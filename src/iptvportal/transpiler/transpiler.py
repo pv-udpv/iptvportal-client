@@ -128,7 +128,13 @@ class SQLTranspiler:
             # 1. auto_order_by_id is enabled
             # 2. Query has a simple table (not a subquery)
             # 3. No explicit ORDER BY clause
-            result["order_by"] = "id"
+            # 4. No GROUP BY clause (aggregate queries don't need ORDER BY id)
+            # 5. No aggregate functions in SELECT (they conflict with ORDER BY)
+            has_group_by = select.args.get("group") is not None
+            has_aggregate = self._has_aggregate_functions(select.expressions)
+            
+            if not has_group_by and not has_aggregate:
+                result["order_by"] = "id"
 
         # Handle LIMIT
         if select.args.get("limit"):
@@ -144,6 +150,42 @@ class SQLTranspiler:
 
         return result
 
+    def _has_aggregate_functions(self, expressions: list[exp.Expression]) -> bool:
+        """
+        Check if any of the SELECT expressions contain aggregate functions.
+        
+        Aggregate functions: COUNT, SUM, AVG, MAX, MIN, etc.
+        """
+        aggregate_functions = {
+            'COUNT', 'SUM', 'AVG', 'MAX', 'MIN', 
+            'STDDEV', 'VARIANCE', 'ARRAY_AGG', 'STRING_AGG',
+            'BOOL_AND', 'BOOL_OR', 'EVERY', 'JSON_AGG', 'JSONB_AGG'
+        }
+        
+        def check_expr(expr: exp.Expression) -> bool:
+            """Recursively check if expression contains aggregate functions."""
+            if isinstance(expr, (exp.Anonymous, exp.Func)):
+                func_name = expr.sql_name() if hasattr(expr, "sql_name") else type(expr).__name__
+                if func_name.upper() in aggregate_functions:
+                    return True
+            
+            # Check nested expressions
+            if isinstance(expr, exp.Alias):
+                return check_expr(expr.this)
+            
+            # Check function arguments
+            if hasattr(expr, "expressions") and expr.expressions:
+                for arg in expr.expressions:
+                    if check_expr(arg):
+                        return True
+            
+            if hasattr(expr, "this") and expr.this and isinstance(expr.this, exp.Expression):
+                return check_expr(expr.this)
+            
+            return False
+        
+        return any(check_expr(expr) for expr in expressions)
+    
     def _transpile_select_columns(self, expressions: list[exp.Expression], from_table: Optional[str] = None) -> list[Any]:
         """Transpile SELECT column expressions."""
         columns = []
