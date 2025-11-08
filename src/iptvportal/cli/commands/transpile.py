@@ -1,6 +1,5 @@
 """Transpile command - SQL to JSONSQL conversion."""
 
-
 import typer
 from rich.console import Console
 
@@ -10,6 +9,7 @@ from iptvportal.transpiler.exceptions import TranspilerError
 
 console = Console()
 
+
 def transpile_command(
     sql: str = typer.Argument(..., help="SQL query to transpile"),
     format: str = typer.Option("json", "--format", help="Output format: json, yaml"),
@@ -17,7 +17,7 @@ def transpile_command(
 ) -> None:
     """
     Transpile SQL query to JSONSQL format (without executing).
-    
+
     Examples:
         iptvportal transpile "SELECT * FROM subscriber"
         iptvportal transpile "SELECT * FROM subscriber WHERE disabled = false" --format yaml

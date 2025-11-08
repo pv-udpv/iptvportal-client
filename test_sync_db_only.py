@@ -72,10 +72,13 @@ class TestSyncDatabase:
             """)
 
             # Initialize global stats
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR IGNORE INTO _cache_stats (id, initialized_at)
                 VALUES (1, ?)
-            """, (datetime.now().isoformat(),))
+            """,
+                (datetime.now().isoformat(),),
+            )
 
             conn.commit()
 
@@ -97,7 +100,9 @@ class TestSyncDatabase:
                 return {"error": "Cache not initialized"}
 
             stats = dict(stats_row)
-            stats["database_size_bytes"] = self.db_path.stat().st_size if self.db_path.exists() else 0
+            stats["database_size_bytes"] = (
+                self.db_path.stat().st_size if self.db_path.exists() else 0
+            )
             return stats
 
     def execute_query(self, table_name, sql, params=None):
@@ -111,6 +116,7 @@ class TestSyncDatabase:
         """Close connection."""
         if self._connection:
             self._connection.close()
+
 
 def test_database():
     """Test database functionality."""
@@ -142,11 +148,13 @@ def test_database():
     except Exception as e:
         print(f"❌ Database test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     success = test_database()

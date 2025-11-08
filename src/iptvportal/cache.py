@@ -11,7 +11,7 @@ from typing import Any
 class QueryCache:
     """
     LRU cache for query results with TTL support.
-    
+
     Features:
     - Hash-based cache keys from query dictionaries
     - LRU eviction policy
@@ -23,7 +23,7 @@ class QueryCache:
     def __init__(self, max_size: int = 1000, default_ttl: int | None = 300):
         """
         Initialize query cache.
-        
+
         Args:
             max_size: Maximum number of entries to cache
             default_ttl: Default time-to-live in seconds (None = no expiration)
@@ -41,33 +41,30 @@ class QueryCache:
     def compute_query_hash(self, query: dict[str, Any]) -> str:
         """
         Compute hash for a query dictionary.
-        
+
         Args:
             query: Query dictionary (JSON-RPC request)
-            
+
         Returns:
             SHA256 hash string
         """
         # Extract only the relevant parts for hashing
         # Ignore 'id' and 'jsonrpc' fields from JSON-RPC wrapper
-        hashable_parts = {
-            'method': query.get('method'),
-            'params': query.get('params', {})
-        }
+        hashable_parts = {"method": query.get("method"), "params": query.get("params", {})}
 
         # Convert to canonical JSON string (sorted keys for consistency)
         json_str = json.dumps(hashable_parts, sort_keys=True, ensure_ascii=True)
 
         # Compute SHA256 hash
-        return hashlib.sha256(json_str.encode('utf-8')).hexdigest()
+        return hashlib.sha256(json_str.encode("utf-8")).hexdigest()
 
     def get(self, query_hash: str) -> Any | None:
         """
         Get cached result by query hash.
-        
+
         Args:
             query_hash: Query hash string
-            
+
         Returns:
             Cached result or None if not found/expired
         """
@@ -79,7 +76,7 @@ class QueryCache:
             entry = self._cache[query_hash]
 
             # Check if entry has expired
-            if entry['expires_at'] is not None and time.time() > entry['expires_at']:
+            if entry["expires_at"] is not None and time.time() > entry["expires_at"]:
                 # Remove expired entry
                 del self._cache[query_hash]
                 self._misses += 1
@@ -89,12 +86,12 @@ class QueryCache:
             self._cache.move_to_end(query_hash)
 
             self._hits += 1
-            return entry['result']
+            return entry["result"]
 
     def set(self, query_hash: str, result: Any, ttl: int | None = None) -> None:
         """
         Cache a query result.
-        
+
         Args:
             query_hash: Query hash string
             result: Result to cache
@@ -118,9 +115,9 @@ class QueryCache:
 
             # Store entry
             self._cache[query_hash] = {
-                'result': result,
-                'cached_at': time.time(),
-                'expires_at': expires_at,
+                "result": result,
+                "cached_at": time.time(),
+                "expires_at": expires_at,
             }
 
             # Move to end (mark as recently used)
@@ -129,11 +126,11 @@ class QueryCache:
     def clear(self, table_name: str | None = None) -> int:
         """
         Clear cache entries.
-        
+
         Args:
             table_name: Optional table name to clear entries for
                        (requires parsing cached queries - not implemented)
-            
+
         Returns:
             Number of entries removed
         """
@@ -152,7 +149,7 @@ class QueryCache:
     def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
-        
+
         Returns:
             Dictionary with cache stats
         """
@@ -161,13 +158,13 @@ class QueryCache:
             hit_rate = (self._hits / total_requests * 100) if total_requests > 0 else 0.0
 
             return {
-                'size': len(self._cache),
-                'max_size': self.max_size,
-                'hits': self._hits,
-                'misses': self._misses,
-                'evictions': self._evictions,
-                'hit_rate': round(hit_rate, 2),
-                'total_requests': total_requests,
+                "size": len(self._cache),
+                "max_size": self.max_size,
+                "hits": self._hits,
+                "misses": self._misses,
+                "evictions": self._evictions,
+                "hit_rate": round(hit_rate, 2),
+                "total_requests": total_requests,
             }
 
     def reset_stats(self) -> None:
@@ -180,14 +177,14 @@ class QueryCache:
     def is_read_query(self, query: dict[str, Any]) -> bool:
         """
         Check if query is a read operation (cacheable).
-        
+
         Args:
             query: Query dictionary
-            
+
         Returns:
             True if query is cacheable (SELECT operation)
         """
-        method = query.get('method', '').lower()
+        method = query.get("method", "").lower()
 
         # Cache only SELECT queries
-        return method in ('select', 'query', 'get')
+        return method in ("select", "query", "get")

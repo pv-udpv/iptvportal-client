@@ -88,6 +88,7 @@ def build_not(operand: Any) -> dict[str, Any]:
     """Build a NOT operation in JSONSQL format."""
     return {"not": operand}
 
+
 def build_math(operator: str, left: Any, right: Any) -> dict[str, list[Any]]:
     """Build a mathematical operation in JSONSQL format."""
     jsonsql_op = MATH_OPERATORS.get(operator.upper() if operator.isalpha() else operator)
@@ -95,9 +96,11 @@ def build_math(operator: str, left: Any, right: Any) -> dict[str, list[Any]]:
         raise ValueError(f"Unsupported math operator: {operator}")
     return {jsonsql_op: [left, right]}
 
+
 def build_is(column: Any, value: Any) -> dict[str, list[Any]]:
     """Build an IS operation in JSONSQL format."""
     return {"is": [column, value]}
+
 
 def build_is_not(column: Any, value: Any) -> dict[str, list[Any]]:
     """Build an IS NOT operation in JSONSQL format."""

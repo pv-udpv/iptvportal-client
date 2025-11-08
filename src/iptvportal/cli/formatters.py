@@ -11,10 +11,11 @@ from rich.table import Table
 
 console = Console()
 
+
 def format_table(data: list[dict[str, Any]], title: str | None = None) -> None:
     """
     Display data as a table.
-    
+
     Args:
         data: List of dictionaries to display
         title: Optional table title
@@ -38,10 +39,11 @@ def format_table(data: list[dict[str, Any]], title: str | None = None) -> None:
 
     console.print(table)
 
+
 def format_json(data: Any, title: str | None = None) -> None:
     """
     Display data as formatted JSON with syntax highlighting.
-    
+
     Args:
         data: Data to display
         title: Optional title
@@ -54,10 +56,11 @@ def format_json(data: Any, title: str | None = None) -> None:
     else:
         console.print(syntax)
 
+
 def format_yaml(data: Any, title: str | None = None) -> None:
     """
     Display data as formatted YAML with syntax highlighting.
-    
+
     Args:
         data: Data to display
         title: Optional title
@@ -70,10 +73,11 @@ def format_yaml(data: Any, title: str | None = None) -> None:
     else:
         console.print(syntax)
 
+
 def display_result(result: Any, format_type: str = "table") -> None:
     """
     Display query result in specified format.
-    
+
     Args:
         result: Query result
         format_type: Output format (table, json, yaml)
@@ -91,6 +95,7 @@ def display_result(result: Any, format_type: str = "table") -> None:
     else:
         console.print(f"[red]Unknown format: {format_type}[/red]")
 
+
 def display_dry_run(
     jsonsql: dict[str, Any],
     method: str,
@@ -99,7 +104,7 @@ def display_dry_run(
 ) -> None:
     """
     Display dry-run information.
-    
+
     Args:
         jsonsql: JSONSQL query
         method: Query method
@@ -137,6 +142,7 @@ def display_dry_run(
     console.print()
     console.print("[yellow]→ Query will NOT be executed (dry-run mode)[/yellow]\n")
 
+
 def display_request_and_result(
     jsonsql: dict[str, Any],
     method: str,
@@ -146,7 +152,7 @@ def display_request_and_result(
 ) -> None:
     """
     Display JSON-RPC request and query result.
-    
+
     Args:
         jsonsql: JSONSQL query
         method: Query method

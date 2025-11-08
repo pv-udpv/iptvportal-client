@@ -9,8 +9,10 @@ from rich.table import Table
 app = typer.Typer(help="Sync cache management")
 console = Console()
 
+
 def get_database(cache_db_path: str | None = None):
     """Get sync database with minimal configuration."""
+
     # Create minimal settings for database operations
     class MinimalSettings:
         def __init__(self):
@@ -20,13 +22,15 @@ def get_database(cache_db_path: str | None = None):
             self.cache_db_cache_size = -64000
 
     from iptvportal.sync.database import SyncDatabase
+
     settings = MinimalSettings()
     return SyncDatabase(settings.cache_db_path, settings)
+
 
 @app.command()
 def init(
     cache_db: str | None = typer.Option(None, "--cache-db", "-d", help="Path to cache database"),
-    force: bool = typer.Option(False, "--force", "-f", help="Force re-initialization")
+    force: bool = typer.Option(False, "--force", "-f", help="Force re-initialization"),
 ):
     """Initialize cache database."""
     try:
@@ -38,18 +42,21 @@ def init(
 
         database.initialize()
         console.print(f"✅ Cache database initialized: {database.db_path}")
-        console.print("💡 Next: Register schemas with 'iptvportal sync register --file config/schemas.yaml'")
+        console.print(
+            "💡 Next: Register schemas with 'iptvportal sync register --file config/schemas.yaml'"
+        )
 
     except Exception as e:
         console.print(f"❌ Failed to initialize cache: {e}", style="red")
         raise typer.Exit(1)
+
 
 @app.command()
 def register(
     schema_file: str | None = typer.Option(None, "--file", "-f", help="Schema file to load"),
     table: str | None = typer.Option(None, "--table", "-t", help="Specific table to register"),
     cache_db: str | None = typer.Option(None, "--cache-db", "-d", help="Path to cache database"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ):
     """
     Register table schemas for syncing.
@@ -76,7 +83,10 @@ def register(
                 console.print(f"📂 Loading schemas from config: {settings.schema_file}")
                 registry = SchemaLoader.from_yaml(settings.schema_file)
             else:
-                console.print("❌ No schema file specified. Use --file or set schema_file in config", style="red")
+                console.print(
+                    "❌ No schema file specified. Use --file or set schema_file in config",
+                    style="red",
+                )
                 raise typer.Exit(1)
         else:
             # Try default location
@@ -85,7 +95,9 @@ def register(
                 console.print(f"📂 Loading schemas from: {default_path}")
                 registry = SchemaLoader.from_yaml(default_path)
             else:
-                console.print("❌ No schema file found. Use --file to specify a schema file", style="red")
+                console.print(
+                    "❌ No schema file found. Use --file to specify a schema file", style="red"
+                )
                 raise typer.Exit(1)
 
         # Get tables to register
@@ -125,18 +137,20 @@ def register(
                             try:
                                 # Import introspector for schema introspection
                                 from iptvportal.introspector import SchemaIntrospector
+
                                 SchemaIntrospector(client)
 
                                 # Get sample row to determine total fields
                                 sample_sql = f"SELECT * FROM {table_name} LIMIT 1"
                                 from iptvportal.transpiler.transpiler import SQLTranspiler
+
                                 transpiler = SQLTranspiler()
                                 sample_jsonsql = transpiler.transpile(sample_sql)
                                 sample_query = {
                                     "jsonrpc": "2.0",
                                     "id": 1,
                                     "method": "select",
-                                    "params": sample_jsonsql
+                                    "params": sample_jsonsql,
                                 }
                                 sample_result = await client.execute(sample_query)
 
@@ -146,7 +160,9 @@ def register(
 
                                     # Update schema with total fields
                                     schema.total_fields = total_fields
-                                    console.print(f"📊 Remote schema for {table_name}: {total_fields} total fields")
+                                    console.print(
+                                        f"📊 Remote schema for {table_name}: {total_fields} total fields"
+                                    )
 
                                     # Get row count
                                     count_sql = f"SELECT COUNT(*) as row_count FROM {table_name}"
@@ -155,21 +171,28 @@ def register(
                                         "jsonrpc": "2.0",
                                         "id": 2,
                                         "method": "select",
-                                        "params": count_jsonsql
+                                        "params": count_jsonsql,
                                     }
                                     count_result = await client.execute(count_query)
-                                    row_count = count_result[0][0] if count_result and count_result[0] else 0
+                                    row_count = (
+                                        count_result[0][0]
+                                        if count_result and count_result[0]
+                                        else 0
+                                    )
 
                                     # Get min/max id if id field exists
                                     min_id = max_id = None
-                                    if any(getattr(f, 'name', '').lower() == "id" for f in schema.fields.values()):
+                                    if any(
+                                        getattr(f, "name", "").lower() == "id"
+                                        for f in schema.fields.values()
+                                    ):
                                         minmax_sql = f"SELECT MIN(id) as min_id, MAX(id) as max_id FROM {table_name}"
                                         minmax_jsonsql = transpiler.transpile(minmax_sql)
                                         minmax_query = {
                                             "jsonrpc": "2.0",
                                             "id": 3,
                                             "method": "select",
-                                            "params": minmax_jsonsql
+                                            "params": minmax_jsonsql,
                                         }
                                         minmax_result = await client.execute(minmax_query)
                                         if minmax_result and minmax_result[0]:
@@ -179,24 +202,35 @@ def register(
                                     # Update schema metadata
                                     if schema.metadata is None:
                                         from iptvportal.schema import TableMetadata
+
                                         schema.metadata = TableMetadata()
 
                                     schema.metadata.row_count = row_count
                                     schema.metadata.min_id = min_id
                                     schema.metadata.max_id = max_id
 
-                                    console.print(f"📊 Fetched metadata for {table_name}: {row_count:,} rows, ID range: {min_id or 'N/A'}-{max_id or 'N/A'}")
+                                    console.print(
+                                        f"📊 Fetched metadata for {table_name}: {row_count:,} rows, ID range: {min_id or 'N/A'}-{max_id or 'N/A'}"
+                                    )
                                 else:
-                                    console.print(f"⚠️  Could not get sample row for {table_name} - using configured fields only")
+                                    console.print(
+                                        f"⚠️  Could not get sample row for {table_name} - using configured fields only"
+                                    )
 
                             except Exception as meta_error:
                                 # Check if it's a 403 Forbidden error - disable the table
                                 error_str = str(meta_error)
                                 if "403" in error_str or "Forbidden" in error_str:
-                                    console.print(f"🚫 Access denied for {table_name} (403 Forbidden) - disabling sync", style="red")
+                                    console.print(
+                                        f"🚫 Access denied for {table_name} (403 Forbidden) - disabling sync",
+                                        style="red",
+                                    )
                                     schema.sync_config.disabled = True
                                 else:
-                                    console.print(f"⚠️  Could not fetch metadata for {table_name}: {meta_error}", style="yellow")
+                                    console.print(
+                                        f"⚠️  Could not fetch metadata for {table_name}: {meta_error}",
+                                        style="yellow",
+                                    )
                                 # Continue with registration even if metadata fetch fails
 
                             database.register_table(schema)
@@ -207,6 +241,7 @@ def register(
 
         # Run async registration
         import asyncio
+
         asyncio.run(register_with_metadata())
 
         # Display results
@@ -215,7 +250,9 @@ def register(
             for table_name in registered:
                 schema = registry.get(table_name)
                 if schema:
-                    console.print(f"  • {table_name} ({schema.total_fields} fields, {schema.sync_config.cache_strategy} strategy)")
+                    console.print(
+                        f"  • {table_name} ({schema.total_fields} fields, {schema.sync_config.cache_strategy} strategy)"
+                    )
 
         if errors:
             console.print(f"\n⚠️  Failed to register {len(errors)} table(s):", style="yellow")
@@ -228,12 +265,15 @@ def register(
         console.print(f"❌ Failed to register schemas: {e}", style="red")
         raise typer.Exit(1)
 
+
 @app.command()
 def run(
     table: str | None = typer.Argument(None, help="Specific table to sync (omit for all tables)"),
-    strategy: str | None = typer.Option(None, "--strategy", "-s", help="Sync strategy (full/incremental/on_demand)"),
+    strategy: str | None = typer.Option(
+        None, "--strategy", "-s", help="Sync strategy (full/incremental/on_demand)"
+    ),
     force: bool = typer.Option(False, "--force", "-f", help="Force sync even if data is fresh"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ):
     """
     Run sync operation for table(s).
@@ -260,7 +300,9 @@ def run(
 
                     # Get registered tables from metadata
                     try:
-                        result = database.execute_query("_sync_metadata", "SELECT table_name FROM _sync_metadata")
+                        result = database.execute_query(
+                            "_sync_metadata", "SELECT table_name FROM _sync_metadata"
+                        )
                         registered_tables = [row["table_name"] for row in result]
                     except Exception:
                         registered_tables = []
@@ -270,7 +312,7 @@ def run(
                         schema_files = [
                             "config/schemas.yaml",
                             "config/media-schema.yaml",
-                            f"config/{table_name}-schema.yaml"
+                            f"config/{table_name}-schema.yaml",
                         ]
                         for schema_file in schema_files:
                             if Path(schema_file).exists():
@@ -295,12 +337,18 @@ def run(
                         # Display result
                         if result.status == "success":
                             console.print(f"✅ Synced {result.rows_fetched} rows for {table}")
-                            console.print(f"   Inserted: {result.rows_inserted}, Updated: {result.rows_updated}, Deleted: {result.rows_deleted}")
-                            console.print(f"   Duration: {result.duration_ms}ms, Chunks: {result.chunks_processed}")
+                            console.print(
+                                f"   Inserted: {result.rows_inserted}, Updated: {result.rows_updated}, Deleted: {result.rows_deleted}"
+                            )
+                            console.print(
+                                f"   Duration: {result.duration_ms}ms, Chunks: {result.chunks_processed}"
+                            )
                         elif result.status == "skipped":
                             console.print(f"⏭️  Skipped {table} (data is fresh)")
                         else:
-                            console.print(f"❌ Failed to sync {table}: {result.error_message}", style="red")
+                            console.print(
+                                f"❌ Failed to sync {table}: {result.error_message}", style="red"
+                            )
 
                     else:
                         # Sync all tables
@@ -324,9 +372,13 @@ def run(
                                 console.print(f"⏭️  {table_name}: skipped (fresh)")
                             else:
                                 failed += 1
-                                console.print(f"❌ {table_name}: {result.error_message}", style="red")
+                                console.print(
+                                    f"❌ {table_name}: {result.error_message}", style="red"
+                                )
 
-                        console.print(f"\n📊 Summary: {successful} successful, {skipped} skipped, {failed} failed")
+                        console.print(
+                            f"\n📊 Summary: {successful} successful, {skipped} skipped, {failed} failed"
+                        )
                         if total_rows > 0:
                             console.print(f"   Total rows synced: {total_rows}")
 
@@ -336,11 +388,13 @@ def run(
 
         # Run async sync
         import asyncio
+
         asyncio.run(do_sync())
 
     except Exception as e:
         console.print(f"❌ Failed to run sync: {e}", style="red")
         raise typer.Exit(1)
+
 
 @app.command()
 def status():
@@ -349,7 +403,9 @@ def status():
         database = get_database()
 
         if not Path(database.db_path).exists():
-            console.print("❌ Cache database not initialized. Run 'iptvportal sync init' first.", style="red")
+            console.print(
+                "❌ Cache database not initialized. Run 'iptvportal sync init' first.", style="red"
+            )
             return
 
         # Get basic stats
@@ -361,16 +417,18 @@ def status():
 
         # Database info
         table_display.add_row("Database Path", str(database.db_path))
-        table_display.add_row("Database Size", f"{stats.get('database_size_bytes', 0) / (1024*1024):.2f} MB")
+        table_display.add_row(
+            "Database Size", f"{stats.get('database_size_bytes', 0) / (1024 * 1024):.2f} MB"
+        )
 
         # Table counts
-        table_display.add_row("Total Tables", str(stats.get('total_tables', 0)))
+        table_display.add_row("Total Tables", str(stats.get("total_tables", 0)))
         table_display.add_row("Total Rows", f"{stats.get('total_rows', 0):,}")
 
         # Sync activity
-        table_display.add_row("Total Syncs", str(stats.get('total_syncs', 0)))
-        table_display.add_row("Successful Syncs", str(stats.get('successful_syncs', 0)))
-        table_display.add_row("Failed Syncs", str(stats.get('failed_syncs', 0)))
+        table_display.add_row("Total Syncs", str(stats.get("total_syncs", 0)))
+        table_display.add_row("Successful Syncs", str(stats.get("successful_syncs", 0)))
+        table_display.add_row("Failed Syncs", str(stats.get("failed_syncs", 0)))
 
         console.print(table_display)
 
@@ -378,11 +436,14 @@ def status():
         console.print("\n📋 Registered Tables:")
         try:
             # Query metadata table with enhanced fields
-            result = database.execute_query("_sync_metadata", """
+            result = database.execute_query(
+                "_sync_metadata",
+                """
                 SELECT table_name, strategy, row_count, local_row_count, min_id, max_id,
                        last_sync_at, total_syncs, failed_syncs
                 FROM _sync_metadata ORDER BY table_name
-            """)
+            """,
+            )
             if result:
                 tables_table = Table()
                 tables_table.add_column("Table", style="cyan")
@@ -398,7 +459,8 @@ def status():
                     if last_sync and last_sync != "Never":
                         try:
                             from datetime import datetime
-                            dt = datetime.fromisoformat(last_sync.replace('Z', '+00:00'))
+
+                            dt = datetime.fromisoformat(last_sync.replace("Z", "+00:00"))
                             last_sync = dt.strftime("%Y-%m-%d %H:%M")
                         except Exception:
                             pass
@@ -426,7 +488,7 @@ def status():
                         f"{row.get('local_row_count', 0):,}",
                         id_range,
                         sync_display,
-                        last_sync
+                        last_sync,
                     )
 
                 console.print(tables_table)
@@ -439,11 +501,12 @@ def status():
         console.print(f"❌ Failed to get cache status: {e}", style="red")
         raise typer.Exit(1)
 
+
 @app.command()
 def clear(
     table: str | None = typer.Argument(None, help="Specific table to clear"),
     all_tables: bool = typer.Option(False, "--all", "-a", help="Clear all tables"),
-    confirm: bool = typer.Option(True, "--confirm/--no-confirm", help="Skip confirmation")
+    confirm: bool = typer.Option(True, "--confirm/--no-confirm", help="Skip confirmation"),
 ):
     """Clear cache for table(s)."""
     try:
@@ -456,7 +519,9 @@ def clear(
 
             # Get all registered tables
             try:
-                result = database.execute_query("_sync_metadata", "SELECT table_name FROM _sync_metadata")
+                result = database.execute_query(
+                    "_sync_metadata", "SELECT table_name FROM _sync_metadata"
+                )
                 table_names = [row["table_name"] for row in result]
             except Exception:
                 table_names = []
@@ -484,6 +549,7 @@ def clear(
     except Exception as e:
         console.print(f"❌ Failed to clear cache: {e}", style="red")
         raise typer.Exit(1)
+
 
 @app.command()
 def stats():
@@ -516,10 +582,9 @@ def stats():
         console.print(f"❌ Failed to get cache stats: {e}", style="red")
         raise typer.Exit(1)
 
+
 @app.command()
-def vacuum(
-    analyze: bool = typer.Option(True, "--analyze/--no-analyze", help="Also run ANALYZE")
-):
+def vacuum(analyze: bool = typer.Option(True, "--analyze/--no-analyze", help="Also run ANALYZE")):
     """Vacuum and optimize cache database."""
     try:
         database = get_database()
@@ -537,6 +602,7 @@ def vacuum(
         console.print(f"❌ Maintenance failed: {e}", style="red")
         raise typer.Exit(1)
 
+
 @app.command()
 def tables():
     """List all registered tables."""
@@ -546,11 +612,13 @@ def tables():
         try:
             result = database.execute_query(
                 "_sync_metadata",
-                "SELECT table_name, strategy, local_row_count, schema_hash FROM _sync_metadata ORDER BY table_name"
+                "SELECT table_name, strategy, local_row_count, schema_hash FROM _sync_metadata ORDER BY table_name",
             )
 
             if not result:
-                console.print("No tables registered. Use 'iptvportal sync register --file <schema-file>' to register tables.")
+                console.print(
+                    "No tables registered. Use 'iptvportal sync register --file <schema-file>' to register tables."
+                )
                 return
 
             table_display = Table(title="Registered Tables")
@@ -564,13 +632,15 @@ def tables():
                     row["table_name"],
                     row.get("strategy", "unknown"),
                     f"{row.get('local_row_count', 0):,}",
-                    row.get("schema_hash", "")[:8] + "..." if row.get("schema_hash") else ""
+                    row.get("schema_hash", "")[:8] + "..." if row.get("schema_hash") else "",
                 )
 
             console.print(table_display)
 
         except Exception:
-            console.print("No tables registered. Use 'iptvportal sync register --file <schema-file>' to register tables.")
+            console.print(
+                "No tables registered. Use 'iptvportal sync register --file <schema-file>' to register tables."
+            )
 
     except Exception as e:
         console.print(f"❌ Failed to list tables: {e}", style="red")

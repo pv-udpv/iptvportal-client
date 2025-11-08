@@ -1,6 +1,5 @@
 """Auth command for CLI."""
 
-
 import typer
 from rich.console import Console
 
@@ -10,13 +9,14 @@ from iptvportal.exceptions import IPTVPortalError
 
 console = Console()
 
+
 def auth_command(
     renew: bool = typer.Option(False, "--renew", help="Force re-authentication"),
     config_file: str | None = typer.Option(None, "--config", help="Config file path"),
 ) -> None:
     """
     Check authentication status or renew session.
-    
+
     Examples:
         iptvportal auth              # Check current session
         iptvportal auth --renew      # Force re-authentication

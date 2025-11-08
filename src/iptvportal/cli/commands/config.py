@@ -1,6 +1,5 @@
 """Config command for managing configuration."""
 
-
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -10,11 +9,12 @@ from iptvportal.config import IPTVPortalSettings
 console = Console()
 config_app = typer.Typer(name="config", help="Manage configuration")
 
+
 @config_app.command(name="show")
 def show_command() -> None:
     """
     Show current configuration.
-    
+
     Examples:
         iptvportal config show
     """
@@ -44,18 +44,21 @@ def show_command() -> None:
 
         console.print(table)
         console.print()
-        console.print("[dim]Configuration is loaded from environment variables with IPTVPORTAL_ prefix[/dim]")
+        console.print(
+            "[dim]Configuration is loaded from environment variables with IPTVPORTAL_ prefix[/dim]"
+        )
         console.print("[dim]or from .env file in the current directory[/dim]\n")
 
     except Exception as e:
         console.print(f"[bold red]Error loading configuration:[/bold red] {e}")
         raise typer.Exit(1)
 
+
 @config_app.command(name="init")
 def init_command() -> None:
     """
     Initialize configuration interactively.
-    
+
     Examples:
         iptvportal config init
     """
@@ -90,6 +93,7 @@ IPTVPORTAL_VERIFY_SSL={str(verify_ssl).lower()}
     console.print("\n[green]✓ Configuration saved to .env file[/green]")
     console.print("\n[dim]You can now use the iptvportal CLI commands.[/dim]\n")
 
+
 @config_app.command(name="set")
 def set_command(
     key: str = typer.Argument(..., help="Configuration key (e.g., domain, username)"),
@@ -97,7 +101,7 @@ def set_command(
 ) -> None:
     """
     Set a configuration value in .env file.
-    
+
     Examples:
         iptvportal config set domain operator
         iptvportal config set timeout 60
@@ -128,13 +132,14 @@ def set_command(
 
     console.print(f"[green]✓ Set {key} = {value}[/green]")
 
+
 @config_app.command(name="get")
 def get_command(
     key: str = typer.Argument(..., help="Configuration key (e.g., domain, username)"),
 ) -> None:
     """
     Get a configuration value.
-    
+
     Examples:
         iptvportal config get domain
         iptvportal config get timeout

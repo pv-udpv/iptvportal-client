@@ -12,7 +12,7 @@ from iptvportal.query.builder import QueryBuilder
 from iptvportal.schema import SchemaLoader, SchemaRegistry
 from iptvportal.transpiler.transpiler import SQLTranspiler
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class IPTVPortalClient:
@@ -50,9 +50,9 @@ class IPTVPortalClient:
             return
 
         # Load schemas based on format
-        if self.settings.schema_format.lower() == 'yaml':
+        if self.settings.schema_format.lower() == "yaml":
             loaded_registry = SchemaLoader.from_yaml(self.settings.schema_file)
-        elif self.settings.schema_format.lower() == 'json':
+        elif self.settings.schema_format.lower() == "json":
             loaded_registry = SchemaLoader.from_json(self.settings.schema_file)
         else:
             raise ValueError(f"Unsupported schema format: {self.settings.schema_format}")
@@ -176,19 +176,16 @@ class IPTVPortalClient:
         raise IPTVPortalError("Request failed with no error captured")
 
     def execute_mapped(
-        self,
-        query: dict[str, Any],
-        table_name: str | None = None,
-        model: type[T] | None = None
+        self, query: dict[str, Any], table_name: str | None = None, model: type[T] | None = None
     ) -> list[dict[str, Any]] | list[T]:
         """
         Execute query and automatically map results using schema.
-        
+
         Args:
             query: Query dictionary to execute
             table_name: Table name for schema lookup (if not in query)
             model: Optional Pydantic/SQLModel model class for result mapping
-            
+
         Returns:
             List of dictionaries or model instances (if model provided)
         """
@@ -199,11 +196,11 @@ class IPTVPortalClient:
             return result
 
         # Try to determine table name from query if not provided
-        if not table_name and isinstance(query.get('query'), str):
+        if not table_name and isinstance(query.get("query"), str):
             # Simple extraction - try to get table name from query string
-            sql = query.get('query', '').upper()
-            if 'FROM' in sql:
-                parts = sql.split('FROM')[1].split()
+            sql = query.get("query", "").upper()
+            if "FROM" in sql:
+                parts = sql.split("FROM")[1].split()
                 if parts:
                     table_name = parts[0].strip().lower()
 

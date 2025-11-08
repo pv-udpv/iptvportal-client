@@ -27,38 +27,25 @@ Examples:
   
   # Specify dialect
   python -m iptvportal.transpiler -d mysql "SELECT * FROM users"
-        """
+        """,
     )
 
-    parser.add_argument(
-        "query",
-        nargs="?",
-        help="SQL query to transpile"
-    )
+    parser.add_argument("query", nargs="?", help="SQL query to transpile")
+
+    parser.add_argument("-f", "--file", type=Path, help="Read SQL from file")
 
     parser.add_argument(
-        "-f", "--file",
-        type=Path,
-        help="Read SQL from file"
+        "-d", "--dialect", default="postgres", help="SQL dialect (default: postgres)"
     )
 
-    parser.add_argument(
-        "-d", "--dialect",
-        default="postgres",
-        help="SQL dialect (default: postgres)"
-    )
+    parser.add_argument("-p", "--pretty", action="store_true", help="Pretty-print JSON output")
 
     parser.add_argument(
-        "-p", "--pretty",
-        action="store_true",
-        help="Pretty-print JSON output"
-    )
-
-    parser.add_argument(
-        "-i", "--indent",
+        "-i",
+        "--indent",
         type=int,
         default=2,
-        help="Indentation level for pretty-print (default: 2)"
+        help="Indentation level for pretty-print (default: 2)",
     )
 
     args = parser.parse_args()
@@ -93,6 +80,7 @@ Examples:
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

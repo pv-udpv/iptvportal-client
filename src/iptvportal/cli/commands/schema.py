@@ -17,11 +17,11 @@ schema_app = typer.Typer(name="schema", help="Manage table schemas")
 
 @schema_app.command(name="list")
 def list_command(
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
     List all loaded schemas.
-    
+
     Examples:
         iptvportal schema list
         iptvportal schema list --config config.yaml
@@ -35,7 +35,7 @@ def list_command(
             if not tables:
                 console.print("[yellow]No schemas loaded[/yellow]")
                 console.print("\n[dim]Load schemas from a file or generate them with:[/dim]")
-                console.print("[dim]  iptvportal schema from-sql -q \"SELECT * FROM table\"[/dim]\n")
+                console.print('[dim]  iptvportal schema from-sql -q "SELECT * FROM table"[/dim]\n')
                 return
 
             console.print(f"\n[bold cyan]Loaded Schemas ({len(tables)} tables)[/bold cyan]\n")
@@ -48,15 +48,18 @@ def list_command(
 
             for table_name in sorted(tables):
                 schema = client.schema_registry.get(table_name)
-                schema_type = "Auto-generated" if not schema.fields or all(
-                    f.description == "Auto-generated field" for f in schema.fields.values()
-                ) else "Predefined"
+                schema_type = (
+                    "Auto-generated"
+                    if not schema.fields
+                    or all(f.description == "Auto-generated field" for f in schema.fields.values())
+                    else "Predefined"
+                )
 
                 table.add_row(
                     table_name,
                     str(schema.total_fields or len(schema.fields)),
                     str(len(schema.fields)),
-                    schema_type
+                    schema_type,
                 )
 
             console.print(table)
@@ -70,11 +73,11 @@ def list_command(
 @schema_app.command(name="show")
 def show_command(
     table_name: str = typer.Argument(..., help="Table name to show schema for"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
     Show detailed schema information for a table.
-    
+
     Examples:
         iptvportal schema show media
         iptvportal schema show subscriber --config config.yaml
@@ -86,7 +89,9 @@ def show_command(
             if not client.schema_registry.has(table_name):
                 console.print(f"[yellow]Schema for table '{table_name}' not found[/yellow]")
                 console.print("\n[dim]Generate it with:[/dim]")
-                console.print(f"[dim]  iptvportal schema from-sql -q \"SELECT * FROM {table_name}\"[/dim]\n")
+                console.print(
+                    f'[dim]  iptvportal schema from-sql -q "SELECT * FROM {table_name}"[/dim]\n'
+                )
                 raise typer.Exit(1)
 
             schema = client.schema_registry.get(table_name)
@@ -126,7 +131,7 @@ def show_command(
                         field.field_type.value,
                         field.alias or "-",
                         field.python_name or "-",
-                        field.description or "-"
+                        field.description or "-",
                     )
 
                 console.print(fields_table)
@@ -146,18 +151,20 @@ def show_command(
 def from_sql_command(
     query: str = typer.Option(..., "--query", "-q", help="SQL query to execute"),
     limit: int = typer.Option(1, "--limit", "-l", help="Number of rows to sample"),
-    fields: str | None = typer.Option(None, "--fields", help="Manual field mappings (e.g., '1:name,2:email,3:url')"),
+    fields: str | None = typer.Option(
+        None, "--fields", help="Manual field mappings (e.g., '1:name,2:email,3:url')"
+    ),
     save: bool = typer.Option(False, "--save", "-s", help="Save generated schema to file"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
     Generate schema from SQL query.
-    
+
     Executes the query, samples results, and generates a schema based on the data structure.
     You can manually specify field names for specific positions using --fields.
-    
+
     Examples:
         iptvportal schema from-sql -q "SELECT * FROM media LIMIT 5"
         iptvportal schema from-sql -q "SELECT * FROM media" --limit 100 --save
@@ -182,7 +189,7 @@ def from_sql_command(
 
         table_name = parts[0].strip().lower()
         # Remove any trailing clauses
-        table_name = table_name.split()[0].strip(';,')
+        table_name = table_name.split()[0].strip(";,")
 
         console.print(f"\n[cyan]Generating schema for table: {table_name}[/cyan]")
         console.print(f"[dim]Executing query with LIMIT {limit}...[/dim]\n")
@@ -194,6 +201,7 @@ def from_sql_command(
         with IPTVPortalClient(settings) as client:
             # Transpile SQL to JSONSQL
             from iptvportal.transpiler import SQLTranspiler
+
             transpiler = SQLTranspiler()
             jsonsql = transpiler.transpile(query)
 
@@ -204,6 +212,7 @@ def from_sql_command(
 
             # Execute query
             from iptvportal.cli.utils import build_jsonrpc_request
+
             request = build_jsonrpc_request(method, jsonsql)
             result = client.execute(request)
 
@@ -215,30 +224,38 @@ def from_sql_command(
             field_overrides = {}
             if fields:
                 try:
-                    for mapping in fields.split(','):
+                    for mapping in fields.split(","):
                         mapping = mapping.strip()
-                        if ':' not in mapping:
-                            console.print(f"[yellow]Warning: Invalid field mapping '{mapping}' (expected format: 'position:name')[/yellow]")
+                        if ":" not in mapping:
+                            console.print(
+                                f"[yellow]Warning: Invalid field mapping '{mapping}' (expected format: 'position:name')[/yellow]"
+                            )
                             continue
 
-                        pos_str, name = mapping.split(':', 1)
+                        pos_str, name = mapping.split(":", 1)
                         position = int(pos_str.strip())
                         field_name = name.strip()
 
                         if position < 0 or position >= len(result[0]):
-                            console.print(f"[yellow]Warning: Position {position} out of range (0-{len(result[0])-1})[/yellow]")
+                            console.print(
+                                f"[yellow]Warning: Position {position} out of range (0-{len(result[0]) - 1})[/yellow]"
+                            )
                             continue
 
                         field_overrides[position] = field_name
 
                     if field_overrides:
-                        console.print(f"[dim]Applying {len(field_overrides)} manual field mapping(s)[/dim]")
+                        console.print(
+                            f"[dim]Applying {len(field_overrides)} manual field mapping(s)[/dim]"
+                        )
                 except ValueError as e:
                     console.print(f"[yellow]Warning: Error parsing field mappings: {e}[/yellow]")
 
             # Generate schema from first row
             sample_row = result[0]
-            schema = TableSchema.auto_generate(table_name, sample_row, field_name_overrides=field_overrides)
+            schema = TableSchema.auto_generate(
+                table_name, sample_row, field_name_overrides=field_overrides
+            )
 
             # Register in current session
             client.schema_registry.register(schema)
@@ -260,12 +277,7 @@ def from_sql_command(
                     if len(sample_str) > 50:
                         sample_str = sample_str[:47] + "..."
 
-                    fields_table.add_row(
-                        str(pos),
-                        field.name,
-                        field.field_type.value,
-                        sample_str
-                    )
+                    fields_table.add_row(str(pos), field.name, field.field_type.value, sample_str)
 
             console.print(fields_table)
             console.print()
@@ -275,28 +287,27 @@ def from_sql_command(
                 output_path = output or f"config/{table_name}-schema.{format}"
 
                 # Convert schema to dict
-                schema_dict = {
-                    "schemas": {
-                        table_name: schema.to_dict()
-                    }
-                }
+                schema_dict = {"schemas": {table_name: schema.to_dict()}}
 
                 # Ensure output directory exists
                 Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
                 # Write to file
                 if format == "json":
-                    with open(output_path, 'w') as f:
+                    with open(output_path, "w") as f:
                         json.dump(schema_dict, f, indent=2)
                 else:  # yaml
                     try:
                         import yaml
-                        with open(output_path, 'w') as f:
+
+                        with open(output_path, "w") as f:
                             yaml.dump(schema_dict, f, default_flow_style=False, sort_keys=False)
                     except ImportError:
-                        console.print("[yellow]PyYAML not installed. Saving as JSON instead.[/yellow]")
-                        output_path = output_path.replace('.yaml', '.json').replace('.yml', '.json')
-                        with open(output_path, 'w') as f:
+                        console.print(
+                            "[yellow]PyYAML not installed. Saving as JSON instead.[/yellow]"
+                        )
+                        output_path = output_path.replace(".yaml", ".json").replace(".yml", ".json")
+                        with open(output_path, "w") as f:
                             json.dump(schema_dict, f, indent=2)
 
                 console.print(f"[green]✓ Schema saved to: {output_path}[/green]\n")
@@ -313,11 +324,11 @@ def export_command(
     table_name: str = typer.Argument(..., help="Table name to export"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
     Export a schema to a file.
-    
+
     Examples:
         iptvportal schema export media
         iptvportal schema export media -o schemas.yaml
@@ -337,31 +348,30 @@ def export_command(
             output_path = output or f"config/{table_name}-schema.{format}"
 
             # Convert schema to dict
-            schema_dict = {
-                "schemas": {
-                    table_name: schema.to_dict()
-                }
-            }
+            schema_dict = {"schemas": {table_name: schema.to_dict()}}
 
             # Ensure output directory exists
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
             # Write to file
             if format == "json":
-                with open(output_path, 'w') as f:
+                with open(output_path, "w") as f:
                     json.dump(schema_dict, f, indent=2)
             else:  # yaml
                 try:
                     import yaml
-                    with open(output_path, 'w') as f:
+
+                    with open(output_path, "w") as f:
                         yaml.dump(schema_dict, f, default_flow_style=False, sort_keys=False)
                 except ImportError:
                     console.print("[yellow]PyYAML not installed. Saving as JSON instead.[/yellow]")
-                    output_path = output_path.replace('.yaml', '.json').replace('.yml', '.json')
-                    with open(output_path, 'w') as f:
+                    output_path = output_path.replace(".yaml", ".json").replace(".yml", ".json")
+                    with open(output_path, "w") as f:
                         json.dump(schema_dict, f, indent=2)
 
-            console.print(f"[green]✓ Schema for '{table_name}' exported to: {output_path}[/green]\n")
+            console.print(
+                f"[green]✓ Schema for '{table_name}' exported to: {output_path}[/green]\n"
+            )
 
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
@@ -371,11 +381,11 @@ def export_command(
 @schema_app.command(name="import")
 def import_command(
     file_path: str = typer.Argument(..., help="Schema file to import"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
     Import schemas from a file.
-    
+
     Examples:
         iptvportal schema import schemas.yaml
         iptvportal schema import config/schemas.json
@@ -388,7 +398,7 @@ def import_command(
         console.print(f"\n[cyan]Importing schemas from: {file_path}[/cyan]\n")
 
         # Detect format from extension
-        if file_path.endswith('.json'):
+        if file_path.endswith(".json"):
             registry = SchemaLoader.from_json(file_path)
         else:
             registry = SchemaLoader.from_yaml(file_path)
@@ -409,12 +419,10 @@ def import_command(
 
 
 @schema_app.command(name="validate")
-def validate_command(
-    file_path: str = typer.Argument(..., help="Schema file to validate")
-) -> None:
+def validate_command(file_path: str = typer.Argument(..., help="Schema file to validate")) -> None:
     """
     Validate a schema file.
-    
+
     Examples:
         iptvportal schema validate schemas.yaml
         iptvportal schema validate config/schemas.json
@@ -431,7 +439,7 @@ def validate_command(
 
         # Try to load the file
         try:
-            if file_path.endswith('.json'):
+            if file_path.endswith(".json"):
                 registry = SchemaLoader.from_json(file_path)
             else:
                 registry = SchemaLoader.from_yaml(file_path)
@@ -455,8 +463,19 @@ def validate_command(
 
             # Check for invalid field types
             for _pos, field in schema.fields.items():
-                if field.field_type.value not in ["integer", "string", "boolean", "float", "datetime", "date", "json", "unknown"]:
-                    errors.append(f"{table_name}.{field.name}: Invalid field type '{field.field_type.value}'")
+                if field.field_type.value not in [
+                    "integer",
+                    "string",
+                    "boolean",
+                    "float",
+                    "datetime",
+                    "date",
+                    "json",
+                    "unknown",
+                ]:
+                    errors.append(
+                        f"{table_name}.{field.name}: Invalid field type '{field.field_type.value}'"
+                    )
 
             # Warn about missing total_fields
             if not schema.total_fields:
@@ -492,18 +511,18 @@ def introspect_command(
     save: bool = typer.Option(False, "--save", "-s", help="Save generated schema to file"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
     Introspect remote table structure with automatic metadata gathering.
-    
+
     This command automatically:
     - Determines field names and types from sample data
     - Counts total rows (COUNT(*))
     - Gets MAX(id) and MIN(id)
     - Analyzes timestamp field ranges
     - Generates smart sync guardrails based on table size
-    
+
     Examples:
         iptvportal schema introspect tv_channel
         iptvportal schema introspect subscriber --save
@@ -528,17 +547,19 @@ def introspect_command(
                     gather_metadata = not no_metadata
 
                     if gather_metadata:
-                        console.print("[dim]Gathering metadata (row count, ID ranges, timestamps)...[/dim]")
+                        console.print(
+                            "[dim]Gathering metadata (row count, ID ranges, timestamps)...[/dim]"
+                        )
                     else:
                         console.print("[dim]Analyzing table structure...[/dim]")
 
                     return await introspector.introspect_table(
-                        table_name=table_name,
-                        gather_metadata=gather_metadata
+                        table_name=table_name, gather_metadata=gather_metadata
                     )
 
             except Exception:
                 import traceback
+
                 console.print("\n[red]Detailed error:[/red]")
                 console.print(f"[red]{traceback.format_exc()}[/red]")
                 raise
@@ -579,10 +600,7 @@ def introspect_command(
         for pos in sorted(schema.fields.keys()):
             field = schema.fields[pos]
             fields_table.add_row(
-                str(pos),
-                field.name,
-                field.field_type.value,
-                field.description or "-"
+                str(pos), field.name, field.field_type.value, field.description or "-"
             )
 
         console.print(fields_table)
@@ -617,9 +635,9 @@ def introspect_command(
 
             for field_name, ranges in schema.metadata.timestamp_ranges.items():
                 console.print(f"  [cyan]{field_name}:[/cyan]")
-                if ranges.get('min'):
+                if ranges.get("min"):
                     console.print(f"    Min: {ranges['min']}")
-                if ranges.get('max'):
+                if ranges.get("max"):
                     console.print(f"    Max: {ranges['max']}")
                 console.print()
 
@@ -628,28 +646,25 @@ def introspect_command(
             output_path = output or f"config/{table_name}-schema.{format}"
 
             # Convert schema to dict
-            schema_dict = {
-                "schemas": {
-                    table_name: schema.to_dict()
-                }
-            }
+            schema_dict = {"schemas": {table_name: schema.to_dict()}}
 
             # Ensure output directory exists
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
             # Write to file
             if format == "json":
-                with open(output_path, 'w') as f:
+                with open(output_path, "w") as f:
                     json.dump(schema_dict, f, indent=2)
             else:  # yaml
                 try:
                     import yaml
-                    with open(output_path, 'w') as f:
+
+                    with open(output_path, "w") as f:
                         yaml.dump(schema_dict, f, default_flow_style=False, sort_keys=False)
                 except ImportError:
                     console.print("[yellow]PyYAML not installed. Saving as JSON instead.[/yellow]")
-                    output_path = output_path.replace('.yaml', '.json').replace('.yml', '.json')
-                    with open(output_path, 'w') as f:
+                    output_path = output_path.replace(".yaml", ".json").replace(".yml", ".json")
+                    with open(output_path, "w") as f:
                         json.dump(schema_dict, f, indent=2)
 
             console.print(f"[green]✓ Schema saved to: {output_path}[/green]\n")
@@ -664,15 +679,16 @@ def introspect_command(
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
 
+
 @schema_app.command(name="clear")
 def clear_command(
     table_name: str | None = typer.Argument(None, help="Table name to clear (omit to clear all)"),
     config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation")
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ) -> None:
     """
     Clear schema(s) from the registry.
-    
+
     Examples:
         iptvportal schema clear media
         iptvportal schema clear --force  # Clear all schemas

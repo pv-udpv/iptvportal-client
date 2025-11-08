@@ -32,13 +32,13 @@ class AuthManager:
 
     def authenticate(self, http_client: httpx.Client) -> str:
         """Authenticate and return session_id.
-        
+
         Args:
             http_client: HTTP client instance
-            
+
         Returns:
             Session ID string
-            
+
         Raises:
             AuthenticationError: If authentication fails
         """
@@ -110,13 +110,13 @@ class AsyncAuthManager:
 
     async def authenticate(self, http_client: httpx.AsyncClient) -> str:
         """Authenticate and return session_id (async).
-        
+
         Args:
             http_client: Async HTTP client instance
-            
+
         Returns:
             Session ID string
-            
+
         Raises:
             AuthenticationError: If authentication fails
         """

@@ -12,12 +12,14 @@ from typing import Any, Union, get_args, get_origin
 
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
 
 try:
     from pydantic import BaseModel
+
     HAS_PYDANTIC = True
 except ImportError:
     HAS_PYDANTIC = False
@@ -25,6 +27,7 @@ except ImportError:
 
 try:
     from sqlmodel import SQLModel  # type: ignore
+
     HAS_SQLMODEL = True
 except ImportError:
     HAS_SQLMODEL = False
@@ -33,6 +36,7 @@ except ImportError:
 
 class FieldType(Enum):
     """Типы полей таблиц."""
+
     INTEGER = "integer"
     STRING = "string"
     BOOLEAN = "boolean"
@@ -42,11 +46,12 @@ class FieldType(Enum):
     JSON = "json"
     UNKNOWN = "unknown"
 
+
 @dataclass
 class SyncConfig:
     """
     Конфигурация синхронизации таблицы с удалённым источником.
-    
+
     Определяет ограничения (guardrails) для процесса синхронизации:
     - Фильтрация данных (WHERE, LIMIT)
     - Стратегия кэширования
@@ -135,39 +140,40 @@ class SyncConfig:
         result = {}
 
         if self.where:
-            result['where'] = self.where
+            result["where"] = self.where
         if self.limit:
-            result['limit'] = self.limit
+            result["limit"] = self.limit
         if self.order_by != "id":
-            result['order_by'] = self.order_by
+            result["order_by"] = self.order_by
         if self.chunk_size != 1000:
-            result['chunk_size'] = self.chunk_size
+            result["chunk_size"] = self.chunk_size
         if not self.enable_chunking:
-            result['enable_chunking'] = self.enable_chunking
+            result["enable_chunking"] = self.enable_chunking
         if self.ttl:
-            result['ttl'] = self.ttl
+            result["ttl"] = self.ttl
         if self.cache_strategy != "full":
-            result['cache_strategy'] = self.cache_strategy
+            result["cache_strategy"] = self.cache_strategy
         if self.auto_sync:
-            result['auto_sync'] = self.auto_sync
+            result["auto_sync"] = self.auto_sync
         if self.sync_interval:
-            result['sync_interval'] = self.sync_interval
+            result["sync_interval"] = self.sync_interval
         if self.include_fields:
-            result['include_fields'] = self.include_fields
+            result["include_fields"] = self.include_fields
         if self.exclude_fields:
-            result['exclude_fields'] = self.exclude_fields
+            result["exclude_fields"] = self.exclude_fields
         if self.incremental_field:
-            result['incremental_field'] = self.incremental_field
+            result["incremental_field"] = self.incremental_field
         if self.incremental_mode:
-            result['incremental_mode'] = self.incremental_mode
+            result["incremental_mode"] = self.incremental_mode
         if self.prefetch_relationships:
-            result['prefetch_relationships'] = self.prefetch_relationships
+            result["prefetch_relationships"] = self.prefetch_relationships
         if self.max_concurrent_chunks != 3:
-            result['max_concurrent_chunks'] = self.max_concurrent_chunks
+            result["max_concurrent_chunks"] = self.max_concurrent_chunks
         if self.disabled:
-            result['disabled'] = self.disabled
+            result["disabled"] = self.disabled
 
         return result
+
 
 @dataclass
 class TableMetadata:
@@ -194,23 +200,23 @@ class TableMetadata:
     def to_dict(self) -> dict[str, Any]:
         """Экспорт метаданных в словарь."""
         result = {
-            'row_count': self.row_count,
-            'analyzed_at': self.analyzed_at or datetime.now().isoformat()
+            "row_count": self.row_count,
+            "analyzed_at": self.analyzed_at or datetime.now().isoformat(),
         }
 
         if self.max_id is not None:
-            result['max_id'] = self.max_id
+            result["max_id"] = self.max_id
         if self.min_id is not None:
-            result['min_id'] = self.min_id
+            result["min_id"] = self.min_id
         if self.estimated_size_mb:
-            result['estimated_size_mb'] = self.estimated_size_mb
+            result["estimated_size_mb"] = self.estimated_size_mb
 
         # Добавить диапазоны timestamp полей
         for field_name, ranges in self.timestamp_ranges.items():
-            if ranges.get('min'):
-                result[f'{field_name}_min'] = ranges['min']
-            if ranges.get('max'):
-                result[f'{field_name}_max'] = ranges['max']
+            if ranges.get("min"):
+                result[f"{field_name}_min"] = ranges["min"]
+            if ranges.get("max"):
+                result[f"{field_name}_max"] = ranges["max"]
 
         return result
 
@@ -231,6 +237,7 @@ class FieldDefinition:
         validator: Функция валидации
         transformer: Функция преобразования значения при маппинге
     """
+
     name: str
     position: int
     alias: str | None = None
@@ -250,7 +257,7 @@ class FieldDefinition:
 class TableSchema:
     """
     Схема таблицы с частичным описанием полей.
-    
+
     Attributes:
         table_name: Имя таблицы
         fields: Словарь {position: FieldDefinition} для описанных полей
@@ -267,7 +274,7 @@ class TableSchema:
         total_fields: int | None = None,
         pydantic_model: type | None = None,
         sync_config: SyncConfig | None = None,
-        metadata: TableMetadata | None = None
+        metadata: TableMetadata | None = None,
     ):
         self.table_name = table_name
         self.fields = fields
@@ -278,18 +285,16 @@ class TableSchema:
 
     @staticmethod
     def auto_generate(
-        table_name: str,
-        sample_row: list[Any],
-        field_name_overrides: dict[int, str] | None = None
-    ) -> 'TableSchema':
+        table_name: str, sample_row: list[Any], field_name_overrides: dict[int, str] | None = None
+    ) -> "TableSchema":
         """
         Автоматически генерирует схему на основе образца строки результата.
-        
+
         Args:
             table_name: Имя таблицы
             sample_row: Строка данных для определения структуры
             field_name_overrides: Словарь {position: name} для ручного задания имен полей
-            
+
         Returns:
             Автоматически сгенерированная TableSchema
         """
@@ -313,27 +318,25 @@ class TableSchema:
                 name=field_name,
                 position=position,
                 field_type=field_type,
-                description="Auto-generated field" if position not in field_name_overrides else "Manually specified field"
+                description="Auto-generated field"
+                if position not in field_name_overrides
+                else "Manually specified field",
             )
 
             fields[position] = field_def
 
-        return TableSchema(
-            table_name=table_name,
-            fields=fields,
-            total_fields=total_fields
-        )
+        return TableSchema(table_name=table_name, fields=fields, total_fields=total_fields)
 
     @staticmethod
     def _infer_field_name(position: int, value: Any, field_type: FieldType) -> str:
         """
         Умное определение имени поля на основе позиции, значения и типа.
-        
+
         Args:
             position: Позиция поля (0-based)
             value: Значение для анализа
             field_type: Определенный тип поля
-            
+
         Returns:
             Предполагаемое имя поля
         """
@@ -351,23 +354,23 @@ class TableSchema:
         value_str = str(value).strip()
 
         # Email pattern
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if re.match(email_pattern, value_str):
             return "email"
 
         # URL pattern
-        url_pattern = r'^https?://[^\s]+$'
+        url_pattern = r"^https?://[^\s]+$"
         if re.match(url_pattern, value_str):
             return "url"
 
         # UUID pattern
-        uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        uuid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         if re.match(uuid_pattern, value_str.lower()):
             return "uuid"
 
         # Phone pattern (basic international format)
-        phone_pattern = r'^\+?[1-9]\d{1,14}$'
-        if re.match(phone_pattern, value_str.replace(' ', '').replace('-', '')):
+        phone_pattern = r"^\+?[1-9]\d{1,14}$"
+        if re.match(phone_pattern, value_str.replace(" ", "").replace("-", "")):
             return "phone"
 
         # If it's a datetime type, use appropriate name
@@ -414,10 +417,10 @@ class TableSchema:
     def resolve_select_star(self, use_aliases: bool = False) -> list[str]:
         """
         Разворачивает SELECT * в список имён полей.
-        
+
         Args:
             use_aliases: Использовать алиасы вместо имён БД
-            
+
         Returns:
             Список имён полей с автогенерацией Field_{n} для неописанных
         """
@@ -454,10 +457,10 @@ class TableSchema:
         """
         Маппинг строки результата на словарь с учётом алиасов.
         Применяет трансформеры если они заданы.
-        
+
         Args:
             row: Строка данных из результата запроса
-            
+
         Returns:
             Словарь с данными, где ключи - mapped_name полей
         """
@@ -482,10 +485,10 @@ class TableSchema:
     def map_rows_to_model(self, rows: list[list[Any]]) -> list[Any]:
         """
         Маппинг списка строк на Pydantic/SQLModel модели.
-        
+
         Args:
             rows: Список строк данных
-            
+
         Returns:
             Список экземпляров модели или словарей (если модель не задана)
         """
@@ -517,17 +520,17 @@ class TableSchema:
                     **({"description": field.description} if field.description else {}),
                 }
                 for pos, field in self.fields.items()
-            }
+            },
         }
 
         # Добавить sync_config если есть непустые значения
         sync_dict = self.sync_config.to_dict()
         if sync_dict:
-            result['sync_config'] = sync_dict
+            result["sync_config"] = sync_dict
 
         # Добавить metadata если есть
         if self.metadata:
-            result['metadata'] = self.metadata.to_dict()
+            result["metadata"] = self.metadata.to_dict()
 
         return result
 
@@ -574,8 +577,8 @@ class SchemaBuilder:
         field_type: FieldType = FieldType.UNKNOWN,
         description: str | None = None,
         transformer: Callable | None = None,
-        validator: Callable | None = None
-    ) -> 'SchemaBuilder':
+        validator: Callable | None = None,
+    ) -> "SchemaBuilder":
         """Добавить описание поля."""
         self.fields[position] = FieldDefinition(
             name=name,
@@ -585,16 +588,16 @@ class SchemaBuilder:
             field_type=field_type,
             description=description,
             transformer=transformer,
-            validator=validator
+            validator=validator,
         )
         return self
 
-    def set_total_fields(self, count: int) -> 'SchemaBuilder':
+    def set_total_fields(self, count: int) -> "SchemaBuilder":
         """Задать общее количество полей."""
         self.total_fields = count
         return self
 
-    def set_pydantic_model(self, model: type) -> 'SchemaBuilder':
+    def set_pydantic_model(self, model: type) -> "SchemaBuilder":
         """Связать с Pydantic/SQLModel моделью."""
         self.pydantic_model = model
         return self
@@ -605,7 +608,7 @@ class SchemaBuilder:
             table_name=self.table_name,
             fields=self.fields,
             total_fields=self.total_fields,
-            pydantic_model=self.pydantic_model
+            pydantic_model=self.pydantic_model,
         )
 
 
@@ -614,30 +617,30 @@ class SchemaLoader:
 
     # Встроенные трансформеры
     BUILTIN_TRANSFORMERS = {
-        'datetime': lambda x: datetime.fromisoformat(x) if isinstance(x, str) else x,
-        'date': lambda x: datetime.fromisoformat(x).date() if isinstance(x, str) else x,
-        'int': int,
-        'float': float,
-        'str': str,
-        'bool': bool,
-        'json': lambda x: json.loads(x) if isinstance(x, str) else x,
+        "datetime": lambda x: datetime.fromisoformat(x) if isinstance(x, str) else x,
+        "date": lambda x: datetime.fromisoformat(x).date() if isinstance(x, str) else x,
+        "int": int,
+        "float": float,
+        "str": str,
+        "bool": bool,
+        "json": lambda x: json.loads(x) if isinstance(x, str) else x,
     }
 
     @staticmethod
     def from_yaml(path: str | Path) -> SchemaRegistry:
         """
         Загрузить схемы из YAML файла.
-        
+
         Args:
             path: Путь к YAML файлу
-            
+
         Returns:
             SchemaRegistry с загруженными схемами
         """
         if not HAS_YAML:
             raise ImportError("PyYAML is not installed. Install it with: pip install pyyaml")
 
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         return SchemaLoader._parse_config(data)
@@ -646,14 +649,14 @@ class SchemaLoader:
     def from_json(path: str | Path) -> SchemaRegistry:
         """
         Загрузить схемы из JSON файла.
-        
+
         Args:
             path: Путь к JSON файлу
-            
+
         Returns:
             SchemaRegistry с загруженными схемами
         """
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         return SchemaLoader._parse_config(data)
@@ -668,7 +671,7 @@ class SchemaLoader:
         """Парсинг конфигурации схем."""
         registry = SchemaRegistry()
 
-        schemas_config = config.get('schemas', {})
+        schemas_config = config.get("schemas", {})
 
         for table_name, table_config in schemas_config.items():
             schema = SchemaLoader._parse_table_schema(table_name, table_config)
@@ -680,18 +683,18 @@ class SchemaLoader:
     def _parse_table_schema(table_name: str, config: dict[str, Any]) -> TableSchema:
         """Парсинг схемы одной таблицы."""
         # Проверить есть ли from_model для автоматической загрузки из Pydantic/SQLModel
-        if 'from_model' in config:
+        if "from_model" in config:
             return SchemaLoader._load_from_model(table_name, config)
 
         fields = {}
-        total_fields = config.get('total_fields')
+        total_fields = config.get("total_fields")
 
-        fields_config = config.get('fields', {})
+        fields_config = config.get("fields", {})
         for pos_str, field_config in fields_config.items():
             position = int(pos_str)
 
             # Получить тип поля
-            field_type_str = field_config.get('type', 'unknown')
+            field_type_str = field_config.get("type", "unknown")
             try:
                 field_type = FieldType(field_type_str)
             except ValueError:
@@ -699,103 +702,103 @@ class SchemaLoader:
 
             # Получить трансформер
             transformer = None
-            transformer_name = field_config.get('transformer')
+            transformer_name = field_config.get("transformer")
             if transformer_name and transformer_name in SchemaLoader.BUILTIN_TRANSFORMERS:
                 transformer = SchemaLoader.BUILTIN_TRANSFORMERS[transformer_name]
 
             # Создать описание поля
             # Use name if provided, otherwise use alias or generate default name
-            field_name = field_config.get('name')
+            field_name = field_config.get("name")
             if not field_name:
                 # If no name, use alias or generate Field_{position}
-                field_name = field_config.get('alias') or f"Field_{position}"
+                field_name = field_config.get("alias") or f"Field_{position}"
 
             field_def = FieldDefinition(
                 name=field_name,
                 position=position,
-                alias=field_config.get('alias'),
-                python_name=field_config.get('python_name'),
-                remote_name=field_config.get('remote_name'),
+                alias=field_config.get("alias"),
+                python_name=field_config.get("python_name"),
+                remote_name=field_config.get("remote_name"),
                 field_type=field_type,
-                description=field_config.get('description'),
-                transformer=transformer
+                description=field_config.get("description"),
+                transformer=transformer,
             )
 
             fields[position] = field_def
 
         # Парсинг sync_config
         sync_config = None
-        if 'sync_config' in config:
-            sync_config = SchemaLoader._parse_sync_config(config['sync_config'])
+        if "sync_config" in config:
+            sync_config = SchemaLoader._parse_sync_config(config["sync_config"])
 
         # Парсинг metadata
         metadata = None
-        if 'metadata' in config:
-            metadata = SchemaLoader._parse_metadata(config['metadata'])
+        if "metadata" in config:
+            metadata = SchemaLoader._parse_metadata(config["metadata"])
 
         return TableSchema(
             table_name=table_name,
             fields=fields,
             total_fields=total_fields,
             sync_config=sync_config,
-            metadata=metadata
+            metadata=metadata,
         )
 
     @staticmethod
     def _parse_sync_config(config: dict[str, Any]) -> SyncConfig:
         """Парсинг конфигурации синхронизации из YAML."""
         return SyncConfig(
-            where=config.get('where'),
-            limit=config.get('limit'),
-            order_by=config.get('order_by', 'id'),
-            chunk_size=config.get('chunk_size', 1000),
-            enable_chunking=config.get('enable_chunking', True),
-            ttl=config.get('ttl'),
-            cache_strategy=config.get('cache_strategy', 'full'),
-            auto_sync=config.get('auto_sync', False),
-            sync_interval=config.get('sync_interval'),
-            disabled=config.get('disabled', False),
-            include_fields=config.get('include_fields'),
-            exclude_fields=config.get('exclude_fields'),
-            incremental_field=config.get('incremental_field'),
-            incremental_mode=config.get('incremental_mode', False),
-            prefetch_relationships=config.get('prefetch_relationships', False),
-            max_concurrent_chunks=config.get('max_concurrent_chunks', 3)
+            where=config.get("where"),
+            limit=config.get("limit"),
+            order_by=config.get("order_by", "id"),
+            chunk_size=config.get("chunk_size", 1000),
+            enable_chunking=config.get("enable_chunking", True),
+            ttl=config.get("ttl"),
+            cache_strategy=config.get("cache_strategy", "full"),
+            auto_sync=config.get("auto_sync", False),
+            sync_interval=config.get("sync_interval"),
+            disabled=config.get("disabled", False),
+            include_fields=config.get("include_fields"),
+            exclude_fields=config.get("exclude_fields"),
+            incremental_field=config.get("incremental_field"),
+            incremental_mode=config.get("incremental_mode", False),
+            prefetch_relationships=config.get("prefetch_relationships", False),
+            max_concurrent_chunks=config.get("max_concurrent_chunks", 3),
         )
 
     @staticmethod
     def _parse_metadata(config: dict[str, Any]) -> TableMetadata:
         """Парсинг метаданных таблицы из YAML."""
         metadata = TableMetadata(
-            row_count=config.get('row_count', 0),
-            max_id=config.get('max_id'),
-            min_id=config.get('min_id'),
-            analyzed_at=config.get('analyzed_at'),
-            estimated_size_mb=config.get('estimated_size_mb')
+            row_count=config.get("row_count", 0),
+            max_id=config.get("max_id"),
+            min_id=config.get("min_id"),
+            analyzed_at=config.get("analyzed_at"),
+            estimated_size_mb=config.get("estimated_size_mb"),
         )
 
         # Парсинг диапазонов timestamp полей
         for key, value in config.items():
-            if key.endswith('_min') or key.endswith('_max'):
+            if key.endswith("_min") or key.endswith("_max"):
                 # Извлечь имя поля (убрать _min/_max)
-                if key.endswith('_min'):
+                if key.endswith("_min"):
                     field_name = key[:-4]
                     if field_name not in metadata.timestamp_ranges:
                         metadata.timestamp_ranges[field_name] = {}
-                    metadata.timestamp_ranges[field_name]['min'] = value
-                elif key.endswith('_max'):
+                    metadata.timestamp_ranges[field_name]["min"] = value
+                elif key.endswith("_max"):
                     field_name = key[:-4]
                     if field_name not in metadata.timestamp_ranges:
                         metadata.timestamp_ranges[field_name] = {}
-                    metadata.timestamp_ranges[field_name]['max'] = value
+                    metadata.timestamp_ranges[field_name]["max"] = value
 
         return metadata
 
     @staticmethod
     def _load_from_model(table_name: str, config: dict[str, Any]) -> TableSchema:
         """Загрузка схемы из Pydantic/SQLModel модели."""
-        model_path = config['from_model']
-        module_path, class_name = model_path.rsplit('.', 1)
+        model_path = config["from_model"]
+        module_path, class_name = model_path.rsplit(".", 1)
 
         try:
             module = importlib.import_module(module_path)
@@ -804,21 +807,20 @@ class SchemaLoader:
             raise ImportError(f"Cannot import model {model_path}: {e}")
 
         # Получить позиции полей
-        if hasattr(model_class, '__field_positions__'):
+        if hasattr(model_class, "__field_positions__"):
             positions = model_class.__field_positions__
         else:
             # Позиции из конфига
-            fields_config = config.get('fields', {})
+            fields_config = config.get("fields", {})
             positions = {
-                field_config['name']: int(pos)
-                for pos, field_config in fields_config.items()
+                field_config["name"]: int(pos) for pos, field_config in fields_config.items()
             }
 
         return SchemaExtractor.from_model(
             model=model_class,
             table_name=table_name,
             field_positions=positions,
-            total_fields=config.get('total_fields')
+            total_fields=config.get("total_fields"),
         )
 
 
@@ -830,17 +832,17 @@ class SchemaExtractor:
         model: type,
         table_name: str,
         field_positions: dict[str, int],
-        total_fields: int | None = None
+        total_fields: int | None = None,
     ) -> TableSchema:
         """
         Создать схему из Pydantic модели.
-        
+
         Args:
             model: Pydantic класс
             table_name: Имя таблицы в БД
             field_positions: Словарь {field_name: position}
             total_fields: Общее количество полей в БД
-            
+
         Returns:
             TableSchema созданная из модели
         """
@@ -859,12 +861,10 @@ class SchemaExtractor:
             position = field_positions[field_name]
 
             # Получить алиас из Pydantic Field
-            alias = getattr(field_info, 'alias', None)
+            alias = getattr(field_info, "alias", None)
 
             # Определить тип поля
-            field_type = SchemaExtractor._map_python_type_to_field_type(
-                field_info.annotation
-            )
+            field_type = SchemaExtractor._map_python_type_to_field_type(field_info.annotation)
 
             # Создать описание поля
             field_def = FieldDefinition(
@@ -873,45 +873,40 @@ class SchemaExtractor:
                 alias=alias,
                 python_name=field_name,
                 field_type=field_type,
-                description=getattr(field_info, 'description', None)
+                description=getattr(field_info, "description", None),
             )
 
             fields[position] = field_def
 
         return TableSchema(
-            table_name=table_name,
-            fields=fields,
-            total_fields=total_fields,
-            pydantic_model=model
+            table_name=table_name, fields=fields, total_fields=total_fields, pydantic_model=model
         )
 
     @staticmethod
     def from_sqlmodel(
-        model: type,
-        field_positions: dict[str, int],
-        total_fields: int | None = None
+        model: type, field_positions: dict[str, int], total_fields: int | None = None
     ) -> TableSchema:
         """
         Создать схему из SQLModel модели.
-        
+
         Args:
             model: SQLModel класс
             field_positions: Словарь {field_name: position}
             total_fields: Общее количество полей
-            
+
         Returns:
             TableSchema
         """
         if not HAS_SQLMODEL:
             raise ImportError("sqlmodel is not installed")
 
-        table_name = getattr(model, '__tablename__', model.__name__.lower())
+        table_name = getattr(model, "__tablename__", model.__name__.lower())
 
         return SchemaExtractor.from_pydantic(
             model=model,
             table_name=table_name,
             field_positions=field_positions,
-            total_fields=total_fields
+            total_fields=total_fields,
         )
 
     @staticmethod
@@ -919,26 +914,26 @@ class SchemaExtractor:
         model: type,
         table_name: str | None = None,
         field_positions: dict[str, int] | None = None,
-        total_fields: int | None = None
+        total_fields: int | None = None,
     ) -> TableSchema:
         """
         Универсальный метод для создания схемы из любой модели.
         Автоматически определяет тип модели (SQLModel или Pydantic).
         """
         # Определить тип модели
-        if HAS_SQLMODEL and hasattr(model, '__tablename__'):
+        if HAS_SQLMODEL and hasattr(model, "__tablename__"):
             return SchemaExtractor.from_sqlmodel(
-                model=model,
-                field_positions=field_positions or {},
-                total_fields=total_fields
+                model=model, field_positions=field_positions or {}, total_fields=total_fields
             )
         if HAS_PYDANTIC:
-            resolved_table_name = table_name or getattr(model, '__tablename__', model.__name__.lower())
+            resolved_table_name = table_name or getattr(
+                model, "__tablename__", model.__name__.lower()
+            )
             return SchemaExtractor.from_pydantic(
                 model=model,
                 table_name=resolved_table_name,
                 field_positions=field_positions or {},
-                total_fields=total_fields
+                total_fields=total_fields,
             )
         raise ImportError("Neither pydantic nor sqlmodel is installed")
 
@@ -969,13 +964,11 @@ class SchemaExtractor:
 
 
 def schema_config(
-    positions: dict[str, int],
-    total_fields: int,
-    registry: SchemaRegistry | None = None
+    positions: dict[str, int], total_fields: int, registry: SchemaRegistry | None = None
 ):
     """
     Декоратор для автоматической регистрации схемы из модели.
-    
+
     Usage:
         @schema_config(
             positions={"id": 0, "name": 1, "email": 2},
@@ -986,12 +979,11 @@ def schema_config(
             name: str
             email: str
     """
+
     def decorator(model_class):
         # Извлечь схему из модели
         schema = SchemaExtractor.from_model(
-            model=model_class,
-            field_positions=positions,
-            total_fields=total_fields
+            model=model_class, field_positions=positions, total_fields=total_fields
         )
 
         # Сохранить схему в атрибуте класса

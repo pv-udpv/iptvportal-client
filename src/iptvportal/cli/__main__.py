@@ -32,9 +32,11 @@ app.add_typer(schema_app, name="schema")
 app.add_typer(cache_app, name="cache")
 app.add_typer(sync_app, name="sync")
 
+
 def main() -> None:
     """Main entry point."""
     app()
+
 
 if __name__ == "__main__":
     main()

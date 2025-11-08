@@ -4,7 +4,8 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+
 
 def test_sync_database():
     """Test basic sync database functionality."""
@@ -40,8 +41,10 @@ def test_sync_database():
     except Exception as e:
         print(f"❌ Sync database test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def test_sync_cli():
     """Test basic CLI functionality."""
@@ -63,8 +66,10 @@ def test_sync_cli():
     except Exception as e:
         print(f"❌ Sync CLI test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     print("🧪 Testing sync functionality...")

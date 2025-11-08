@@ -22,7 +22,7 @@ class TestSyncDatabase:
     @pytest.fixture
     def temp_db_path(self):
         """Create temporary database file."""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
         yield db_path
         # Cleanup
@@ -58,10 +58,7 @@ class TestSyncDatabase:
             """).fetchall()
 
             table_names = [row[0] for row in tables]
-            expected_tables = [
-                '_sync_metadata', '_field_mappings', '_sync_history',
-                '_cache_stats'
-            ]
+            expected_tables = ["_sync_metadata", "_field_mappings", "_sync_history", "_cache_stats"]
 
             for table in expected_tables:
                 assert table in table_names
@@ -76,16 +73,8 @@ class TestSyncDatabase:
                 2: FieldDefinition(name="active", position=2, field_type=FieldType.BOOLEAN),
             },
             total_fields=3,
-            sync_config=SyncConfig(
-                cache_strategy="full",
-                chunk_size=100,
-                ttl=3600
-            ),
-            metadata=TableMetadata(
-                row_count=1000,
-                max_id=1000,
-                min_id=1
-            )
+            sync_config=SyncConfig(cache_strategy="full", chunk_size=100, ttl=3600),
+            metadata=TableMetadata(row_count=1000, max_id=1000, min_id=1),
         )
 
         db.register_table(schema)
@@ -103,11 +92,14 @@ class TestSyncDatabase:
 
         # Check field mappings were stored
         with db._get_connection() as conn:
-            mappings = conn.execute("""
+            mappings = conn.execute(
+                """
                 SELECT * FROM _field_mappings
                 WHERE table_name = ?
                 ORDER BY position
-            """, ("test_table",)).fetchall()
+            """,
+                ("test_table",),
+            ).fetchall()
 
             assert len(mappings) == 3
 
@@ -133,18 +125,14 @@ class TestSyncDatabase:
                 0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER),
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
             },
-            total_fields=2
+            total_fields=2,
         )
 
         # Register table first
         db.register_table(schema)
 
         # Test data
-        rows = [
-            [1, "Alice"],
-            [2, "Bob"],
-            [3, "Charlie"]
-        ]
+        rows = [[1, "Alice"], [2, "Bob"], [3, "Charlie"]]
 
         # Insert data
         inserted = db.bulk_insert("bulk_test", rows, schema)
@@ -172,7 +160,7 @@ class TestSyncDatabase:
                 0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER),
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
             },
-            total_fields=2
+            total_fields=2,
         )
 
         db.register_table(schema)
@@ -196,7 +184,7 @@ class TestSyncDatabase:
                 0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER),
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
             },
-            total_fields=2
+            total_fields=2,
         )
 
         db.register_table(schema)
@@ -221,7 +209,7 @@ class TestSyncDatabase:
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
                 2: FieldDefinition(name="email", position=2, field_type=FieldType.STRING),
             },
-            total_fields=3
+            total_fields=3,
         )
 
         db.register_table(schema)
@@ -232,7 +220,7 @@ class TestSyncDatabase:
         # Upsert (update existing, insert new)
         rows = [
             [1, "Alice Updated", "alice@example.com"],  # Update
-            [2, "Bob", "bob@example.com"]               # Insert
+            [2, "Bob", "bob@example.com"],  # Insert
         ]
 
         inserted, updated = db.upsert_rows("upsert_test", rows, schema)
@@ -261,7 +249,7 @@ class TestSyncDatabase:
                 0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER),
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
             },
-            total_fields=2
+            total_fields=2,
         )
 
         db.register_table(schema)
@@ -287,16 +275,15 @@ class TestSyncDatabase:
         schema = TableSchema(
             table_name="metadata_test",
             fields={0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER)},
-            total_fields=1
+            total_fields=1,
         )
 
         db.register_table(schema)
 
         # Update metadata
-        db.update_metadata("metadata_test",
-                          row_count=1500,
-                          last_sync_at="2023-01-01T12:00:00",
-                          total_syncs=5)
+        db.update_metadata(
+            "metadata_test", row_count=1500, last_sync_at="2023-01-01T12:00:00", total_syncs=5
+        )
 
         # Verify updates
         metadata = db.get_metadata("metadata_test")
@@ -310,7 +297,7 @@ class TestSyncDatabase:
             table_name="stale_test",
             fields={0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER)},
             total_fields=1,
-            sync_config=SyncConfig(ttl=3600)  # 1 hour TTL
+            sync_config=SyncConfig(ttl=3600),  # 1 hour TTL
         )
 
         db.register_table(schema)
@@ -320,6 +307,7 @@ class TestSyncDatabase:
 
         # Set next sync to future
         from datetime import datetime, timedelta
+
         future_time = (datetime.now() + timedelta(hours=2)).isoformat()
         db.update_metadata("stale_test", next_sync_at=future_time)
 
@@ -340,14 +328,14 @@ class TestSyncDatabase:
             table_name="stats_test1",
             fields={0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER)},
             total_fields=1,
-            metadata=TableMetadata(row_count=100)
+            metadata=TableMetadata(row_count=100),
         )
 
         schema2 = TableSchema(
             table_name="stats_test2",
             fields={0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER)},
             total_fields=1,
-            metadata=TableMetadata(row_count=200)
+            metadata=TableMetadata(row_count=200),
         )
 
         db.register_table(schema1)
@@ -374,38 +362,34 @@ class TestSyncDatabase:
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
                 2: FieldDefinition(name="active", position=2, field_type=FieldType.BOOLEAN),
             },
-            total_fields=3
+            total_fields=3,
         )
 
         db.register_table(schema)
 
         # Insert test data
-        rows = [
-            [1, "Alice", True],
-            [2, "Bob", False],
-            [3, "Charlie", True]
-        ]
+        rows = [[1, "Alice", True], [2, "Bob", False], [3, "Charlie", True]]
         db.bulk_insert("query_test", rows, schema)
 
         # Test various queries
         results = db.execute_query("query_test", "SELECT COUNT(*) as count FROM query_test")
         assert results[0]["count"] == 3
 
-        results = db.execute_query("query_test",
-                                  "SELECT * FROM query_test WHERE active = 1 ORDER BY name")
+        results = db.execute_query(
+            "query_test", "SELECT * FROM query_test WHERE active = 1 ORDER BY name"
+        )
         assert len(results) == 2
         assert results[0]["name"] == "Alice"
         assert results[1]["name"] == "Charlie"
 
-        results = db.execute_query("query_test",
-                                  "SELECT name FROM query_test WHERE id = ?",
-                                  (2,))
+        results = db.execute_query("query_test", "SELECT name FROM query_test WHERE id = ?", (2,))
         assert len(results) == 1
         assert results[0]["name"] == "Bob"
 
     def test_execute_query_nonexistent_table(self, db):
         """Test executing query on non-existent table."""
         from iptvportal.sync.exceptions import TableNotFoundError
+
         with pytest.raises(TableNotFoundError):  # Should raise TableNotFoundError
             db.execute_query("nonexistent_table", "SELECT 1")
 
@@ -429,7 +413,7 @@ class TestSyncDatabase:
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
             },
             total_fields=2,
-            sync_config=SyncConfig(cache_strategy="full", chunk_size=1000)
+            sync_config=SyncConfig(cache_strategy="full", chunk_size=1000),
         )
 
         schema2 = TableSchema(
@@ -439,7 +423,7 @@ class TestSyncDatabase:
                 1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
             },
             total_fields=2,
-            sync_config=SyncConfig(cache_strategy="full", chunk_size=1000)
+            sync_config=SyncConfig(cache_strategy="full", chunk_size=1000),
         )
 
         # Same schemas should have same hash
@@ -456,7 +440,7 @@ class TestSyncDatabase:
                 2: FieldDefinition(name="email", position=2, field_type=FieldType.STRING),
             },
             total_fields=3,
-            sync_config=SyncConfig(cache_strategy="full", chunk_size=1000)
+            sync_config=SyncConfig(cache_strategy="full", chunk_size=1000),
         )
 
         hash3 = db._calculate_schema_hash(schema3)

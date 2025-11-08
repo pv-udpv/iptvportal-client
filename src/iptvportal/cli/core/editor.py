@@ -13,10 +13,10 @@ console = Console()
 def get_editor() -> str:
     """
     Get the user's preferred editor from environment.
-    
+
     Returns:
         Editor command
-        
+
     Raises:
         RuntimeError: If no editor is configured
     """
@@ -42,15 +42,15 @@ def open_editor(
 ) -> str:
     """
     Open editor for user input.
-    
+
     Args:
         initial_content: Initial content to populate in editor
         suffix: File extension for temp file
         prompt: Optional prompt to display before opening editor
-        
+
     Returns:
         Content from editor
-        
+
     Raises:
         RuntimeError: If editor fails or returns empty content
     """
@@ -92,10 +92,10 @@ def open_editor(
 def open_sql_editor(initial_sql: str | None = None) -> str:
     """
     Open editor for SQL query input.
-    
+
     Args:
         initial_sql: Initial SQL to populate
-        
+
     Returns:
         SQL query from editor
     """
@@ -114,10 +114,10 @@ def open_sql_editor(initial_sql: str | None = None) -> str:
 def open_jsonsql_editor(initial_json: str | None = None) -> str:
     """
     Open editor for JSONSQL query input.
-    
+
     Args:
         initial_json: Initial JSONSQL to populate
-        
+
     Returns:
         JSONSQL query from editor
     """

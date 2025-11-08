@@ -15,11 +15,7 @@ class TestFieldDefinition:
 
     def test_field_definition_basic(self):
         """Test basic field definition creation."""
-        field = FieldDefinition(
-            name="id",
-            position=0,
-            field_type=FieldType.INTEGER
-        )
+        field = FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER)
         assert field.name == "id"
         assert field.position == 0
         assert field.field_type == FieldType.INTEGER
@@ -28,10 +24,7 @@ class TestFieldDefinition:
     def test_field_definition_with_alias(self):
         """Test field definition with alias."""
         field = FieldDefinition(
-            name="subscriber_id",
-            position=1,
-            alias="sub_id",
-            field_type=FieldType.INTEGER
+            name="subscriber_id", position=1, alias="sub_id", field_type=FieldType.INTEGER
         )
         assert field.mapped_name == "sub_id"
 
@@ -42,7 +35,7 @@ class TestFieldDefinition:
             position=1,
             alias="sub_id",
             python_name="subscriber_identifier",
-            field_type=FieldType.INTEGER
+            field_type=FieldType.INTEGER,
         )
         assert field.mapped_name == "subscriber_identifier"
 
@@ -122,8 +115,10 @@ class TestTableSchema:
 
     def test_map_row_with_transformer(self):
         """Test mapping with transformer function."""
+
         def transformer(x):
             return x.upper() if isinstance(x, str) else x
+
         fields = {
             0: FieldDefinition("id", 0, field_type=FieldType.INTEGER),
             1: FieldDefinition("name", 1, field_type=FieldType.STRING, transformer=transformer),
@@ -216,14 +211,11 @@ class TestSchemaBuilder:
 
     def test_builder_with_transformer(self):
         """Test building schema with transformer."""
+
         def upper_transformer(x):
             return x.upper() if isinstance(x, str) else x
 
-        schema = (
-            SchemaBuilder("test")
-            .field(0, "code", transformer=upper_transformer)
-            .build()
-        )
+        schema = SchemaBuilder("test").field(0, "code", transformer=upper_transformer).build()
 
         assert schema.fields[0].transformer is not None
         assert schema.fields[0].transformer("test") == "TEST"
@@ -241,7 +233,7 @@ class TestSchemaLoader:
                     "fields": {
                         "0": {"name": "id", "type": "integer"},
                         "1": {"name": "name", "type": "string", "alias": "full_name"},
-                    }
+                    },
                 }
             }
         }
@@ -263,7 +255,7 @@ class TestSchemaLoader:
                     "fields": {
                         "0": {"name": "id", "type": "integer"},
                         "1": {"name": "count", "type": "string", "transformer": "int"},
-                    }
+                    },
                 }
             }
         }
@@ -278,16 +270,16 @@ class TestSchemaLoader:
     def test_builtin_transformers(self):
         """Test all built-in transformers."""
         # Test int transformer
-        assert SchemaLoader.BUILTIN_TRANSFORMERS['int']("42") == 42
+        assert SchemaLoader.BUILTIN_TRANSFORMERS["int"]("42") == 42
 
         # Test float transformer
-        assert SchemaLoader.BUILTIN_TRANSFORMERS['float']("3.14") == 3.14
+        assert SchemaLoader.BUILTIN_TRANSFORMERS["float"]("3.14") == 3.14
 
         # Test str transformer
-        assert SchemaLoader.BUILTIN_TRANSFORMERS['str'](123) == "123"
+        assert SchemaLoader.BUILTIN_TRANSFORMERS["str"](123) == "123"
 
         # Test bool transformer
-        assert SchemaLoader.BUILTIN_TRANSFORMERS['bool'](1) is True
+        assert SchemaLoader.BUILTIN_TRANSFORMERS["bool"](1) is True
 
 
 class TestSchemaIntegration:

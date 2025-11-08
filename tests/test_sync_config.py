@@ -5,7 +5,6 @@ Run with:
     uv run pytest tests/test_sync_config.py -v
 """
 
-
 from iptvportal.schema import SyncConfig
 
 
@@ -30,7 +29,7 @@ class TestSyncConfigValidation:
             incremental_field="updated_at",
             incremental_mode=True,
             prefetch_relationships=False,
-            max_concurrent_chunks=3
+            max_concurrent_chunks=3,
         )
 
         errors = config.validate()
@@ -73,9 +72,7 @@ class TestSyncConfigValidation:
     def test_valid_incremental_config(self):
         """Test valid incremental sync configuration."""
         config = SyncConfig(
-            incremental_mode=True,
-            incremental_field="updated_at",
-            cache_strategy="incremental"
+            incremental_mode=True, incremental_field="updated_at", cache_strategy="incremental"
         )
         errors = config.validate()
         assert len(errors) == 0
@@ -108,27 +105,27 @@ class TestSyncConfigToDict:
             incremental_mode=True,
             prefetch_relationships=True,
             max_concurrent_chunks=5,
-            disabled=True
+            disabled=True,
         )
 
         result = config.to_dict()
         expected = {
-            'where': 'deleted_at IS NULL',
-            'limit': 1000,
-            'order_by': 'name',
-            'chunk_size': 500,
-            'enable_chunking': False,
-            'ttl': 7200,
-            'cache_strategy': 'incremental',
-            'auto_sync': True,
-            'sync_interval': 3600,
-            'include_fields': ['id', 'name'],
-            'exclude_fields': ['password'],
-            'incremental_field': 'updated_at',
-            'incremental_mode': True,
-            'prefetch_relationships': True,
-            'max_concurrent_chunks': 5,
-            'disabled': True
+            "where": "deleted_at IS NULL",
+            "limit": 1000,
+            "order_by": "name",
+            "chunk_size": 500,
+            "enable_chunking": False,
+            "ttl": 7200,
+            "cache_strategy": "incremental",
+            "auto_sync": True,
+            "sync_interval": 3600,
+            "include_fields": ["id", "name"],
+            "exclude_fields": ["password"],
+            "incremental_field": "updated_at",
+            "incremental_mode": True,
+            "prefetch_relationships": True,
+            "max_concurrent_chunks": 5,
+            "disabled": True,
         }
 
         assert result == expected
@@ -139,7 +136,7 @@ class TestSyncConfigToDict:
             order_by="id",  # This is the default
             chunk_size=1000,  # This is the default
             cache_strategy="full",  # This is the default
-            max_concurrent_chunks=3  # This is the default
+            max_concurrent_chunks=3,  # This is the default
         )
 
         result = config.to_dict()
@@ -151,12 +148,7 @@ class TestSyncConfigStrategies:
 
     def test_full_sync_config(self):
         """Test configuration optimized for full sync."""
-        config = SyncConfig(
-            cache_strategy="full",
-            chunk_size=1000,
-            ttl=3600,
-            auto_sync=True
-        )
+        config = SyncConfig(cache_strategy="full", chunk_size=1000, ttl=3600, auto_sync=True)
 
         errors = config.validate()
         assert len(errors) == 0
@@ -169,7 +161,7 @@ class TestSyncConfigStrategies:
             incremental_mode=True,
             incremental_field="updated_at",
             chunk_size=5000,
-            ttl=1800
+            ttl=1800,
         )
 
         errors = config.validate()
@@ -179,11 +171,7 @@ class TestSyncConfigStrategies:
 
     def test_on_demand_sync_config(self):
         """Test configuration for on-demand sync."""
-        config = SyncConfig(
-            cache_strategy="on-demand",
-            ttl=600,
-            auto_sync=False
-        )
+        config = SyncConfig(cache_strategy="on-demand", ttl=600, auto_sync=False)
 
         errors = config.validate()
         assert len(errors) == 0
@@ -199,7 +187,7 @@ class TestSyncConfigEdgeCases:
         config = SyncConfig(where="")
         result = config.to_dict()
         # Empty string should not be included
-        assert 'where' not in result
+        assert "where" not in result
 
     def test_none_values(self):
         """Test None values are handled correctly."""
@@ -210,7 +198,7 @@ class TestSyncConfigEdgeCases:
             sync_interval=None,
             include_fields=None,
             exclude_fields=None,
-            incremental_field=None
+            incremental_field=None,
         )
 
         result = config.to_dict()
@@ -222,7 +210,7 @@ class TestSyncConfigEdgeCases:
             limit=1000000,
             chunk_size=50000,
             ttl=86400 * 30,  # 30 days
-            sync_interval=3600 * 24  # 24 hours
+            sync_interval=3600 * 24,  # 24 hours
         )
 
         errors = config.validate()
@@ -232,8 +220,8 @@ class TestSyncConfigEdgeCases:
         """Test zero values where allowed."""
         config = SyncConfig(
             limit=0,  # No limit
-            ttl=0,    # No TTL
-            sync_interval=0  # No interval
+            ttl=0,  # No TTL
+            sync_interval=0,  # No interval
         )
 
         errors = config.validate()

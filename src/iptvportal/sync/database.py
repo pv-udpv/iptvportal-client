@@ -57,10 +57,13 @@ class SyncDatabase:
             self._create_views(conn)
 
             # Initialize global stats if not exists
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR IGNORE INTO _cache_stats (id, initialized_at)
                 VALUES (1, ?)
-            """, (datetime.now().isoformat(),))
+            """,
+                (datetime.now().isoformat(),),
+            )
 
             conn.commit()
 
@@ -159,11 +162,21 @@ class SyncDatabase:
         """)
 
         # Create indexes for performance
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_meta_next_sync ON _sync_metadata(next_sync_at)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_meta_strategy ON _sync_metadata(strategy)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_field_map_table ON _field_mappings(table_name)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_history_table ON _sync_history(table_name)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_history_started ON _sync_history(started_at DESC)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sync_meta_next_sync ON _sync_metadata(next_sync_at)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sync_meta_strategy ON _sync_metadata(strategy)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_field_map_table ON _field_mappings(table_name)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sync_history_table ON _sync_history(table_name)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sync_history_started ON _sync_history(started_at DESC)"
+        )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_history_status ON _sync_history(status)")
 
     def _create_views(self, conn: sqlite3.Connection) -> None:
@@ -219,7 +232,7 @@ class SyncDatabase:
         conn = sqlite3.connect(
             str(self.db_path),
             timeout=30.0,
-            isolation_level=None  # Enable autocommit mode
+            isolation_level=None,  # Enable autocommit mode
         )
         conn.row_factory = sqlite3.Row
 
@@ -256,11 +269,13 @@ class SyncDatabase:
                     columns.append(f"{col_name} TEXT NULL")
 
             # Add sync metadata columns
-            columns.extend([
-                "_synced_at TEXT NOT NULL",
-                "_sync_version INTEGER DEFAULT 1",
-                "_is_partial BOOLEAN DEFAULT FALSE"
-            ])
+            columns.extend(
+                [
+                    "_synced_at TEXT NOT NULL",
+                    "_sync_version INTEGER DEFAULT 1",
+                    "_is_partial BOOLEAN DEFAULT FALSE",
+                ]
+            )
 
             # Create primary key if id field exists
             if any(f.name.lower() == "id" for f in schema.fields.values()):
@@ -271,7 +286,7 @@ class SyncDatabase:
 
             create_sql = f"""
                 CREATE TABLE IF NOT EXISTS {schema.table_name} (
-                    {', '.join(columns)}
+                    {", ".join(columns)}
                 )
             """
 
@@ -321,15 +336,22 @@ class SyncDatabase:
         table_name = schema.table_name
 
         # Index on synced_at for temporal queries
-        conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table_name}_synced_at ON {table_name}(_synced_at)")
+        conn.execute(
+            f"CREATE INDEX IF NOT EXISTS idx_{table_name}_synced_at ON {table_name}(_synced_at)"
+        )
 
         # Index on common fields
         for field_def in schema.fields.values():
             col_name = self._get_column_name(field_def)
 
             # Index primary key and incremental fields
-            if field_def.name.lower() == "id" or field_def.name == schema.sync_config.incremental_field:
-                conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table_name}_{col_name} ON {table_name}({col_name})")
+            if (
+                field_def.name.lower() == "id"
+                or field_def.name == schema.sync_config.incremental_field
+            ):
+                conn.execute(
+                    f"CREATE INDEX IF NOT EXISTS idx_{table_name}_{col_name} ON {table_name}({col_name})"
+                )
 
     def _create_user_view(self, conn: sqlite3.Connection, schema: TableSchema) -> None:
         """Create user-friendly view with proper column aliases."""
@@ -355,11 +377,7 @@ class SyncDatabase:
                 select_parts.append(f"Field_{pos}")
 
         # Add sync metadata columns
-        select_parts.extend([
-            "_synced_at",
-            "_sync_version",
-            "_is_partial"
-        ])
+        select_parts.extend(["_synced_at", "_sync_version", "_is_partial"])
 
         select_clause = ", ".join(select_parts)
         create_view_sql = f"""
@@ -386,7 +404,8 @@ class SyncDatabase:
 
             # Insert/update metadata
             now = datetime.now().isoformat()
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR REPLACE INTO _sync_metadata (
                     table_name, last_sync_at, next_sync_at, strategy, ttl,
                     chunk_size, where_clause, order_by, schema_hash,
@@ -394,47 +413,52 @@ class SyncDatabase:
                     row_count, min_id, max_id,
                     created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                schema.table_name,
-                now,  # last_sync_at
-                None,  # next_sync_at (will be set after sync)
-                schema.sync_config.cache_strategy,
-                schema.sync_config.ttl,
-                schema.sync_config.chunk_size,
-                schema.sync_config.where,
-                schema.sync_config.order_by,
-                schema_hash,
-                1,  # schema_version
-                schema.total_fields,
-                schema.sync_config.incremental_field,
-                schema.metadata.row_count if schema.metadata else None,
-                schema.metadata.min_id if schema.metadata else None,
-                schema.metadata.max_id if schema.metadata else None,
-                now,  # created_at
-                now,  # updated_at
-            ))
+            """,
+                (
+                    schema.table_name,
+                    now,  # last_sync_at
+                    None,  # next_sync_at (will be set after sync)
+                    schema.sync_config.cache_strategy,
+                    schema.sync_config.ttl,
+                    schema.sync_config.chunk_size,
+                    schema.sync_config.where,
+                    schema.sync_config.order_by,
+                    schema_hash,
+                    1,  # schema_version
+                    schema.total_fields,
+                    schema.sync_config.incremental_field,
+                    schema.metadata.row_count if schema.metadata else None,
+                    schema.metadata.min_id if schema.metadata else None,
+                    schema.metadata.max_id if schema.metadata else None,
+                    now,  # created_at
+                    now,  # updated_at
+                ),
+            )
 
             # Insert field mappings (use same unique column names as table creation)
             used_names = set()
             for pos, field_def in schema.fields.items():
                 local_column = self._get_unique_column_name(field_def, used_names)
-                conn.execute("""
+                conn.execute(
+                    """
                     INSERT OR REPLACE INTO _field_mappings (
                         table_name, position, field_name, local_column,
                         field_type, is_primary_key, is_incremental_field,
                         is_nullable, description
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    schema.table_name,
-                    pos,
-                    field_def.name,
-                    local_column,
-                    field_def.field_type.value,
-                    field_def.name.lower() == "id",
-                    field_def.name == schema.sync_config.incremental_field,
-                    True,  # is_nullable (for now)
-                    field_def.description,
-                ))
+                """,
+                    (
+                        schema.table_name,
+                        pos,
+                        field_def.name,
+                        local_column,
+                        field_def.field_type.value,
+                        field_def.name.lower() == "id",
+                        field_def.name == schema.sync_config.incremental_field,
+                        True,  # is_nullable (for now)
+                        field_def.description,
+                    ),
+                )
 
             # Create user-friendly view with proper column aliases
             self._create_user_view(conn, schema)
@@ -447,11 +471,7 @@ class SyncDatabase:
         hash_data = {
             "table_name": schema.table_name,
             "fields": {
-                pos: {
-                    "name": f.name,
-                    "type": f.field_type.value,
-                    "position": f.position
-                }
+                pos: {"name": f.name, "type": f.field_type.value, "position": f.position}
                 for pos, f in schema.fields.items()
             },
             "sync_config": {
@@ -460,7 +480,7 @@ class SyncDatabase:
                 "chunk_size": schema.sync_config.chunk_size,
                 "where": schema.sync_config.where,
                 "order_by": schema.sync_config.order_by,
-            }
+            },
         }
 
         json_str = json.dumps(hash_data, sort_keys=True)
@@ -470,8 +490,7 @@ class SyncDatabase:
         """Get sync metadata for table."""
         with self._get_connection() as conn:
             row = conn.execute(
-                "SELECT * FROM _sync_metadata WHERE table_name = ?",
-                (table_name,)
+                "SELECT * FROM _sync_metadata WHERE table_name = ?", (table_name,)
             ).fetchone()
 
             return dict(row) if row else None
@@ -485,11 +504,14 @@ class SyncDatabase:
             set_clause = ", ".join(f"{k} = ?" for k in kwargs)
             values = list(kwargs.values()) + [datetime.now().isoformat(), table_name]
 
-            conn.execute(f"""
+            conn.execute(
+                f"""
                 UPDATE _sync_metadata
                 SET {set_clause}, updated_at = ?
                 WHERE table_name = ?
-            """, values)
+            """,
+                values,
+            )
 
             conn.commit()
 
@@ -509,8 +531,9 @@ class SyncDatabase:
         except (ValueError, TypeError):
             return True
 
-    def bulk_insert(self, table_name: str, rows: list[list[Any]],
-                   schema: TableSchema, on_conflict: str = "FAIL") -> int:
+    def bulk_insert(
+        self, table_name: str, rows: list[list[Any]], schema: TableSchema, on_conflict: str = "FAIL"
+    ) -> int:
         """
         Insert multiple rows efficiently.
 
@@ -551,9 +574,13 @@ class SyncDatabase:
             col_names = ", ".join(columns)
 
             if on_conflict == "REPLACE":
-                insert_sql = f"INSERT OR REPLACE INTO {table_name} ({col_names}) VALUES ({placeholders})"
+                insert_sql = (
+                    f"INSERT OR REPLACE INTO {table_name} ({col_names}) VALUES ({placeholders})"
+                )
             elif on_conflict == "IGNORE":
-                insert_sql = f"INSERT OR IGNORE INTO {table_name} ({col_names}) VALUES ({placeholders})"
+                insert_sql = (
+                    f"INSERT OR IGNORE INTO {table_name} ({col_names}) VALUES ({placeholders})"
+                )
             else:  # FAIL (default)
                 insert_sql = f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders})"
 
@@ -579,8 +606,9 @@ class SyncDatabase:
 
             return len(rows)
 
-    def upsert_rows(self, table_name: str, rows: list[list[Any]],
-                   schema: TableSchema) -> tuple[int, int]:
+    def upsert_rows(
+        self, table_name: str, rows: list[list[Any]], schema: TableSchema
+    ) -> tuple[int, int]:
         """
         Upsert rows (insert or update).
 
@@ -606,8 +634,7 @@ class SyncDatabase:
                 # Check if row exists
                 pk_value = row[0] if row else None  # Assume ID is first column
                 exists = conn.execute(
-                    f"SELECT 1 FROM {table_name} WHERE {pk_column} = ?",
-                    (pk_value,)
+                    f"SELECT 1 FROM {table_name} WHERE {pk_column} = ?", (pk_value,)
                 ).fetchone()
 
                 if exists:
@@ -622,8 +649,9 @@ class SyncDatabase:
             conn.commit()
             return inserted, updated
 
-    def _insert_row(self, conn: sqlite3.Connection, table_name: str,
-                   row: list[Any], schema: TableSchema) -> None:
+    def _insert_row(
+        self, conn: sqlite3.Connection, table_name: str, row: list[Any], schema: TableSchema
+    ) -> None:
         """Insert single row."""
         # Get column names for ALL remote fields (Field_0, Field_1, ..., Field_N)
         total_fields = schema.total_fields or max(schema.fields.keys()) + 1
@@ -658,13 +686,17 @@ class SyncDatabase:
         # Add sync metadata
         values = row_values + [now, 1, False]
 
-        conn.execute(f"""
+        conn.execute(
+            f"""
             INSERT INTO {table_name} ({col_names})
             VALUES ({placeholders})
-        """, values)
+        """,
+            values,
+        )
 
-    def _update_row(self, conn: sqlite3.Connection, table_name: str,
-                   row: list[Any], schema: TableSchema) -> None:
+    def _update_row(
+        self, conn: sqlite3.Connection, table_name: str, row: list[Any], schema: TableSchema
+    ) -> None:
         """Update single row."""
         # Get primary key value (assume first configured field is ID)
         configured_positions = sorted(schema.fields.keys())
@@ -710,19 +742,20 @@ class SyncDatabase:
         set_clause = ", ".join(set_parts)
         values.append(pk_value)  # WHERE clause
 
-        conn.execute(f"""
+        conn.execute(
+            f"""
             UPDATE {table_name}
             SET {set_clause}
             WHERE {pk_column} = ?
-        """, values)
+        """,
+            values,
+        )
 
     def clear_table(self, table_name: str) -> int:
         """Clear all data from table. Returns rows deleted."""
         with self._get_connection() as conn:
             # Get count before deletion
-            count_row = conn.execute(
-                f"SELECT COUNT(*) FROM {table_name}"
-            ).fetchone()
+            count_row = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
             count = count_row[0] if count_row else 0
 
             # Clear table
@@ -731,8 +764,9 @@ class SyncDatabase:
 
             return count
 
-    def execute_query(self, table_name: str, sql: str,
-                     params: dict | None = None) -> list[dict[str, Any]]:
+    def execute_query(
+        self, table_name: str, sql: str, params: dict | None = None
+    ) -> list[dict[str, Any]]:
         """
         Execute SQL query on cached table.
 
@@ -746,10 +780,13 @@ class SyncDatabase:
         """
         with self._get_connection() as conn:
             # Ensure table exists
-            table_exists = conn.execute("""
+            table_exists = conn.execute(
+                """
                 SELECT name FROM sqlite_master
                 WHERE type='table' AND name=?
-            """, (table_name,)).fetchone()
+            """,
+                (table_name,),
+            ).fetchone()
 
             if not table_exists:
                 raise TableNotFoundError(f"Table '{table_name}' not found in cache")
@@ -797,21 +834,27 @@ class SyncDatabase:
         """Vacuum database to reclaim space."""
         with self._get_connection() as conn:
             conn.execute("VACUUM")
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE _cache_stats
                 SET last_vacuum_at = ?
                 WHERE id = 1
-            """, (datetime.now().isoformat(),))
+            """,
+                (datetime.now().isoformat(),),
+            )
 
     def analyze(self) -> None:
         """Run ANALYZE for query optimization."""
         with self._get_connection() as conn:
             conn.execute("ANALYZE")
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE _cache_stats
                 SET last_analyze_at = ?
                 WHERE id = 1
-            """, (datetime.now().isoformat(),))
+            """,
+                (datetime.now().isoformat(),),
+            )
 
     def close(self) -> None:
         """Close database connection."""

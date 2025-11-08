@@ -1,6 +1,5 @@
 """Cache management commands."""
 
-
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -20,7 +19,9 @@ cache_app = typer.Typer(
 @cache_app.command("clear")
 def clear_cache_command(
     config_file: str | None = typer.Option(None, "--config", help="Config file path"),
-    table: str | None = typer.Option(None, "--table", "-t", help="Clear cache for specific table (not implemented yet)"),
+    table: str | None = typer.Option(
+        None, "--table", "-t", help="Clear cache for specific table (not implemented yet)"
+    ),
 ) -> None:
     """
     Clear the query result cache.
@@ -48,7 +49,9 @@ def clear_cache_command(
             cleared_count = client._cache.clear(table_name=table)
 
             if table:
-                console.print(f"[green]✓ Cleared {cleared_count} cached entries for table: {table}[/green]")
+                console.print(
+                    f"[green]✓ Cleared {cleared_count} cached entries for table: {table}[/green]"
+                )
             else:
                 console.print(f"[green]✓ Cleared {cleared_count} cached entries[/green]")
 
@@ -88,27 +91,31 @@ def cache_stats_command(
             stats = client._cache.get_stats()
 
             # Display statistics in a table
-            table = Table(title="Query Cache Statistics", show_header=True, header_style="bold cyan")
+            table = Table(
+                title="Query Cache Statistics", show_header=True, header_style="bold cyan"
+            )
             table.add_column("Metric", style="cyan")
             table.add_column("Value", justify="right", style="green")
 
             table.add_row("Cache Size", f"{stats['size']} / {stats['max_size']}")
             table.add_row("Hit Rate", f"{stats['hit_rate']}%")
-            table.add_row("Cache Hits", str(stats['hits']))
-            table.add_row("Cache Misses", str(stats['misses']))
-            table.add_row("Total Requests", str(stats['total_requests']))
-            table.add_row("Evictions", str(stats['evictions']))
+            table.add_row("Cache Hits", str(stats["hits"]))
+            table.add_row("Cache Misses", str(stats["misses"]))
+            table.add_row("Total Requests", str(stats["total_requests"]))
+            table.add_row("Evictions", str(stats["evictions"]))
 
             console.print(table)
 
             # Display cache efficiency assessment
-            if stats['total_requests'] > 0:
-                if stats['hit_rate'] >= 80:
+            if stats["total_requests"] > 0:
+                if stats["hit_rate"] >= 80:
                     console.print("\n[green]✓ Cache is performing well![/green]")
-                elif stats['hit_rate'] >= 50:
+                elif stats["hit_rate"] >= 50:
                     console.print("\n[yellow]⚠ Cache hit rate could be improved[/yellow]")
                 else:
-                    console.print("\n[red]⚠ Low cache hit rate - consider adjusting cache settings[/red]")
+                    console.print(
+                        "\n[red]⚠ Low cache hit rate - consider adjusting cache settings[/red]"
+                    )
 
             # Reset if requested
             if reset:
@@ -138,7 +145,9 @@ def cache_info_command(
     table.add_column("Setting", style="cyan")
     table.add_column("Value", justify="right")
 
-    table.add_row("Enabled", "[green]Yes[/green]" if settings.enable_query_cache else "[red]No[/red]")
+    table.add_row(
+        "Enabled", "[green]Yes[/green]" if settings.enable_query_cache else "[red]No[/red]"
+    )
     table.add_row("Max Size", str(settings.cache_max_size))
     table.add_row("TTL", f"{settings.cache_ttl} seconds")
 
