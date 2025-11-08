@@ -46,14 +46,31 @@ iptvportal jsonsql select --from media --limit 5 --no-map-schema
 ```
 ### Configuration
 
-The client uses a modular configuration system powered by dynaconf:
+The client uses a modular configuration system powered by dynaconf and supports multiple configuration methods:
 
-#### Quick Setup (`.env` file)
+#### Quick Setup - Environment Variables (Recommended)
+
+Set environment variables with the `IPTVPORTAL_` prefix:
+
+```bash
+export IPTVPORTAL_DOMAIN=adstat
+export IPTVPORTAL_USERNAME=your_username
+export IPTVPORTAL_PASSWORD=your_password
+
+# Now run queries directly - automatically authenticated
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
+```
+
+Or use a `.env` file:
+
 ```env
 IPTVPORTAL_DOMAIN=adstat
 IPTVPORTAL_USERNAME=your_username
 IPTVPORTAL_PASSWORD=your_password
 ```
+
+The client automatically loads configuration from environment variables - no code changes needed! See [docs/ENV_VAR_AUTH.md](docs/ENV_VAR_AUTH.md) for complete details.
 
 #### Advanced Configuration
 
