@@ -660,6 +660,7 @@ erDiagram
 - **[CLI Documentation](docs/cli.md)** - Complete guide to CLI usage with examples
 - **[Configuration Guide](docs/configuration.md)** - Detailed configuration options and settings
 - **[JSONSQL Specification](docs/jsonsql.md)** - IPTVPortal JSONSQL API reference
+- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Annotated tree view of the codebase
 
 ### Project Structure Documentation
 
