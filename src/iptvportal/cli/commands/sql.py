@@ -49,6 +49,22 @@ def sql_main(
             "(auto-generate schema if missing)"
         ),
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug mode with detailed step-by-step logging",
+    ),
+    debug_format: str = typer.Option(
+        "text",
+        "--debug-format",
+        help="Debug output format: text, json, yaml",
+    ),
+    debug_file: str | None = typer.Option(
+        None,
+        "--debug-file",
+        help="Save debug logs to file",
+    ),
 ) -> None:
     """
     Execute SQL query (auto-transpiled to JSONSQL).
@@ -69,10 +85,25 @@ def sql_main(
         iptvportal sql -q "SELECT * FROM subscriber" --format json
         iptvportal sql -q "SELECT * FROM subscriber" -f yaml
 
-    # Disable schema mapping (if you need raw column inference)
-    iptvportal sql -q "SELECT * FROM media LIMIT 10" --no-map-schema
-    iptvportal sql -q "SELECT * FROM media" -M
+        # Disable schema mapping (if you need raw column inference)
+        iptvportal sql -q "SELECT * FROM media LIMIT 10" --no-map-schema
+        iptvportal sql -q "SELECT * FROM media" -M
+
+        # Debug mode (detailed step-by-step logging)
+        iptvportal sql -q "SELECT * FROM subscriber" --debug
+        iptvportal sql -q "SELECT * FROM media" --debug --debug-format json
+        iptvportal sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
     """
+    # Import debug logger
+    from iptvportal.cli.debug import DebugLogger
+
+    # Initialize debug logger
+    debug_logger = DebugLogger(
+        enabled=debug,
+        format_type=debug_format,
+        output_file=debug_file,
+    )
+
     # If no subcommand and ctx is being invoked
     if ctx.invoked_subcommand is not None:
         return
@@ -91,9 +122,14 @@ def sql_main(
             console.print("[red]Error: Either --query/-q or --edit/-e is required[/red]")
             raise typer.Exit(1)
 
+        # Log SQL input in debug mode
+        debug_logger.log("sql_input", sql_query, "SQL Input")
+
         # Transpile SQL to JSONSQL
+        debug_logger.log("transpiling", "Transpiling SQL to JSONSQL...", "Transpilation")
         transpiler = SQLTranspiler()
         result = transpiler.transpile(sql_query)
+        debug_logger.log("transpiled", result, "Transpiled JSONSQL")
 
         # Determine method from transpiled result
         method = result.get("_method", "select")  # Default to select if not specified
@@ -108,12 +144,21 @@ def sql_main(
         elif "from" in result and any(k in result for k in ["data", "where", "order_by", "limit"]):
             method = "select"
 
+        debug_logger.log("method", method, "Detected Method")
+
         if dry_run:
             # Show transpiled query without executing
             display_dry_run(result, method, sql=sql_query, format_type=output_format)
         else:
+            # Log execution
+            debug_logger.log("executing", f"Executing {method} query...", "Execution")
+
             # Execute query with optional schema mapping
-            query_result = execute_query(method, result, config_file, use_schema_mapping=map_schema)
+            query_result = execute_query(
+                method, result, config_file, use_schema_mapping=map_schema, debug_logger=debug_logger
+            )
+
+            debug_logger.log("result", query_result, "Query Result")
 
             if show_request:
                 # Show request and result
@@ -124,9 +169,24 @@ def sql_main(
                 # Show only result
                 display_result(query_result, output_format)
 
+        # Save debug logs to file if specified
+        debug_logger.save_to_file()
+
     except IPTVPortalError as e:
-        console.print(f"[bold red]Query failed:[/bold red] {e}")
+        debug_logger.exception(e, "IPTVPortal error occurred")
+        if debug:
+            console.print(f"\n[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
     except Exception as e:
-        console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+        debug_logger.exception(e, "Unexpected error occurred")
+        if debug:
+            console.print(f"\n[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e

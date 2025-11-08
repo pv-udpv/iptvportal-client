@@ -252,3 +252,83 @@ def test_sql_multiple_joins_dry_run():
     assert '"from":' in result.stdout
     # Verify multiple JOINs are present
     assert result.stdout.count('"join":') >= 2 or result.stdout.count("tv_channel") >= 1
+
+
+def test_sql_debug_mode():
+    """Test SQL query with --debug flag in dry-run mode."""
+    result = runner.invoke(
+        app,
+        [
+            "sql",
+            "-q",
+            "SELECT id, username FROM subscriber LIMIT 5",
+            "--dry-run",
+            "--debug",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "[DEBUG]" in result.stdout
+    assert "SQL Input" in result.stdout
+    assert "Transpiled JSONSQL" in result.stdout
+
+
+def test_sql_debug_json_format():
+    """Test SQL query with --debug and --debug-format json."""
+    result = runner.invoke(
+        app,
+        [
+            "sql",
+            "-q",
+            "SELECT * FROM subscriber LIMIT 3",
+            "--dry-run",
+            "--debug",
+            "--debug-format",
+            "json",
+        ],
+    )
+    assert result.exit_code == 0
+    # JSON format should have step and data fields
+    assert '"step":' in result.stdout
+    assert '"data":' in result.stdout
+
+
+def test_sql_debug_yaml_format():
+    """Test SQL query with --debug and --debug-format yaml."""
+    result = runner.invoke(
+        app,
+        [
+            "sql",
+            "-q",
+            "SELECT * FROM subscriber LIMIT 3",
+            "--dry-run",
+            "--debug",
+            "--debug-format",
+            "yaml",
+        ],
+    )
+    assert result.exit_code == 0
+    # YAML format should have step and data fields
+    assert "step:" in result.stdout
+    assert "data:" in result.stdout
+
+
+def test_jsonsql_debug_mode():
+    """Test jsonsql select query with --debug flag."""
+    result = runner.invoke(
+        app,
+        [
+            "jsonsql",
+            "select",
+            "--from",
+            "subscriber",
+            "--data",
+            "id,username",
+            "--limit",
+            "5",
+            "--dry-run",
+            "--debug",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "[DEBUG]" in result.stdout
+    assert "JSONSQL Parameters" in result.stdout

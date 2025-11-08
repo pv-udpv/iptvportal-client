@@ -92,6 +92,23 @@ def select_command(
         ),
     ),
     config_file: str | None = typer.Option(None, "--config", help="Config file path"),
+    # Debug options
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug mode with detailed step-by-step logging",
+    ),
+    debug_format: str = typer.Option(
+        "text",
+        "--debug-format",
+        help="Debug output format: text, json, yaml",
+    ),
+    debug_file: str | None = typer.Option(
+        None,
+        "--debug-file",
+        help="Save debug logs to file",
+    ),
 ) -> None:
     """
     Execute SELECT query.
@@ -106,7 +123,19 @@ def select_command(
 
         # With dry-run
         iptvportal jsonsql select --from subscriber --limit 5 --dry-run
+
+        # Debug mode
+        iptvportal jsonsql select --from subscriber --limit 5 --debug
     """
+    from iptvportal.cli.debug import DebugLogger
+
+    # Initialize debug logger
+    debug_logger = DebugLogger(
+        enabled=debug,
+        format_type=debug_format,
+        output_file=debug_file,
+    )
+
     try:
         if edit:
             # Editor mode: open editor for JSONSQL input
@@ -128,6 +157,7 @@ def select_command(
 
             jsonsql_str = open_jsonsql_editor(template)
             params = json.loads(jsonsql_str)
+            debug_logger.log("jsonsql_input", params, "JSONSQL Input (from editor)")
         else:
             # Native mode: build JSONSQL from parameters
             if not from_:
@@ -137,15 +167,18 @@ def select_command(
             params = build_select_params(
                 data, from_, where, order_by, limit, offset, distinct, group_by
             )
+            debug_logger.log("jsonsql_params", params, "JSONSQL Parameters (from CLI)")
 
         if dry_run:
             # Show what would be executed
             display_dry_run(params, "select", sql=None, format_type=output_format)
         else:
             # Execute query with optional schema mapping
+            debug_logger.log("executing", "Executing SELECT query...", "Execution")
             result: Any = execute_query(
-                "select", params, config_file, use_schema_mapping=map_schema
+                "select", params, config_file, use_schema_mapping=map_schema, debug_logger=debug_logger
             )
+            debug_logger.log("result", result, "Query Result")
 
             if show_request:
                 # Show request and result
@@ -156,11 +189,26 @@ def select_command(
                 # Show only result
                 display_result(result, output_format)
 
+        # Save debug logs to file if specified
+        debug_logger.save_to_file()
+
     except IPTVPortalError as e:
-        console.print(f"[bold red]Query failed:[/bold red] {e}")
+        debug_logger.exception(e, "IPTVPortal error occurred")
+        if debug:
+            console.print(f"\n[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
     except Exception as e:
-        console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+        debug_logger.exception(e, "Unexpected error occurred")
+        if debug:
+            console.print(f"\n[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
 
 

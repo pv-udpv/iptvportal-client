@@ -122,6 +122,7 @@ def execute_query(
     params: dict[str, Any],
     config_file: str | None = None,
     use_schema_mapping: bool = False,
+    debug_logger: Any = None,
 ) -> Any:
     """
     Execute query through IPTVPortal client.
@@ -131,19 +132,29 @@ def execute_query(
         params: Query parameters
         config_file: Optional config file path
         use_schema_mapping: Whether to use schema-based result mapping
+        debug_logger: Optional debug logger instance
 
     Returns:
         Query result (raw or schema-mapped)
     """
     settings = load_config(config_file)
 
+    if debug_logger:
+        debug_logger.log("config", settings.model_dump(), "Configuration")
+
     with IPTVPortalClient(settings) as client:
         request = build_jsonrpc_request(method, params)
+
+        if debug_logger:
+            debug_logger.log("jsonrpc_request", request, "JSON-RPC Request")
 
         # Use schema mapping if enabled and schemas are available
         if use_schema_mapping and method == "select":
             # Extract table name from params
             table_name = extract_table_name(params, method)
+
+            if debug_logger:
+                debug_logger.log("table_name", table_name, "Extracted Table Name")
 
             if not table_name:
                 console.print(
@@ -154,9 +165,14 @@ def execute_query(
             # Check if schema exists for this table
             if client.schema_registry.has(table_name):
                 console.print(f"[dim]Using existing schema for table: {table_name}[/dim]")
+                if debug_logger:
+                    debug_logger.log("schema_status", "using_existing", "Schema Status")
                 return client.execute_mapped(request, table_name=table_name)
             # Auto-generate schema from first result row
             console.print(f"[cyan]Auto-generating schema for table: {table_name}[/cyan]")
+
+            if debug_logger:
+                debug_logger.log("schema_status", "auto_generating", "Schema Status")
 
             # Execute query to get sample result
             result = client.execute(request)
@@ -171,6 +187,13 @@ def execute_query(
 
                 # Auto-generate schema
                 schema = TableSchema.auto_generate(table_name, sample_row)
+
+                if debug_logger:
+                    debug_logger.log("generated_schema", {
+                        "table": table_name,
+                        "total_fields": schema.total_fields,
+                        "fields": list(schema.fields.keys())
+                    }, "Generated Schema")
 
                 # Register for future use
                 client.schema_registry.register(schema)
