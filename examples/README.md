@@ -1,6 +1,25 @@
-# Schema Examples
+# IPTVPortal Client Examples
 
-This directory contains example schema definitions demonstrating various features of the iptvportal-client schema system.
+This directory contains practical examples demonstrating various features of the iptvportal-client.
+
+## ⚠️ Safety Notice for Production Systems
+
+**IMPORTANT**: These examples may connect to production systems. To ensure safety:
+
+- ✅ **Authentication examples use READ-ONLY operations** (SELECT queries only)
+- ❌ **No UPDATE operations** that modify existing data
+- ❌ **No DELETE operations** that remove data
+- ❌ **No INSERT operations** in production (use test environments)
+
+## Examples Overview
+
+### Authentication Examples (`authentication_examples.py`)
+
+Demonstrates various authentication patterns and scenarios. **All examples use safe read-only operations.**
+
+### Schema Examples
+
+Schema definitions demonstrating various features of the iptvportal-client schema system.
 
 ## Files
 
