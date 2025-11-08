@@ -1,6 +1,8 @@
 """Config command for managing configuration."""
 
 import json
+from pathlib import Path
+from typing import Literal
 
 import typer
 import yaml
@@ -308,3 +310,172 @@ def _print_tree(name: str, data: dict, tree: Tree | None = None) -> Tree:
         console.print(tree)
     
     return tree
+
+
+@config_app.command(name="inspect")
+def inspect_command(
+    scope: str = typer.Option(
+        "src",
+        "--scope",
+        help="Directory to start scanning for settings classes (default: src)"
+    ),
+    ignore: list[str] = typer.Option(
+        None,
+        "--ignore",
+        help="Patterns to ignore during scanning (can be specified multiple times)"
+    ),
+    settings_context: str = typer.Option(
+        "",
+        "--settings-context",
+        help="Base path in settings tree where discovered settings should be attached (e.g., 'sync', 'cli.advanced')"
+    ),
+    strategy: Literal["single", "per-module", "file-per-module"] = typer.Option(
+        "file-per-module",
+        "--strategy",
+        help="File generation strategy: 'single' (one file), 'per-module' (one per Python module), 'file-per-module' (one per settings class)"
+    ),
+    output: str = typer.Option(
+        "config/generated",
+        "--output",
+        "-o",
+        help="Output directory for generated configuration files"
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Show what would be generated without creating files"
+    ),
+) -> None:
+    """Inspect code for settings classes and generate configuration files.
+    
+    This command scans Python modules for Pydantic BaseSettings classes,
+    dynaconf configurations, and other settings models, then generates
+    corresponding YAML configuration files.
+    
+    Examples:
+        # Scan src directory and generate one file per settings class
+        iptvportal config inspect
+        
+        # Scan specific directory with custom output
+        iptvportal config inspect --scope src/iptvportal/sync --output config/sync
+        
+        # Generate single settings.yaml with all discovered settings
+        iptvportal config inspect --strategy single
+        
+        # Ignore test files and generate files per module
+        iptvportal config inspect --ignore "test_*" --ignore "*_test.py" --strategy per-module
+        
+        # Attach discovered settings to a specific context
+        iptvportal config inspect --settings-context sync.advanced
+        
+        # Dry run to see what would be generated
+        iptvportal config inspect --dry-run
+    """
+    try:
+        from iptvportal.cli.introspection import (
+            discover_settings_classes,
+            generate_settings_yaml,
+        )
+        
+        console.print("\n[bold cyan]Configuration Inspection[/bold cyan]\n")
+        
+        # Resolve paths
+        scope_path = Path(scope)
+        if not scope_path.is_absolute():
+            scope_path = Path.cwd() / scope_path
+        
+        if not scope_path.exists():
+            console.print(f"[bold red]Error:[/bold red] Scope directory not found: {scope_path}")
+            raise typer.Exit(1)
+        
+        console.print(f"[dim]Scanning:[/dim] {scope_path}")
+        
+        # Set default ignore patterns
+        ignore_patterns = list(ignore) if ignore else []
+        if not ignore_patterns:
+            ignore_patterns = ["test_*", "*_test.py", "__pycache__", ".*"]
+        
+        console.print(f"[dim]Ignoring:[/dim] {', '.join(ignore_patterns)}")
+        console.print(f"[dim]Strategy:[/dim] {strategy}")
+        if settings_context:
+            console.print(f"[dim]Context:[/dim] {settings_context}")
+        console.print()
+        
+        # Discover settings classes
+        with console.status("[bold green]Discovering settings classes..."):
+            settings_classes = discover_settings_classes(scope_path, ignore_patterns)
+        
+        if not settings_classes:
+            console.print("[yellow]No settings classes found.[/yellow]")
+            console.print("\n[dim]Tip: Make sure your settings classes inherit from BaseSettings[/dim]\n")
+            return
+        
+        # Display discovered classes
+        console.print(f"[green]Found {len(settings_classes)} settings class(es):[/green]\n")
+        
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column("Class", style="white")
+        table.add_column("Module", style="dim")
+        table.add_column("Fields", style="yellow")
+        
+        for class_info in settings_classes:
+            table.add_row(
+                class_info.class_name,
+                class_info.module,
+                str(len(class_info.fields))
+            )
+        
+        console.print(table)
+        console.print()
+        
+        if dry_run:
+            console.print("[bold yellow]Dry run - no files will be created[/bold yellow]\n")
+            
+            # Show what would be generated
+            console.print("[bold cyan]Would generate:[/bold cyan]\n")
+            
+            for class_info in settings_classes:
+                console.print(f"[green]• {class_info.class_name}[/green]")
+                console.print(f"  [dim]{class_info.module}[/dim]")
+                
+                if class_info.docstring:
+                    console.print(f"  [dim]{class_info.docstring[:80]}...[/dim]" if len(class_info.docstring) > 80 else f"  [dim]{class_info.docstring}[/dim]")
+                
+                console.print(f"  [yellow]Fields:[/yellow] {', '.join(f.name for f in class_info.fields[:5])}")
+                if len(class_info.fields) > 5:
+                    console.print(f"    [dim]...and {len(class_info.fields) - 5} more[/dim]")
+                console.print()
+        else:
+            # Generate files
+            output_path = Path(output)
+            if not output_path.is_absolute():
+                output_path = Path.cwd() / output_path
+            
+            with console.status("[bold green]Generating configuration files..."):
+                generated_files = generate_settings_yaml(
+                    settings_classes,
+                    strategy,
+                    settings_context,
+                    output_path
+                )
+            
+            console.print(f"[green]✓ Generated {len(generated_files)} file(s) in {output_path}[/green]\n")
+            
+            for file_path in generated_files:
+                rel_path = file_path.relative_to(Path.cwd()) if file_path.is_relative_to(Path.cwd()) else file_path
+                console.print(f"  [cyan]• {rel_path}[/cyan]")
+            
+            console.print()
+            console.print("[dim]Review the generated files and adjust as needed.[/dim]")
+            console.print("[dim]Use 'iptvportal config conf --files' to see loaded configuration files.[/dim]\n")
+    
+    except ImportError as e:
+        console.print(f"[bold red]Error:[/bold red] Failed to import introspection module: {e}")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        import traceback
+        if "--verbose" in typer.get_current_context().args:
+            console.print(traceback.format_exc())
+        raise typer.Exit(1)
+

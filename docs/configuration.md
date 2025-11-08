@@ -26,6 +26,26 @@ Settings in `config/schemas/*.settings.yaml` override main settings for specific
 
 ## CLI Commands
 
+### Inspect Code for Settings
+
+The `inspect` command scans your codebase for settings classes and generates configuration files:
+
+```bash
+# Generate config files from code
+iptvportal config inspect
+
+# Scan specific directory
+iptvportal config inspect --scope src/iptvportal/sync
+
+# Generate single file
+iptvportal config inspect --strategy single
+
+# Dry run to preview
+iptvportal config inspect --dry-run
+```
+
+See [Config Inspect Documentation](config-inspect.md) for detailed usage.
+
 ### Show All Configuration
 
 ```bash
