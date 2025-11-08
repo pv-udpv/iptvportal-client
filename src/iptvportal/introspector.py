@@ -89,7 +89,7 @@ class SchemaIntrospector:
                 else:
                     field_name = base_name
                 description = "Auto-detected field"
-            
+
             used_names.add(field_name)
             fields[position] = FieldDefinition(
                 name=field_name, position=position, field_type=field_type, description=description

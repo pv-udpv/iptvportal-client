@@ -4,30 +4,33 @@ Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync sup
 
 ## Features
 
-- 🚀 **Full Type Safety** - Complete type hints with Pydantic v2 validation
-- ⚡ **Async/Sync APIs** - Identical interfaces for both paradigms
-- 🔧 **Python DSL** - Intuitive query builder with Field API and Q objects
-- 🔐 **Secure** - SecretStr for passwords, session caching, SSL verification
-- 🔄 **Resilient** - Exponential backoff retry mechanism with enhanced error messages
-- 📦 **Resource Managers** - High-level CRUD operations
-- 🎯 **Context Managers** - Automatic connection management
-- 🔄 **SQL Transpiler** - Convert PostgreSQL to JSONSQL automatically
+ - 🧬 **Schema-Aware Formatting** - CLI auto-generates or reuses table schemas to render column names in table/JSON output (disable with `--no-map-schema`)
 
 ## Installation
 
+ iptvportal sql -q "SELECT * FROM media LIMIT 5"            # Auto schema mapping ON (default)
+ iptvportal sql -q "SELECT * FROM media LIMIT 5" --no-map-schema  # Disable mapping
 ```bash
 # Using pip
 pip install iptvportal-client
+ iptvportal jsonsql select --from media --limit 5            # Auto schema mapping ON (default)
+ iptvportal jsonsql select --from media --limit 5 --no-map-schema  # Disable mapping
 
 # Using uv (recommended)
 uv pip install iptvportal-client
 
+
+# Disable automatic schema mapping (returns raw field inference)
+ iptvportal sql -q "SELECT * FROM subscriber LIMIT 10" --no-map-schema
 # With CLI support
 pip install iptvportal-client[cli]
 ```
 
 ## Quick Start
 
+
+# Disable schema mapping if you want raw field inference
+ iptvportal jsonsql select --from subscriber --limit 10 --no-map-schema
 ### Configuration
 
 Create `.env` file:

@@ -26,6 +26,12 @@ iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
 
 # Or use native JSONSQL
 iptvportal jsonsql select --from subscriber --limit 5
+ 
+# (New) Schema mapping ON by default: column names shown using schema (auto-generated if missing)
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"               # mapped
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema  # disable mapping
+iptvportal jsonsql select --from subscriber --limit 5                # mapped
+iptvportal jsonsql select --from subscriber --limit 5 --no-map-schema # disable mapping
 ```
 
 ## Configuration
@@ -437,13 +443,15 @@ All query commands support multiple output formats:
 ```bash
 iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
 
-# Output:
+# Output (schema-mapped by default):
 # ┏━━━━┳━━━━━━━━━━┳━━━━━━━━━━┓
 # ┃ id ┃ username ┃ disabled ┃
 # ┡━━━━╇━━━━━━━━━━╇━━━━━━━━━━┩
 # │ 1  │ test123  │ false    │
 # │ 2  │ user456  │ false    │
 # └────┴──────────┴──────────┘
+# Disable mapping if you need raw positional inference:
+# iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema
 ```
 
 ### JSON Format
@@ -451,7 +459,7 @@ iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
 ```bash
 iptvportal sql -q "SELECT * FROM subscriber LIMIT 2" --format json
 
-# Output:
+# Output (schema-mapped keys):
 # [
 #   {"id": 1, "username": "test123", "disabled": false},
 #   {"id": 2, "username": "user456", "disabled": false}
@@ -463,7 +471,7 @@ iptvportal sql -q "SELECT * FROM subscriber LIMIT 2" --format json
 ```bash
 iptvportal sql -q "SELECT * FROM subscriber LIMIT 2" -f yaml
 
-# Output:
+# Output (schema-mapped keys):
 # - id: 1
 #   username: test123
 #   disabled: false
@@ -716,6 +724,7 @@ which vim nano emacs code
 8. **Use config init wizard** for first-time setup
 9. **Test with LIMIT** before running large queries
 10. **Use transpile command** to learn JSONSQL format
+11. **Disable auto schema mapping** with `--no-map-schema` for debugging raw field positions
 
 ## Command Cheat Sheet
 

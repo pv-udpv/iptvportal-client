@@ -37,7 +37,7 @@ class SQLTranspiler:
         self,
         dialect: str = "postgres",
         schema_registry: Optional[Any] = None,
-        auto_order_by_id: bool = True
+        auto_order_by_id: bool = True,
     ):
         """
         Initialize the transpiler.
@@ -131,11 +131,13 @@ class SQLTranspiler:
             # 4. No GROUP BY clause (aggregate queries don't need ORDER BY id)
             # 5. No aggregate functions in SELECT (they conflict with ORDER BY)
             # 6. Query selects id field (either explicitly or via SELECT *)
+            # 7. No JOINs (ORDER BY id would be ambiguous with multiple tables)
             has_group_by = select.args.get("group") is not None
             has_aggregate = self._has_aggregate_functions(select.expressions)
             has_id_field = self._has_id_field(select.expressions)
-            
-            if not has_group_by and not has_aggregate and has_id_field:
+            has_joins = bool(select.args.get("joins"))
+
+            if not has_group_by and not has_aggregate and has_id_field and not has_joins:
                 result["order_by"] = "id"
 
         # Handle LIMIT
@@ -155,66 +157,80 @@ class SQLTranspiler:
     def _has_id_field(self, expressions: list[exp.Expression]) -> bool:
         """
         Check if the SELECT expressions include the 'id' field.
-        
+
         Returns True if:
         - SELECT * is used
         - 'id' field is explicitly selected
         """
+
         def check_expr(expr: exp.Expression) -> bool:
             """Check if expression represents the id field."""
             # Check for SELECT *
             if isinstance(expr, exp.Star):
                 return True
-            
+
             # Check for explicit 'id' column
             if isinstance(expr, exp.Column):
-                return expr.name.lower() == 'id'
-            
+                return expr.name.lower() == "id"
+
             # Check within alias
             if isinstance(expr, exp.Alias):
                 return check_expr(expr.this)
-            
+
             return False
-        
+
         return any(check_expr(expr) for expr in expressions)
-    
+
     def _has_aggregate_functions(self, expressions: list[exp.Expression]) -> bool:
         """
         Check if any of the SELECT expressions contain aggregate functions.
-        
+
         Aggregate functions: COUNT, SUM, AVG, MAX, MIN, etc.
         """
         aggregate_functions = {
-            'COUNT', 'SUM', 'AVG', 'MAX', 'MIN', 
-            'STDDEV', 'VARIANCE', 'ARRAY_AGG', 'STRING_AGG',
-            'BOOL_AND', 'BOOL_OR', 'EVERY', 'JSON_AGG', 'JSONB_AGG'
+            "COUNT",
+            "SUM",
+            "AVG",
+            "MAX",
+            "MIN",
+            "STDDEV",
+            "VARIANCE",
+            "ARRAY_AGG",
+            "STRING_AGG",
+            "BOOL_AND",
+            "BOOL_OR",
+            "EVERY",
+            "JSON_AGG",
+            "JSONB_AGG",
         }
-        
+
         def check_expr(expr: exp.Expression) -> bool:
             """Recursively check if expression contains aggregate functions."""
             if isinstance(expr, (exp.Anonymous, exp.Func)):
                 func_name = expr.sql_name() if hasattr(expr, "sql_name") else type(expr).__name__
                 if func_name.upper() in aggregate_functions:
                     return True
-            
+
             # Check nested expressions
             if isinstance(expr, exp.Alias):
                 return check_expr(expr.this)
-            
+
             # Check function arguments
             if hasattr(expr, "expressions") and expr.expressions:
                 for arg in expr.expressions:
                     if check_expr(arg):
                         return True
-            
+
             if hasattr(expr, "this") and expr.this and isinstance(expr.this, exp.Expression):
                 return check_expr(expr.this)
-            
+
             return False
-        
+
         return any(check_expr(expr) for expr in expressions)
-    
-    def _transpile_select_columns(self, expressions: list[exp.Expression], from_table: Optional[str] = None) -> list[Any]:
+
+    def _transpile_select_columns(
+        self, expressions: list[exp.Expression], from_table: Optional[str] = None
+    ) -> list[Any]:
         """Transpile SELECT column expressions."""
         columns = []
 
@@ -374,12 +390,6 @@ class SQLTranspiler:
             right = self._transpile_expression(expr.expression)
             return build_is(left, right)
 
-        elif isinstance(expr, exp.IsNot):
-            # Handle IS NOT NULL / IS NOT <value>
-            left = self._transpile_expression(expr.this)
-            right = self._transpile_expression(expr.expression)
-            return build_is_not(left, right)
-
         elif isinstance(expr, exp.Binary):
             return self._transpile_binary(expr)
 
@@ -387,8 +397,16 @@ class SQLTranspiler:
             return self._transpile_in(expr)
 
         elif isinstance(expr, exp.Not):
-            operand = self._transpile_expression(expr.this)
-            return build_not(operand)
+            # Check if this is IS NOT (NOT wrapping IS expression)
+            if isinstance(expr.this, exp.Is):
+                # Handle IS NOT NULL / IS NOT <value>
+                left = self._transpile_expression(expr.this.this)
+                right = self._transpile_expression(expr.this.expression)
+                return build_is_not(left, right)
+            else:
+                # Regular NOT operator
+                operand = self._transpile_expression(expr.this)
+                return build_not(operand)
 
         elif isinstance(expr, (exp.Anonymous, exp.Func)):
             return self._transpile_function(expr)
