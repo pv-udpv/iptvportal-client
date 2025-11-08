@@ -237,6 +237,19 @@ docs-serve: ## Serve documentation locally (if docs server exists)
 	@echo "$(YELLOW)Documentation serving not yet implemented$(NC)"
 	@echo "View docs in docs/ directory"
 
+docs-tree: ## Generate annotated tree structure of the project
+	@echo "$(BLUE)Generating project tree structure...$(NC)"
+	@python scripts/generate_tree_docs.py src/iptvportal --max-depth 3
+
+docs-tree-full: ## Generate full annotated tree structure (no depth limit)
+	@echo "$(BLUE)Generating full project tree structure...$(NC)"
+	@python scripts/generate_tree_docs.py src/iptvportal
+
+docs-tree-file: ## Generate tree structure and save to file (default: PROJECT_STRUCTURE.md)
+	@echo "$(BLUE)Generating project tree structure to PROJECT_STRUCTURE.md...$(NC)"
+	@python scripts/generate_tree_docs.py src/iptvportal --max-depth 3 --output PROJECT_STRUCTURE.md
+	@echo "$(GREEN)✓ Tree structure written to PROJECT_STRUCTURE.md$(NC)"
+
 # Database/Cache management
 cache-clear: ## Clear all caches
 	@echo "$(YELLOW)Clearing caches...$(NC)"

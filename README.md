@@ -661,6 +661,29 @@ erDiagram
 - **[Configuration Guide](docs/configuration.md)** - Detailed configuration options and settings
 - **[JSONSQL Specification](docs/jsonsql.md)** - IPTVPortal JSONSQL API reference
 
+### Project Structure Documentation
+
+Generate annotated tree structure of the project:
+
+```bash
+# Quick view (max depth 3)
+make docs-tree
+
+# Full tree structure
+make docs-tree-full
+
+# Save to file
+make docs-tree-file
+```
+
+Or use the script directly:
+
+```bash
+python scripts/generate_tree_docs.py src/iptvportal --max-depth 3
+```
+
+See [scripts/README.md](scripts/README.md) for more details.
+
 ## Development
 
 ```bash
