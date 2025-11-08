@@ -1,0 +1,261 @@
+# Example schema with full feature set including:
+# - Remote mapping validation metadata
+# - Database constraints
+# - ORM relationships
+
+schemas:
+  # Subscriber table with full metadata
+  subscriber:
+    total_fields: 10
+    description: "Users/subscribers in the system"
+    
+    fields:
+      0:
+        name: id
+        type: integer
+        description: "Primary key"
+        constraints:
+          primary_key: true
+          nullable: false
+          unique: true
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 1000
+          validated_at: "2025-01-01T10:00:00"
+          dtype: "int64"
+          null_count: 0
+          unique_count: 1000
+          remote_column: "id"
+        relationships:
+          type: "one-to-many"
+          target_table: "terminal"
+          field_name: "terminals"
+          back_populates: "subscriber"
+      
+      1:
+        name: username
+        type: string
+        description: "Login username"
+        constraints:
+          nullable: false
+          unique: true
+          index: true
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 1000
+          validated_at: "2025-01-01T10:00:00"
+          dtype: "object"
+          null_count: 0
+          unique_count: 1000
+          remote_column: "username"
+      
+      2:
+        name: email
+        type: string
+        description: "Email address"
+        constraints:
+          nullable: true
+          unique: true
+          index: true
+        remote_mapping:
+          match_ratio: 0.98
+          sample_size: 1000
+          validated_at: "2025-01-01T10:00:00"
+          dtype: "object"
+          null_count: 15
+          unique_count: 985
+          remote_column: "email"
+      
+      3:
+        name: disabled
+        type: boolean
+        description: "Account disabled flag"
+        constraints:
+          nullable: false
+          default: false
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 1000
+          dtype: "bool"
+          null_count: 0
+          remote_column: "disabled"
+      
+      4:
+        name: balance
+        type: float
+        description: "Account balance"
+        constraints:
+          nullable: false
+          default: 0.0
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 1000
+          dtype: "float64"
+          null_count: 0
+          min_value: 0.0
+          max_value: 10000.0
+          remote_column: "balance"
+      
+      5:
+        name: created_at
+        type: datetime
+        transformer: datetime
+        description: "Registration date"
+        constraints:
+          nullable: false
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 1000
+          dtype: "datetime64[ns]"
+          null_count: 0
+          min_value: "2020-01-01T00:00:00"
+          max_value: "2025-01-01T00:00:00"
+          remote_column: "created_at"
+    
+    metadata:
+      row_count: 150000
+      max_id: 150000
+      min_id: 1
+      analyzed_at: "2025-01-01T10:00:00"
+      created_at_min: "2020-01-01T00:00:00"
+      created_at_max: "2025-01-01T00:00:00"
+    
+    sync_config:
+      where: "disabled = false"
+      order_by: "id"
+      chunk_size: 10000
+      cache_strategy: "incremental"
+      auto_sync: false
+      ttl: 600
+      incremental_field: "created_at"
+      incremental_mode: true
+
+  # Terminal (device) table with foreign key relationship
+  terminal:
+    total_fields: 8
+    description: "User devices (set-top boxes, smart TVs)"
+    
+    fields:
+      0:
+        name: id
+        type: integer
+        description: "Primary key"
+        constraints:
+          primary_key: true
+          nullable: false
+      
+      1:
+        name: subscriber_id
+        type: integer
+        description: "Foreign key to subscriber"
+        constraints:
+          nullable: false
+          foreign_key: "subscriber.id"
+          index: true
+        relationships:
+          type: "many-to-one"
+          target_table: "subscriber"
+          field_name: "subscriber"
+          back_populates: "terminals"
+      
+      2:
+        name: mac_addr
+        alias: mac
+        type: string
+        description: "MAC address of device"
+        constraints:
+          nullable: false
+          unique: true
+          index: true
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 500
+          dtype: "object"
+          null_count: 0
+          unique_count: 500
+          remote_column: "mac_addr"
+      
+      3:
+        name: active
+        type: boolean
+        description: "Device active flag"
+        constraints:
+          nullable: false
+          default: true
+      
+      4:
+        name: last_seen
+        type: datetime
+        transformer: datetime
+        description: "Last activity timestamp"
+        constraints:
+          nullable: true
+    
+    metadata:
+      row_count: 75000
+      max_id: 75000
+      min_id: 1
+      analyzed_at: "2025-01-01T10:00:00"
+    
+    sync_config:
+      where: "active = true"
+      chunk_size: 5000
+      cache_strategy: "full"
+      auto_sync: true
+      ttl: 1800
+
+  # Package table (subscription packages)
+  package:
+    total_fields: 7
+    description: "Subscription packages"
+    
+    fields:
+      0:
+        name: id
+        type: integer
+        description: "Primary key"
+        constraints:
+          primary_key: true
+          nullable: false
+      
+      1:
+        name: name
+        type: string
+        description: "Package name"
+        constraints:
+          nullable: false
+          unique: true
+      
+      2:
+        name: price
+        type: float
+        description: "Package price"
+        constraints:
+          nullable: false
+        remote_mapping:
+          match_ratio: 1.0
+          sample_size: 100
+          dtype: "float64"
+          null_count: 0
+          min_value: 0.0
+          max_value: 500.0
+          remote_column: "price"
+      
+      3:
+        name: active
+        type: boolean
+        description: "Package active flag"
+        constraints:
+          nullable: false
+          default: true
+    
+    metadata:
+      row_count: 25
+      max_id: 25
+      min_id: 1
+    
+    sync_config:
+      chunk_size: 100
+      cache_strategy: "full"
+      auto_sync: true
+      ttl: 3600
