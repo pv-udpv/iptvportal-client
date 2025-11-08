@@ -135,13 +135,17 @@ result = transpiler.transpile(sql)
 
 ### Supported Features
 
-- **SELECT statements** with columns, aliases, WHERE, GROUP BY, ORDER BY, LIMIT, OFFSET
-- **JOINs** (INNER, LEFT, RIGHT) with complex ON conditions
-- **Aggregate functions** (COUNT, SUM, AVG, MIN, MAX, etc.)
-- **Subqueries** in FROM and WHERE clauses
-- **Operators**: comparison (=, !=, >, <, >=, <=), logical (AND, OR, NOT), pattern matching (LIKE, ILIKE), set operations (IN)
+- **SELECT statements** with columns, aliases, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, DISTINCT
+- **JOINs** (INNER, LEFT, RIGHT, FULL, CROSS) with complex ON conditions
+- **Aggregate functions** (COUNT, SUM, AVG, MIN, MAX) with DISTINCT support
+- **Subqueries** in FROM, WHERE, and SELECT clauses
+- **Comparison operators**: `=`, `!=`, `>`, `<`, `>=`, `<=`, `IS`, `IS NOT`
+- **Logical operators**: `AND`, `OR`, `NOT`
+- **Mathematical operators**: `+` (add), `-` (sub), `*` (mul), `/` (div), `%` (mod)
+- **Pattern matching**: `LIKE`, `ILIKE`
+- **Set operations**: `IN`, `NOT IN`
 - **INSERT, UPDATE, DELETE** statements with RETURNING clause
-- **Functions**: COUNT(DISTINCT), REGEXP_REPLACE, DATE, and more
+- **Special functions**: COUNT(DISTINCT col), REGEXP_REPLACE, and more
 
 ## Query Building
 
