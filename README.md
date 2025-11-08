@@ -639,7 +639,9 @@ erDiagram
 
 ## Documentation
 
+- **[Authentication Guide](docs/authentication.md)** - Complete guide to authentication setup and usage
 - **[CLI Documentation](docs/cli.md)** - Complete guide to CLI usage with examples
+- **[Configuration Guide](docs/configuration.md)** - Detailed configuration options and settings
 - **[JSONSQL Specification](docs/jsonsql.md)** - IPTVPortal JSONSQL API reference
 
 ## Development
