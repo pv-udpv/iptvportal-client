@@ -272,6 +272,18 @@ class SQLTranspiler:
         elif isinstance(expr, exp.Literal):
             return self._transpile_literal(expr)
 
+        elif isinstance(expr, exp.Is):
+            # Handle IS NULL / IS <value>
+            left = self._transpile_expression(expr.this)
+            right = self._transpile_expression(expr.expression)
+            return build_is(left, right)
+
+        elif isinstance(expr, exp.IsNot):
+            # Handle IS NOT NULL / IS NOT <value>
+            left = self._transpile_expression(expr.this)
+            right = self._transpile_expression(expr.expression)
+            return build_is_not(left, right)
+
         elif isinstance(expr, exp.Binary):
             return self._transpile_binary(expr)
 
@@ -293,6 +305,14 @@ class SQLTranspiler:
 
         elif isinstance(expr, exp.Alias):
             return self._transpile_column_expression(expr.this)
+
+        elif isinstance(expr, exp.Null):
+            # Handle NULL literal
+            return None
+
+        elif isinstance(expr, exp.Boolean):
+            # Handle TRUE/FALSE literals
+            return expr.this
 
         else:
             # Fallback: try to convert to string
