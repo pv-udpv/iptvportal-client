@@ -37,3 +37,6 @@ test_*_manual.py
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated documentation (root only)
+/PROJECT_STRUCTURE.md
