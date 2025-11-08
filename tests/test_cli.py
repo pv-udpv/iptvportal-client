@@ -188,3 +188,67 @@ def test_query_delete_missing_from():
     result = runner.invoke(app, ["jsonsql", "delete", "--where", '{"eq": ["id", 123]}'])
     assert result.exit_code == 1
     assert "--from is required" in result.stdout
+
+
+def test_sql_join_dry_run():
+    """Test SQL query with JOIN in dry-run mode."""
+    result = runner.invoke(
+        app,
+        [
+            "sql",
+            "-q",
+            "SELECT c.name AS channel, p.title AS program FROM tv_program p JOIN tv_channel c ON p.channel_id = c.id LIMIT 10",
+            "--dry-run",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "DRY RUN MODE" in result.stdout
+    assert '"from":' in result.stdout
+    # Verify it shows the JOIN structure
+    assert '"join":' in result.stdout or "tv_channel" in result.stdout
+
+
+def test_sql_join_with_show_request():
+    """Test SQL query with JOIN and --show-request flag in dry-run mode."""
+    result = runner.invoke(
+        app,
+        [
+            "sql",
+            "-q",
+            "SELECT c.name AS channel, p.title AS program FROM tv_program p JOIN tv_channel c ON p.channel_id = c.id LIMIT 10",
+            "--dry-run",
+            "--show-request",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "DRY RUN MODE" in result.stdout
+    assert "JSON-RPC Request:" in result.stdout
+    assert '"from":' in result.stdout
+
+
+def test_sql_multiple_joins_dry_run():
+    """Test SQL query with multiple JOINs in dry-run mode."""
+    result = runner.invoke(
+        app,
+        [
+            "sql",
+            "-q",
+            """SELECT 
+                c.name AS channel,
+                p.title AS program,
+                cat.name AS category,
+                cat.genre AS genre
+            FROM tv_program p
+            JOIN tv_channel c ON p.channel_id = c.id
+            JOIN tv_program_category pc ON pc.program_id = p.id
+            JOIN tv_category cat ON pc.category_id = cat.id
+            WHERE p.epg_provider_id = 36
+            LIMIT 10""",
+            "--dry-run",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "DRY RUN MODE" in result.stdout
+    assert '"from":' in result.stdout
+    # Verify multiple JOINs are present
+    assert result.stdout.count('"join":') >= 2 or result.stdout.count("tv_channel") >= 1

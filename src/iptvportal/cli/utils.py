@@ -86,7 +86,14 @@ def extract_table_name(params: dict[str, Any], method: str) -> str | None:
     """
     # Try different parameter keys based on method
     if method == "select":
-        return params.get("from")
+        from_value = params.get("from")
+        # Handle JOIN queries where from is a list
+        if isinstance(from_value, list):
+            if from_value and isinstance(from_value[0], dict):
+                # Extract table name from first element
+                return from_value[0].get("table")
+            return None
+        return from_value
     if method == "insert":
         return params.get("into")
     if method in ("update", "delete"):
@@ -96,8 +103,15 @@ def extract_table_name(params: dict[str, Any], method: str) -> str | None:
     for key in ("from", "table", "into"):
         if key in params:
             value = params[key]
+            # Handle if it's a list (JOIN queries)
+            if isinstance(value, list):
+                if value and isinstance(value[0], dict):
+                    # Extract table name from first element
+                    table_name = value[0].get("table")
+                    if table_name:
+                        return table_name.lower()
             # Handle if it's a string (table name)
-            if isinstance(value, str):
+            elif isinstance(value, str):
                 return value.lower()
 
     return None
