@@ -332,3 +332,67 @@ def test_jsonsql_debug_mode():
     assert result.exit_code == 0
     assert "[DEBUG]" in result.stdout
     assert "JSONSQL Parameters" in result.stdout
+
+
+def test_jsonsql_insert_debug_mode():
+    """Test jsonsql insert query with --debug flag."""
+    result = runner.invoke(
+        app,
+        [
+            "jsonsql",
+            "insert",
+            "--into",
+            "package",
+            "--columns",
+            "name,paid",
+            "--values",
+            '[["test", true]]',
+            "--dry-run",
+            "--debug",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "[DEBUG]" in result.stdout
+    assert "JSONSQL Parameters" in result.stdout
+
+
+def test_jsonsql_update_debug_mode():
+    """Test jsonsql update query with --debug flag."""
+    result = runner.invoke(
+        app,
+        [
+            "jsonsql",
+            "update",
+            "--table",
+            "subscriber",
+            "--set",
+            '{"disabled": true}',
+            "--where",
+            '{"eq": ["id", 123]}',
+            "--dry-run",
+            "--debug",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "[DEBUG]" in result.stdout
+    assert "JSONSQL Parameters" in result.stdout
+
+
+def test_jsonsql_delete_debug_mode():
+    """Test jsonsql delete query with --debug flag."""
+    result = runner.invoke(
+        app,
+        [
+            "jsonsql",
+            "delete",
+            "--from",
+            "terminal",
+            "--where",
+            '{"eq": ["id", 456]}',
+            "--dry-run",
+            "--debug",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "[DEBUG]" in result.stdout
+    assert "JSONSQL Parameters" in result.stdout

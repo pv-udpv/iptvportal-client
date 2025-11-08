@@ -338,6 +338,13 @@ iptvportal jsonsql insert \
 
 # Using editor
 iptvportal jsonsql insert --edit
+
+# With debug mode
+iptvportal jsonsql insert \
+  --into package \
+  --columns "name,paid" \
+  --values '[["Test", true]]' \
+  --debug
 ```
 
 #### UPDATE Command
@@ -357,6 +364,13 @@ iptvportal jsonsql update \
 
 # Using editor
 iptvportal jsonsql update --edit
+
+# With debug mode
+iptvportal jsonsql update \
+  --table subscriber \
+  --set '{"disabled": true}' \
+  --where '{"eq": ["id", 123]}' \
+  --debug
 ```
 
 #### DELETE Command
@@ -375,6 +389,12 @@ iptvportal jsonsql delete \
 
 # Using editor
 iptvportal jsonsql delete --edit
+
+# With debug mode
+iptvportal jsonsql delete \
+  --from terminal \
+  --where '{"eq": ["id", 456]}' \
+  --debug
 ```
 
 #### JSONSQL Editor Mode
@@ -530,7 +550,7 @@ Useful for:
 
 Enable detailed step-by-step logging for troubleshooting and understanding query execution flow.
 
-**Available in:** `sql` and `jsonsql` commands
+**Available in:** `sql` and all `jsonsql` commands (select, insert, update, delete)
 
 ```bash
 # Basic debug mode (human-readable text format)
@@ -547,6 +567,12 @@ iptvportal sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
 
 # Works with dry-run mode too
 iptvportal sql -q "SELECT * FROM subscriber" --dry-run --debug
+
+# Debug mode also works with jsonsql commands
+iptvportal jsonsql select --from subscriber --limit 5 --debug
+iptvportal jsonsql insert --into package --columns "name" --values '[["test"]]' --debug
+iptvportal jsonsql update --table subscriber --set '{"disabled": true}' --where '{"eq": ["id", 1]}' --debug
+iptvportal jsonsql delete --from terminal --where '{"eq": ["id", 123]}' --debug
 ```
 
 **Debug output includes:**
