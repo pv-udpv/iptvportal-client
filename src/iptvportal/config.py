@@ -1,5 +1,6 @@
 """Configuration management with Pydantic Settings."""
 
+from typing import Optional
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -94,4 +95,42 @@ class IPTVPortalSettings(BaseSettings):
     log_responses: bool = Field(
         default=False,
         description="Log HTTP responses",
+    )
+
+    # Schema configuration
+    schema_file: Optional[str] = Field(
+        default=None,
+        description="Path to schema configuration file (YAML or JSON)",
+    )
+
+    schema_format: str = Field(
+        default="yaml",
+        description="Schema file format: 'yaml' or 'json'",
+    )
+
+    auto_load_schemas: bool = Field(
+        default=True,
+        description="Automatically load schemas from schema_file on client initialization",
+    )
+
+    # Query caching
+    enable_query_cache: bool = Field(
+        default=True,
+        description="Enable query result caching",
+    )
+
+    cache_ttl: int = Field(
+        default=300,
+        description="Default cache TTL in seconds (5 minutes)",
+    )
+
+    cache_max_size: int = Field(
+        default=1000,
+        description="Maximum number of cached query results",
+    )
+
+    # Query optimization
+    auto_order_by_id: bool = Field(
+        default=True,
+        description="Automatically add ORDER BY id to SELECT queries without explicit ordering",
     )

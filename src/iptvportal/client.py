@@ -1,27 +1,82 @@
 """Synchronous IPTVPortal client with context manager and resource support."""
-from typing import Optional, Any
+
+from typing import Optional, Any, TypeVar, Type, List, Dict, Union
 import httpx
 from iptvportal.config import IPTVPortalSettings
 from iptvportal.auth import AuthManager
 from iptvportal.query.builder import QueryBuilder
 from iptvportal.exceptions import IPTVPortalError, APIError, TimeoutError, ConnectionError
+from iptvportal.schema import SchemaRegistry, SchemaLoader
+from iptvportal.transpiler.transpiler import SQLTranspiler
+from iptvportal.cache import QueryCache
+
+T = TypeVar('T')
+
 
 class IPTVPortalClient:
     """
     Synchronous IPTVPortal API client.
     Use as context manager for automatic connection management.
     """
+
     def __init__(self, settings: Optional[IPTVPortalSettings] = None, **kwargs):
         self.settings = settings or IPTVPortalSettings(**kwargs)
         self.auth = AuthManager(self.settings)
         self.query = QueryBuilder()
         self._http_client: Optional[httpx.Client] = None
         self._session_id: Optional[str] = None
+        
+        # Initialize schema registry
+        self.schema_registry = SchemaRegistry()
+        self._transpiler: Optional[SQLTranspiler] = None
+        
+        # Initialize query cache
+        self._cache: Optional[QueryCache] = None
+        if self.settings.enable_query_cache:
+            self._cache = QueryCache(
+                max_size=self.settings.cache_max_size,
+                default_ttl=self.settings.cache_ttl,
+            )
+        
+        # Auto-load schemas if configured
+        if self.settings.auto_load_schemas and self.settings.schema_file:
+            self._load_schemas()
+    
+    def _load_schemas(self) -> None:
+        """Load schemas from configuration file."""
+        if not self.settings.schema_file:
+            return
+        
+        # Load schemas based on format
+        if self.settings.schema_format.lower() == 'yaml':
+            loaded_registry = SchemaLoader.from_yaml(self.settings.schema_file)
+        elif self.settings.schema_format.lower() == 'json':
+            loaded_registry = SchemaLoader.from_json(self.settings.schema_file)
+        else:
+            raise ValueError(f"Unsupported schema format: {self.settings.schema_format}")
+        
+        # Copy schemas to our registry
+        for table_name in loaded_registry.list_tables():
+            schema = loaded_registry.get(table_name)
+            if schema:
+                self.schema_registry.register(schema)
+    
+    def _get_transpiler(self) -> SQLTranspiler:
+        """Get or create SQL transpiler with schema registry."""
+        if self._transpiler is None:
+            self._transpiler = SQLTranspiler(
+                schema_registry=self.schema_registry,
+                auto_order_by_id=self.settings.auto_order_by_id,
+            )
+        return self._transpiler
+
     def __enter__(self):
         self.connect()
         return self
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
     def connect(self):
         self._http_client = httpx.Client(
             timeout=self.settings.timeout,
@@ -29,26 +84,37 @@ class IPTVPortalClient:
             http2=True,
         )
         self._session_id = self.auth.authenticate(self._http_client)
+
     def close(self):
         if self._http_client:
             self._http_client.close()
             self._http_client = None
             self._session_id = None
+
     def execute(self, query: dict[str, Any]) -> Any:
         if not self._http_client or not self._session_id:
             raise IPTVPortalError("Client not connected. Use 'with' statement or call connect().")
+        
+        # Check cache for read queries
+        if self._cache and self._cache.is_read_query(query):
+            query_hash = self._cache.compute_query_hash(query)
+            cached_result = self._cache.get(query_hash)
+            if cached_result is not None:
+                if self.settings.log_requests:
+                    print(f"Cache hit for query hash: {query_hash[:16]}...")
+                return cached_result
+        
         headers = {
             "Iptvportal-Authorization": f"sessionid={self._session_id}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         import time
-        last_error = None
+
+        last_error: Optional[Exception] = None
         for attempt in range(self.settings.max_retries + 1):
             try:
                 response = self._http_client.post(
-                    self.settings.api_url,
-                    json=query,
-                    headers=headers
+                    self.settings.api_url, json=query, headers=headers
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -57,7 +123,16 @@ class IPTVPortalClient:
                         data["error"].get("message", "API error"),
                         details=data["error"],
                     )
-                return data.get("result")
+                result = data.get("result")
+                
+                # Cache result for read queries
+                if self._cache and self._cache.is_read_query(query):
+                    query_hash = self._cache.compute_query_hash(query)
+                    self._cache.set(query_hash, result)
+                    if self.settings.log_requests:
+                        print(f"Cached result for query hash: {query_hash[:16]}...")
+                
+                return result
             except httpx.TimeoutException as e:
                 last_error = TimeoutError(f"Request timeout: {e}")
             except httpx.ConnectError as e:
@@ -66,8 +141,12 @@ class IPTVPortalClient:
                 # Try to get response body for better error messages
                 try:
                     error_body = e.response.text
-                    error_json = e.response.json() if e.response.headers.get("content-type", "").startswith("application/json") else None
-                    
+                    error_json = (
+                        e.response.json()
+                        if e.response.headers.get("content-type", "").startswith("application/json")
+                        else None
+                    )
+
                     if error_json and "error" in error_json:
                         error_msg = f"HTTP {e.response.status_code}: {error_json['error'].get('message', str(e))}"
                     elif error_body:
@@ -76,15 +155,66 @@ class IPTVPortalClient:
                         error_msg = f"HTTP {e.response.status_code}: {e}"
                 except Exception:
                     error_msg = f"HTTP {e.response.status_code}: {e}"
-                
+
                 if 400 <= e.response.status_code < 500:
                     raise APIError(error_msg)
                 last_error = APIError(error_msg)
             except Exception as e:
                 last_error = IPTVPortalError(f"Unexpected error: {e}")
             if attempt < self.settings.max_retries:
-                delay = self.settings.retry_delay * (2 ** attempt)
+                delay = self.settings.retry_delay * (2**attempt)
                 if self.settings.log_requests:
-                    print(f"Retry attempt {attempt + 1}/{self.settings.max_retries}, waiting {delay}s...")
+                    print(
+                        f"Retry attempt {attempt + 1}/{self.settings.max_retries}, waiting {delay}s..."
+                    )
                 time.sleep(delay)
-        raise last_error
+        
+        if last_error:
+            raise last_error
+        raise IPTVPortalError("Request failed with no error captured")
+    
+    def execute_mapped(
+        self,
+        query: dict[str, Any],
+        table_name: Optional[str] = None,
+        model: Optional[Type[T]] = None
+    ) -> Union[List[Dict[str, Any]], List[T]]:
+        """
+        Execute query and automatically map results using schema.
+        
+        Args:
+            query: Query dictionary to execute
+            table_name: Table name for schema lookup (if not in query)
+            model: Optional Pydantic/SQLModel model class for result mapping
+            
+        Returns:
+            List of dictionaries or model instances (if model provided)
+        """
+        result = self.execute(query)
+        
+        # Handle empty results
+        if not result or not isinstance(result, list):
+            return result
+        
+        # Try to determine table name from query if not provided
+        if not table_name and isinstance(query.get('query'), str):
+            # Simple extraction - try to get table name from query string
+            sql = query.get('query', '').upper()
+            if 'FROM' in sql:
+                parts = sql.split('FROM')[1].split()
+                if parts:
+                    table_name = parts[0].strip().lower()
+        
+        # If we have table_name and schema, map the results
+        if table_name and self.schema_registry.has(table_name):
+            schema = self.schema_registry.get(table_name)
+            if schema:
+                if model:
+                    # Map to model instances
+                    return schema.map_rows_to_model(result)
+                else:
+                    # Map to dictionaries
+                    return [schema.map_row_to_dict(row) for row in result]
+        
+        # No schema available, return raw results
+        return result

@@ -1,6 +1,6 @@
 """Main SQL to JSONSQL transpiler."""
 
-from typing import Any
+from typing import Any, Optional
 import sqlglot
 from sqlglot import exp
 
@@ -33,14 +33,23 @@ class SQLTranspiler:
         {'data': ['id', 'name'], 'from': 'users', 'where': {'gt': ['age', 18]}}
     """
 
-    def __init__(self, dialect: str = "postgres"):
+    def __init__(
+        self,
+        dialect: str = "postgres",
+        schema_registry: Optional[Any] = None,
+        auto_order_by_id: bool = True
+    ):
         """
         Initialize the transpiler.
 
         Args:
             dialect: SQL dialect to use (default: 'postgres')
+            schema_registry: Optional SchemaRegistry for SELECT * expansion
+            auto_order_by_id: Automatically add ORDER BY id to SELECT queries without ordering
         """
         self.dialect = dialect
+        self.schema_registry = schema_registry
+        self.auto_order_by_id = auto_order_by_id
 
     def transpile(self, sql: str) -> dict[str, Any]:
         """
@@ -84,9 +93,16 @@ class SQLTranspiler:
         """Transpile SELECT statement."""
         result: dict[str, Any] = {}
 
+        # Extract table name for schema lookup
+        from_table = None
+        if select.args.get("from"):
+            from_expr = select.args["from"].this
+            if isinstance(from_expr, exp.Table):
+                from_table = from_expr.name
+
         # Handle SELECT columns
         if select.expressions:
-            result["data"] = self._transpile_select_columns(select.expressions)
+            result["data"] = self._transpile_select_columns(select.expressions, from_table)
 
         # Handle FROM clause with JOINs
         if select.args.get("from"):
@@ -107,6 +123,12 @@ class SQLTranspiler:
         # Handle ORDER BY
         if select.args.get("order"):
             result["order_by"] = self._transpile_order_by(select.args["order"])
+        elif self.auto_order_by_id and from_table and not isinstance(from_table, dict):
+            # Auto-add ORDER BY id if:
+            # 1. auto_order_by_id is enabled
+            # 2. Query has a simple table (not a subquery)
+            # 3. No explicit ORDER BY clause
+            result["order_by"] = "id"
 
         # Handle LIMIT
         if select.args.get("limit"):
@@ -122,14 +144,18 @@ class SQLTranspiler:
 
         return result
 
-    def _transpile_select_columns(self, expressions: list[exp.Expression]) -> list[Any]:
+    def _transpile_select_columns(self, expressions: list[exp.Expression], from_table: Optional[str] = None) -> list[Any]:
         """Transpile SELECT column expressions."""
         columns = []
 
         for expr in expressions:
             if isinstance(expr, exp.Star):
-                # SELECT *
-                columns.append("*")
+                # SELECT * - expand using schema if available
+                if from_table and self.schema_registry and self.schema_registry.has(from_table):
+                    schema = self.schema_registry.get(from_table)
+                    columns.extend(schema.resolve_select_star())
+                else:
+                    columns.append("*")
             elif isinstance(expr, exp.Alias):
                 # Column with alias
                 column_expr = self._transpile_column_expression(expr.this)

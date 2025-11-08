@@ -19,42 +19,54 @@ sql_app = typer.Typer(
     no_args_is_help=True,
 )
 
+
 @sql_app.callback(invoke_without_command=True)
 def sql_main(
     ctx: typer.Context,
     query: Optional[str] = typer.Option(None, "--query", "-q", help="SQL query to execute"),
     edit: bool = typer.Option(False, "--edit", "-e", help="Open editor to write SQL query"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show transpiled query without executing"),
-    show_request: bool = typer.Option(False, "--show-request", help="Show JSON-RPC request along with result"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show transpiled query without executing"
+    ),
+    show_request: bool = typer.Option(
+        False, "--show-request", help="Show JSON-RPC request along with result"
+    ),
     format: str = typer.Option("table", "--format", "-f", help="Output format: table, json, yaml"),
     config_file: Optional[str] = typer.Option(None, "--config", help="Config file path"),
+    map_schema: bool = typer.Option(
+        False, "--map-schema", "-m", help="Use schema mapping for results (auto-detects table)"
+    ),
 ) -> None:
     """
     Execute SQL query (auto-transpiled to JSONSQL).
-    
+
     Examples:
         # Execute SQL query directly
         iptvportal sql --query "SELECT * FROM subscriber LIMIT 10"
         iptvportal sql -q "SELECT id, username FROM subscriber WHERE disabled = false"
-        
+
         # Open editor to write query
         iptvportal sql --edit
         iptvportal sql -e
-        
+
         # Dry-run mode (show transpiled JSONSQL without executing)
         iptvportal sql -q "SELECT * FROM subscriber" --dry-run
-        
+
         # Different output formats
         iptvportal sql -q "SELECT * FROM subscriber" --format json
         iptvportal sql -q "SELECT * FROM subscriber" -f yaml
+
+        # Use schema mapping for results
+        iptvportal sql -q "SELECT * FROM media LIMIT 10" --map-schema
+        iptvportal sql -q "SELECT * FROM media" -m
     """
     # If no subcommand and ctx is being invoked
     if ctx.invoked_subcommand is not None:
         return
-    
+
     try:
         sql_query: Optional[str] = None
-        
+
         # Get SQL query from --query or --edit
         if edit:
             if query:
@@ -65,16 +77,16 @@ def sql_main(
         else:
             console.print("[red]Error: Either --query/-q or --edit/-e is required[/red]")
             raise typer.Exit(1)
-        
+
         # Transpile SQL to JSONSQL
         transpiler = SQLTranspiler()
         result = transpiler.transpile(sql_query)
-        
+
         # Determine method from transpiled result
         method = result.get("_method", "select")  # Default to select if not specified
         if "_method" in result:
             del result["_method"]
-        
+
         # Infer method from JSONSQL structure if _method not present
         if "into" in result:
             method = "insert"
@@ -82,21 +94,23 @@ def sql_main(
             method = "update"
         elif "from" in result and any(k in result for k in ["data", "where", "order_by", "limit"]):
             method = "select"
-        
+
         if dry_run:
             # Show transpiled query without executing
             display_dry_run(result, method, sql=sql_query, format_type=format)
         else:
-            # Execute query
-            query_result = execute_query(method, result, config_file)
-            
+            # Execute query with optional schema mapping
+            query_result = execute_query(method, result, config_file, use_schema_mapping=map_schema)
+
             if show_request:
                 # Show request and result
-                display_request_and_result(result, method, query_result, sql=sql_query, format_type=format)
+                display_request_and_result(
+                    result, method, query_result, sql=sql_query, format_type=format
+                )
             else:
                 # Show only result
                 display_result(query_result, format)
-            
+
     except IPTVPortalError as e:
         console.print(f"[bold red]Query failed:[/bold red] {e}")
         raise typer.Exit(1)

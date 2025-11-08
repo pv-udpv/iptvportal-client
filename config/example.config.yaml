@@ -6,9 +6,22 @@ ipptvportal:
   timeout: 30.0
   max_retries: 3
   retry_delay: 1.0
-  verify_ssl: true
+  verify_ssl: false
   session_cache: true
   session_ttl: 3600
   log_level: "INFO"
   log_requests: false
   log_responses: false
+  
+  # Schema configuration
+  schema_file: "config/schemas.yaml"
+  schema_format: "yaml"
+  auto_load_schemas: true
+  
+  # Query caching
+  enable_query_cache: true     # Enable/disable query result caching
+  cache_ttl: 300               # Cache TTL in seconds (5 minutes)
+  cache_max_size: 1000         # Maximum number of cached queries
+  
+  # Query optimization
+  auto_order_by_id: true       # Automatically add ORDER BY id to SELECT queries
