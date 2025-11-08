@@ -1,0 +1,14 @@
+# Example YAML configuration for IPTVPortal Client
+ipptvportal:
+  domain: "your_domain"
+  username: "your_username"
+  password: "your_password"
+  timeout: 30.0
+  max_retries: 3
+  retry_delay: 1.0
+  verify_ssl: true
+  session_cache: true
+  session_ttl: 3600
+  log_level: "INFO"
+  log_requests: false
+  log_responses: false
