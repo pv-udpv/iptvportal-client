@@ -1,0 +1,36 @@
+# Python
+*.py[cod]
+__pycache__/
+*.so
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.bak
+
+# Environment
+.venv/
+.env
+.env.local
+.env.*
+
+# Build
+build/
+dist/
+.eggs/
+*.log
+*.db
+
+# Test
+.coverage
+htmlcov/
+pytest_cache/
+
+# Package
+*.pkl
+
+# OS
+.DS_Store
+Thumbs.db
