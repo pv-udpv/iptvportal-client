@@ -1,163 +1,376 @@
-# IPTVPortal JSONSQL API Documentation
+# IPTVPORTAL JSONSQL API — Полная документация
 
-## Описание протокола
+***
 
-JSONSQL API предоставляет SQL-подобный JSON формат для DML-операций, поддерживает JOIN, GROUP BY, агрегаты и подзапросы, полностью совместим с логикой PostgreSQL.
+## Протокол и транспорт
 
-- Запросы передаются через методы JSONRPC (`select`, `insert`, `update`, `delete`)
-- Поддерживаются JOIN всех типов, подзапросы, GROUP BY, агрегаты, математические и строковые функции, WHERE выражения с логическими операторами (and, or, not)
+JSONSQL API — это протокол взаимодействия IPTVPORTAL с внешними системами, полностью основанный на JSONRPC через HTTPS.
 
----
+- **Endpoint для команд DML/SQL:**  
+  `https://{domain}.admin.iptvportal.ru/api/jsonsql/`
+- **Endpoint для авторизации:**  
+  `https://{domain}.admin.iptvportal.ru/api/jsonrpc/`
+- Все команды требуют заголовок:  
+  `Iptvportal-Authorization: sessionid={sid}`  
+  где `sid` — идентификатор сессии из успешной авторизации.
 
-## Примеры: JSONSQL vs SQL
+***
 
-### 1. JOIN и выборка (complete_playlog)
+## Авторизация администратора
 
-**JSONSQL**
+### Запрос
 ```json
 {
-  "data": [
-    {"terminal_playlog": "start", "as": "playlog__start"},
-    {"terminal_playlog": "domain_id", "as": "playlog__domain_id"},
-    {"terminal_playlog": "mac_addr", "as": "playlog__mac_addr"},
-    {"tv_channel": "name", "as": "playlog__channel_name"}
-  ],
-  "from": [
-    {"table": "terminal_playlog", "as": "terminal_playlog"},
-    {"join": "tv_channel", "as": "tv_channel", "on": {
-      "and": [
-        {"eq": [{"tv_channel": "id"}, {"terminal_playlog": "channel_id"}]}
-      ]
-    }},
-    {"join": "tv_program", "as": "tv_program", "on": {
-      "and": [
-        {"eq": [{"tv_program": "epg_provider_id"}, 36]},
-        {"gt": [{"terminal_playlog": "start"}, {"tv_program": "start"}]},
-        {"lt": [{"terminal_playlog": "start"}, {"tv_program": "stop"}]},
-        {"eq": [{"tv_channel": "id"}, {"tv_program": "channel_id"}]}
-      ]
-    }},
-    {"join": "tv_program_category", "as": "crosscat", "on": {
-      "and": [
-        {"eq": [{"crosscat": "program_id"}, {"tv_program": "id"}]}
-      ]
-    }},
-    {"join": "tv_category", "as": "tv_category", "on": {
-      "and": [
-        {"eq": [{"crosscat": "category_id"}, {"tv_category": "id"}]}
-      ]
-    }}
-  ],
-  "where": {
-    "and": [
-      {"gt": [{"terminal_playlog": "start"}, "2020-02-17 00:00:00"]},
-      {"lt": [{"terminal_playlog": "start"}, "2020-04-20 00:00:00"]}
-    ]
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "authorize_user",
+  "params": {"username": "admin", "password": "adminpassword"}
+}
+```
+### Ответ
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {"session_id": "sid"}
+}
+```
+### Ошибка
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {"message": "Error message"}
+}
+```
+
+***
+
+## Поддерживаемые команды DML:
+- **SELECT**
+- **INSERT**
+- **UPDATE**
+- **DELETE**
+
+***
+
+## SELECT — Выборка данных
+
+### Формат
+```json
+{
+  "distinct": ...,
+  "data": ...,
+  "from": ...,
+  "where": ...,
+  "group_by": ...,
+  "order_by": ...,
+  "limit": ...,
+  "offset": ...
+}
+```
+
+#### Примеры
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "select",
+  "params": {
+    "data": ["id", "name", "protocol", "inet_addr", "port"],
+    "from": "media",
+    "where": {"is": ["is_tv", true]},
+    "order_by": "name"
   }
 }
 ```
-
-**SQL**
+**SQL-аналог:**
 ```sql
-SELECT
-    tp.start AS playlog__start,
-    tp.domain_id AS playlog__domain_id,
-    tp.mac_addr AS playlog__mac_addr,
-    tc.name AS playlog__channel_name
-FROM terminal_playlog tp
-JOIN tv_channel tc ON tc.id = tp.channel_id
-JOIN tv_program tvp ON
-    tvp.epg_provider_id = 36 AND
-    tp.start > tvp.start AND
-    tp.start < tvp.stop AND
-    tc.id = tvp.channel_id
-JOIN tv_program_category crosscat ON crosscat.program_id = tvp.id
-JOIN tv_category tcat ON crosscat.category_id = tcat.id
-WHERE
-    tp.start > '2020-02-17 00:00:00' AND
-    tp.start < '2020-04-20 00:00:00'
+SELECT id, name, protocol, inet_addr, port
+FROM media
+WHERE is_tv IS TRUE
+ORDER BY name
 ```
 
----
+***
 
-### 2. Агрегат с подзапросом (aggr_playlog)
+## INSERT — Добавление новых данных
 
-**JSONSQL**
+### Формат
 ```json
 {
-  "data": [
-    {"function": "count", "args": ["*"], "as": "rowcount"},
-    {"function": "count", "args": {"function": "distinct", "args": {"q": "playlog__mac_addr"}}, "as": "uniques"}
-  ],
-  "from": [
-    {"select": complete_playlog, "as": "q"}
-  ]
+  "into": ...,
+  "columns": ...,
+  "values": ...,
+  "returning": ...
 }
 ```
-**SQL**
-```sql
-SELECT
-    COUNT(*) AS rowcount,
-    COUNT(DISTINCT q.playlog__mac_addr) AS uniques
-FROM (
-    -- inner SQL is previous JOIN example
-) AS q
-```
 
----
+#### Примеры
 
-### 3. Подзапросы в WHERE (example delete)
-
-**JSONSQL**
 ```json
 {
-  "from": "terminal",
-  "where": {
-    "in": ["subscriber_id", {
-      "select": {
-        "data": "id",
-        "from": "subscriber",
-        "where": {"eq": ["username", "test"]}
-      }
-    }]
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "insert",
+  "params": {
+    "into": "package",
+    "columns": ["name", "paid"],
+    "values": [["movie", true], ["sports", true]],
+    "returning": "id"
   }
 }
 ```
-**SQL**
+**SQL-аналог:**
+```sql
+INSERT INTO package (name, paid) VALUES
+  ('movie', true), ('sports', true)
+RETURNING id
+```
+
+***
+
+## UPDATE — Обновление данных
+
+### Формат
+```json
+{
+  "table": ...,
+  "set": ...,
+  "where": ...,
+  "returning": ...
+}
+```
+
+#### Примеры
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "update",
+  "params": {
+    "table": "subscriber",
+    "set": {"disabled": true},
+    "where": {"eq": ["username", "12345"]},
+    "returning": "id"
+  }
+}
+```
+**SQL-аналог:**
+```sql
+UPDATE subscriber SET disabled = TRUE WHERE username = '12345' RETURNING id
+```
+
+***
+
+## DELETE — Удаление данных
+
+### Формат
+```json
+{
+  "from": ...,
+  "where": ...,
+  "returning": ...
+}
+```
+
+#### Примеры
+
+**Удаление устройств абонента test:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "delete",
+  "params": {
+    "from": "terminal",
+    "where": {
+      "in": [
+        "subscriber_id",
+        {
+          "select": {
+            "data": "id",
+            "from": "subscriber",
+            "where": {"eq": ["username", "test"]}
+          }
+        }
+      ]
+    },
+    "returning": "id"
+  }
+}
+```
+**SQL-аналог:**
 ```sql
 DELETE FROM terminal
 WHERE subscriber_id IN (
-    SELECT id FROM subscriber WHERE username = 'test'
+  SELECT id FROM subscriber WHERE username = 'test'
 )
+RETURNING id
 ```
 
----
+***
 
-### 4. Применение функций и фильтров
+## Логические и сравнения
 
-**JSONSQL**
+- `{ "and": [expr1, expr2, ...] }`  
+- `{ "or": [expr1, expr2, ...] }`  
+- `{ "not": [expr] }`
+
+**Операции сравнения:**
+- `{ "is": [op1, op2] }`
+- `{ "is_not": [op1, op2] }`
+- `{ "eq": [op1, op2] }`
+- `{ "neq": [op1, op2] }`
+- `{ "lt": [op1, op2] }`
+- `{ "gt": [op1, op2] }`
+- `{ "lte": [op1, op2] }`
+- `{ "gte": [op1, op2] }`
+
+***
+
+## Математические и строковые функции
+
+- `{ "add": [op1, op2, ...] }`
+- `{ "sub": [op1, op2] }`
+- `{ "mul": [op1, op2, ...] }`
+- `{ "div": [op1, op2] }`
+- `{ "mod": [op1, op2] }`
+- `{ "like": [field, pattern] }`
+- `{ "ilike": [field, pattern] }`
+- `{ "regexp_replace": [field, pattern, replacement] }`
+
+**Пример:**
 ```json
 {
   "data": [
     {"function": "regexp_replace", "args": ["tv_channel.name", "\\s\\(.*", ""], "as": "cleared"},
-    "name",
-    "id"
+    "name", "id"
   ],
   "from": "tv_channel"
 }
 ```
-**SQL**
+**SQL-аналог:**
 ```sql
-SELECT
-    REGEXP_REPLACE(tv_channel.name, '\s\(.*', '') AS cleared,
-    name,
-    id
-FROM tv_channel
+SELECT regexp_replace(tv_channel.name, '\\s\\(.*', '') AS cleared, name, id FROM tv_channel
 ```
 
----
+***
 
-### Операторные конструкции
+## JOIN, SUBQUERY, GROUP BY
 
-- **AND, OR, NOT:** `{ "and": [expr1, expr2] }` аналогично SQL-выражениям
-- **JOINs:** `{ "join": ... }` с условием `
+### JOIN через from/join
+
+**Пример JSONSQL JOIN:**
+```json
+{
+  "data": ["a.id", "b.name"],
+  "from": [
+    {"table": "a", "as": "a"},
+    {"join": "b", "as": "b", "on": {"eq": [{"a": "id"}, {"b": "a_id"}]}}
+  ]
+}
+```
+**SQL-аналог:**
+```sql
+SELECT a.id, b.name FROM a JOIN b ON a.id = b.a_id
+```
+
+### SUBQUERY в SELECT/FROM/WHERE
+- Через вложенные `"select": {...}`
+
+### GROUP BY/ORDER BY
+- `"group_by": ["field1", "field2"]`
+- `"order_by": ["field1", "DESC"]`
+
+***
+
+## Агрегаты
+
+- `{ "function": "count", "args": ["*"] }`
+- `{ "function": "distinct", "args": [field_or_subquery] }`
+- `{ "function": "avg", ... }`, `{ "function": "max", ... }`, `{ "function": "sum", ... }`
+
+**Пример:**
+```json
+{
+  "data": [
+    {"function": "count", "args": ["*"], "as": "cnt"},
+    {"function": "count", "args": {"function": "distinct", "args": "mac_addr"}, "as": "uniq"}
+  ],
+  "from": "terminal_playlog"
+}
+```
+**SQL-аналог:**
+```sql
+SELECT COUNT(*) AS cnt, COUNT(DISTINCT mac_addr) AS uniq
+FROM terminal_playlog
+```
+
+***
+
+## Структура основной JSONSQL сущности
+
+- `"data"` — что выбирать или возвращать
+- `"from"` — таблицы, join, subquery
+- `"where"` — условия
+- `"group_by"` — группировка
+- `"order_by"` — сортировка
+- `"limit"` — лимит
+- `"offset"` — смещение
+
+***
+
+## Пример комплексного запроса
+**JSONSQL:**
+```json
+{
+  "data": [
+    "subscriber.id",
+    "subscriber.username",
+    {"function": "count", "args": ["terminal.id"], "as": "term_count"}
+  ],
+  "from": [
+    {"table": "subscriber", "as": "subscriber"},
+    {"join": "terminal", "as": "terminal", "on": {"eq": [{"subscriber": "id"}, {"terminal": "subscriber_id"}]}}
+  ],
+  "group_by": ["subscriber.id", "subscriber.username"],
+  "order_by": ["term_count", "DESC"],
+  "where": {"gt": [{"subscriber": "created_at"}, "2023-01-01 00:00:00"]}
+}
+```
+**SQL-аналог:**
+```sql
+SELECT
+  subscriber.id,
+  subscriber.username,
+  COUNT(terminal.id) AS term_count
+FROM subscriber
+JOIN terminal ON subscriber.id = terminal.subscriber_id
+WHERE subscriber.created_at > '2023-01-01 00:00:00'
+GROUP BY subscriber.id, subscriber.username
+ORDER BY term_count DESC
+```
+
+***
+
+## Авторизация и работа с API
+
+- Получить `session_id` через метод `authorize_user`
+- Передавать его в каждом запросе в заголовке
+- Работать с API строго через JSON-RPC 2.0 формат
+
+***
+
+## Полезные ссылки
+
+- [IPTVPORTAL JSONSQL API docs](https://iptvportal.cloud/support/api/)
+- [PostgreSQL documentation](https://www.postgresql.org/docs/8.4/interactive/index.html)
+- [Примеры production скриптов](http://ftp.iptvportal.cloud/doc/API/examples/)
+
+***
+
+Документация готова для размещения в `docs/jsonsql.md` — с реальными production-паттернами, SQL-аналогами для быстрого старта и интеграции.
