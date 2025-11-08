@@ -130,10 +130,12 @@ class SQLTranspiler:
             # 3. No explicit ORDER BY clause
             # 4. No GROUP BY clause (aggregate queries don't need ORDER BY id)
             # 5. No aggregate functions in SELECT (they conflict with ORDER BY)
+            # 6. Query selects id field (either explicitly or via SELECT *)
             has_group_by = select.args.get("group") is not None
             has_aggregate = self._has_aggregate_functions(select.expressions)
+            has_id_field = self._has_id_field(select.expressions)
             
-            if not has_group_by and not has_aggregate:
+            if not has_group_by and not has_aggregate and has_id_field:
                 result["order_by"] = "id"
 
         # Handle LIMIT
@@ -150,6 +152,32 @@ class SQLTranspiler:
 
         return result
 
+    def _has_id_field(self, expressions: list[exp.Expression]) -> bool:
+        """
+        Check if the SELECT expressions include the 'id' field.
+        
+        Returns True if:
+        - SELECT * is used
+        - 'id' field is explicitly selected
+        """
+        def check_expr(expr: exp.Expression) -> bool:
+            """Check if expression represents the id field."""
+            # Check for SELECT *
+            if isinstance(expr, exp.Star):
+                return True
+            
+            # Check for explicit 'id' column
+            if isinstance(expr, exp.Column):
+                return expr.name.lower() == 'id'
+            
+            # Check within alias
+            if isinstance(expr, exp.Alias):
+                return check_expr(expr.this)
+            
+            return False
+        
+        return any(check_expr(expr) for expr in expressions)
+    
     def _has_aggregate_functions(self, expressions: list[exp.Expression]) -> bool:
         """
         Check if any of the SELECT expressions contain aggregate functions.
