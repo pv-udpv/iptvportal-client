@@ -92,6 +92,57 @@ async def main():
 asyncio.run(main())
 ```
 
+## SQL to JSONSQL Transpiler
+
+Convert PostgreSQL queries to JSONSQL format using the built-in transpiler:
+
+### CLI Usage
+
+```bash
+# Transpile SQL string
+python -m iptvportal.transpiler "SELECT id, name FROM users WHERE age > 18"
+
+# Pretty-print output
+python -m iptvportal.transpiler -p "SELECT * FROM users LIMIT 10"
+
+# From file
+python -m iptvportal.transpiler -f query.sql
+
+# Specify dialect
+python -m iptvportal.transpiler -d mysql "SELECT * FROM users"
+```
+
+### Python API
+
+```python
+from iptvportal.transpiler import SQLTranspiler
+
+transpiler = SQLTranspiler(dialect='postgres')
+
+# Simple query
+result = transpiler.transpile("SELECT id, name FROM users WHERE age > 18 LIMIT 10")
+# Output: {'data': ['id', 'name'], 'from': 'users', 'where': {'gt': ['age', 18]}, 'limit': 10}
+
+# Complex query with JOINs
+sql = """
+    SELECT t.start, c.name 
+    FROM terminal_playlog t
+    JOIN tv_channel c ON c.id = t.channel_id
+    WHERE t.start > '2020-02-17 00:00:00'
+"""
+result = transpiler.transpile(sql)
+```
+
+### Supported Features
+
+- **SELECT statements** with columns, aliases, WHERE, GROUP BY, ORDER BY, LIMIT, OFFSET
+- **JOINs** (INNER, LEFT, RIGHT) with complex ON conditions
+- **Aggregate functions** (COUNT, SUM, AVG, MIN, MAX, etc.)
+- **Subqueries** in FROM and WHERE clauses
+- **Operators**: comparison (=, !=, >, <, >=, <=), logical (AND, OR, NOT), pattern matching (LIKE, ILIKE), set operations (IN)
+- **INSERT, UPDATE, DELETE** statements with RETURNING clause
+- **Functions**: COUNT(DISTINCT), REGEXP_REPLACE, DATE, and more
+
 ## Query Building
 
 Three ways to build queries:
@@ -160,10 +211,15 @@ iptvportal-client/
 │   ├── auth.py            # Auth managers (sync/async)
 │   ├── client.py          # Sync client
 │   ├── async_client.py    # Async client
-│   └── query/
-│       ├── builder.py     # Query builder
-│       ├── field.py       # Field API
-│       └── q_objects.py   # Q Objects
+│   ├── query/
+│   │   ├── builder.py     # Query builder
+│   │   ├── field.py       # Field API
+│   │   └── q_objects.py   # Q Objects
+│   └── transpiler/
+│       ├── transpiler.py  # SQL to JSONSQL transpiler
+│       ├── operators.py   # Operator mappings
+│       ├── functions.py   # Function handlers
+│       └── __main__.py    # CLI interface
 ```
 
 ## Development
