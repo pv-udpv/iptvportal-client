@@ -48,7 +48,7 @@ This wizard will prompt you for:
 - Admin password
 - Optional settings (timeout, retries, SSL verification)
 
-Creates a `.env` file in the current directory.
+Creates a `~/.iptvportal/cli-config.yaml` with your settings (optionally creates a `.env` file in the current directory if selected).
 
 ### Show Current Configuration
 

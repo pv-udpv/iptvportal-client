@@ -1,0 +1,48 @@
+schemas:
+  tv_program:
+    total_fields: 11
+    fields:
+      '0':
+        name: id
+        type: integer
+        description: Auto-generated field
+      '1':
+        name: created_at
+        type: datetime
+        description: Auto-generated field
+      '2':
+        name: updated_at
+        type: datetime
+        description: Auto-generated field
+      '3':
+        name: Field_3
+        type: integer
+        description: Auto-generated field
+      '4':
+        name: Field_4
+        type: string
+        description: Auto-generated field
+      '5':
+        name: Field_5
+        type: unknown
+        description: Auto-generated field
+      '6':
+        name: Field_6
+        type: unknown
+        description: Auto-generated field
+      '7':
+        name: Field_7
+        type: integer
+        description: Auto-generated field
+      '8':
+        name: Field_8
+        type: unknown
+        description: Auto-generated field
+      '9':
+        name: Field_9
+        type: integer
+        description: Auto-generated field
+      '10':
+        name: Field_10
+        type: unknown
+        description: Auto-generated field
