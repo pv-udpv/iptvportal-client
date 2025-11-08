@@ -107,8 +107,75 @@ test(schema): Add validation tests
 
 **Skip hooks**: Use `--no-verify` flag (e.g., `git commit --no-verify`)
 
+## Makefile Commands
+- **Build System**: Comprehensive Makefile with uv integration for all development tasks
+- **Help**: Run `make` or `make help` to see all available commands with descriptions
+
+### Installation & Setup:
+```bash
+make install      # Production dependencies only
+make install-dev  # All dependencies including dev
+make sync         # Sync production dependencies
+make sync-dev     # Sync all dependencies
+make dev          # Set up development environment
+```
+
+### Testing:
+```bash
+make test                    # Run all tests
+make test-cov               # Tests with coverage report
+make test-verbose           # Verbose test output
+make test-specific TEST=file.py  # Run specific test file
+make test-watch             # Tests in watch mode
+```
+
+### Code Quality:
+```bash
+make lint         # Run ruff linter
+make lint-fix     # Linter with auto-fix
+make format       # Format code with ruff
+make format-check # Check formatting without changes
+make type-check   # Run mypy type checker
+make check        # Run all checks (lint, format, type)
+make check-fix    # Run checks with auto-fix
+```
+
+### CLI Shortcuts:
+```bash
+make cli ARGS="command args"  # Run CLI with arguments
+make cli-help                 # Show CLI help
+make cli-auth                 # Authenticate
+make cli-sync-init           # Initialize sync
+make cli-sync-pull           # Pull data
+make cli-sync-status         # Show sync status
+```
+
+### Development Workflows:
+```bash
+make quick        # Fast feedback (lint-fix + tests)
+make pre-commit   # Full pre-commit checks
+make ci           # CI-style checks (no auto-fix)
+```
+
+### Utilities:
+```bash
+make clean        # Remove cache/build artifacts
+make build        # Build distribution packages
+make shell        # Start IPython shell
+make cache-clear  # Clear all caches
+make info         # Show project information
+make version      # Show project version
+```
+
+### Workflow Integration:
+- Makefile commands integrate with git hooks and workflow scripts
+- All commands use `uv run` for proper environment isolation
+- Color-coded output for better readability
+- Comprehensive help system with target descriptions
+
 ## Important Notes
 - Never use `pip` directly - always use `uv add` or `uv sync`
 - Never use `python` directly - always use `uv run python`
 - All scripts and tools should work with `uv run`
 - Virtual environment is managed automatically by `uv`
+- Use `make` commands for all development operations
