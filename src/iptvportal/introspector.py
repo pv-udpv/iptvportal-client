@@ -144,7 +144,7 @@ class SchemaIntrospector:
                 "id": 2,
                 "method": "select",
                 "params": {
-                    "data": ["COUNT(*) as count"],
+                    "data": ["COUNT(*)"],
                     "from": table_name
                 }
             }
@@ -164,7 +164,7 @@ class SchemaIntrospector:
                     "id": 3,
                     "method": "select",
                     "params": {
-                        "data": ["MAX(id) as max_id", "MIN(id) as min_id"],
+                        "data": ["MAX(id)", "MIN(id)"],
                         "from": table_name
                     }
                 }
@@ -191,8 +191,8 @@ class SchemaIntrospector:
                     "method": "select",
                     "params": {
                         "data": [
-                            f"MIN({ts_field.name}) as min_val",
-                            f"MAX({ts_field.name}) as max_val"
+                            f"MIN({ts_field.name})",
+                            f"MAX({ts_field.name})"
                         ],
                         "from": table_name
                     }
