@@ -912,7 +912,7 @@ def generate_models_command(
         # Display results
         console.print(f"[green]✓ Generated {len(results)} model(s):[/green]\n")
 
-        for table_name, code in results.items():
+        for table_name, _code in results.items():
             # Get class name from code
             class_name = table_name.replace("_", " ").title().replace(" ", "")
             file_name = f"{class_name.lower()}.py"

@@ -1,7 +1,6 @@
 """ORM model generation from YAML schemas."""
 
 from pathlib import Path
-from typing import Any
 
 from .schema import FieldType, SchemaLoader, SchemaRegistry, TableSchema
 
@@ -60,14 +59,14 @@ class ORMGenerator:
 
         # Docstring
         if schema.metadata and schema.metadata.row_count:
-            lines.append(f'    """')
+            lines.append('    """')
             if schema.sync_config and hasattr(schema.sync_config, 'description'):
                 lines.append(f"    {schema.sync_config.description}")
                 lines.append("")
             lines.append(f"    Table: {table_name}")
             lines.append(f"    Total fields: {schema.total_fields}")
             lines.append(f"    Row count: {schema.metadata.row_count:,}")
-            lines.append(f'    """')
+            lines.append('    """')
         else:
             lines.append(f'    """ORM model for {table_name} table."""')
 
@@ -192,11 +191,8 @@ class ORMGenerator:
         if field_def.constraints:
             is_primary = field_def.constraints.get("primary_key", False)
 
-        # Формировать type hint
-        if nullable and not is_primary:
-            type_hint = f"Optional[{python_type}]"
-        else:
-            type_hint = python_type
+        # Formировать type hint
+        type_hint = f"Optional[{python_type}]" if nullable and not is_primary else python_type
 
         # Field arguments
         field_args = []
