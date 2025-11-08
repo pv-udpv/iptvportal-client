@@ -26,6 +26,7 @@ dependencies = [
     "sqlglot>=27.29.0",
     "typer>=0.20.0",
     "pyyaml>=6.0.3",
+    "dynaconf>=3.2.0",
 ]
 
 [project.optional-dependencies]

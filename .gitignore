@@ -28,6 +28,8 @@ dist/
 .coverage
 htmlcov/
 pytest_cache/
+test_*_standalone.py
+test_*_manual.py
 
 # Package
 *.pkl

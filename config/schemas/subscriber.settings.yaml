@@ -1,0 +1,32 @@
+# Subscriber table specific settings
+# These settings override/extend the main settings.yaml for subscriber operations
+
+sync:
+  subscriber:
+    # Sync strategy for subscriber table
+    strategy: "incremental"  # Use incremental sync for frequently updated data
+    ttl: 1800  # 30 minutes - subscribers change frequently
+    chunk_size: 500  # Smaller chunks for subscriber data
+    priority: 1  # High priority for sync operations
+    
+    # Fields to track for incremental sync
+    tracking_fields:
+      - "updated_at"
+      - "modified"
+    
+    # Auto-sync configuration
+    auto_sync: true
+    sync_on_access: true
+
+adapters:
+  subscriber:
+    # Schema-specific query optimization
+    default_fields:
+      - "id"
+      - "username"
+      - "mac_addr"
+      - "status"
+    
+    # Cache configuration for subscriber queries
+    cache_ttl: 180  # 3 minutes
+    enable_cache: true

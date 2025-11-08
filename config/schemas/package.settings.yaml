@@ -1,0 +1,27 @@
+# Package table specific settings
+# These settings override/extend the main settings.yaml for package operations
+
+sync:
+  package:
+    # Sync strategy for package table
+    strategy: "on_demand"  # On-demand sync for static reference data
+    ttl: 86400  # 24 hours - packages rarely change
+    chunk_size: 100
+    priority: 3  # Low priority
+    
+    # Auto-sync configuration
+    auto_sync: false
+    sync_on_access: false
+
+adapters:
+  package:
+    # Schema-specific query optimization
+    default_fields:
+      - "id"
+      - "name"
+      - "description"
+      - "price"
+    
+    # Cache configuration for package queries
+    cache_ttl: 3600  # 1 hour
+    enable_cache: true
