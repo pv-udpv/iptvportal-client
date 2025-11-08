@@ -290,25 +290,73 @@ SELECT a.id, b.name FROM a JOIN b ON a.id = b.a_id
 
 ## Агрегаты
 
-- `{ "function": "count", "args": ["*"] }`
-- `{ "function": "distinct", "args": [field_or_subquery] }`
+- `{ "function": "count", "args": ["*"] }` — COUNT(*) в массиве
+- `{ "function": "count", "args": "field" }` — COUNT(field) строкой для одного поля
+- `{ "function": "distinct", "args": "field" }` — DISTINCT для одного поля
+- `{ "function": "distinct", "args": ["field1", "field2"] }` — DISTINCT для нескольких полей
 - `{ "function": "avg", ... }`, `{ "function": "max", ... }`, `{ "function": "sum", ... }`
 
-**Пример:**
+### Примеры агрегатных функций
+
+**COUNT(*) — подсчёт всех строк:**
+```json
+{
+  "data": [{"function": "count", "args": ["*"]}],
+  "from": "tv_channel"
+}
+```
+**SQL:** `SELECT COUNT(*) FROM tv_channel`  
+**Результат:** `[[7308]]`
+
+**COUNT(field) — подсчёт непустых значений:**
+```json
+{
+  "data": [{"function": "count", "args": "id"}],
+  "from": "media"
+}
+```
+**SQL:** `SELECT COUNT(id) FROM media`
+
+**COUNT(DISTINCT field) — подсчёт уникальных значений:**
+```json
+{
+  "data": [
+    {
+      "function": "count",
+      "args": {
+        "function": "distinct",
+        "args": "mac_addr"
+      }
+    }
+  ],
+  "from": "terminal"
+}
+```
+**SQL:** `SELECT COUNT(DISTINCT mac_addr) FROM terminal`
+
+**Несколько агрегатов с алиасами:**
 ```json
 {
   "data": [
     {"function": "count", "args": ["*"], "as": "cnt"},
-    {"function": "count", "args": {"function": "distinct", "args": "mac_addr"}, "as": "uniq"}
+    {"function": "count", "args": {"function": "distinct", "args": "inet_addr"}, "as": "uniq"}
   ],
-  "from": "terminal_playlog"
+  "from": "media"
 }
 ```
 **SQL-аналог:**
 ```sql
-SELECT COUNT(*) AS cnt, COUNT(DISTINCT mac_addr) AS uniq
-FROM terminal_playlog
+SELECT COUNT(*) AS cnt, COUNT(DISTINCT inet_addr) AS uniq
+FROM media
 ```
+**Результат:** `[[651232, 14381]]`
+
+### Правила форматирования args
+
+1. **COUNT(\*)** — всегда массив: `["*"]`
+2. **Одно поле** — строка: `"field_name"`
+3. **Несколько полей** — массив: `["field1", "field2"]`
+4. **Вложенные функции** — объект: `{"function": "distinct", "args": "field"}`
 
 ***
 

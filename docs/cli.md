@@ -183,6 +183,68 @@ iptvportal sql -q "UPDATE subscriber SET disabled = true WHERE username = 'test'
 
 # DELETE
 iptvportal sql -q "DELETE FROM terminal WHERE id = 123 RETURNING id"
+
+# Aggregate functions
+iptvportal sql -q "SELECT COUNT(*) FROM media"
+iptvportal sql -q "SELECT COUNT(id) FROM subscriber"
+iptvportal sql -q "SELECT COUNT(DISTINCT inet_addr) FROM media"
+
+# Complex aggregates
+iptvportal sql -q "
+  SELECT 
+    COUNT(*) AS total_count, 
+    COUNT(DISTINCT inet_addr) AS unique_addrs 
+  FROM media
+"
+
+# Group by with aggregates
+iptvportal sql -q "
+  SELECT subscriber_id, COUNT(*) as device_count 
+  FROM terminal 
+  GROUP BY subscriber_id 
+  ORDER BY device_count DESC
+"
+```
+
+#### Aggregate Function Details
+
+The SQL transpiler properly handles aggregate functions with optimal JSONSQL format:
+
+**COUNT(\*)** - Counts all rows (uses array format per JSONSQL spec):
+```bash
+iptvportal sql -q "SELECT COUNT(*) FROM tv_channel" --dry-run
+# Transpiles to: {"function": "count", "args": ["*"]}
+```
+
+**COUNT(field)** - Counts non-null values in a specific field (uses string format):
+```bash
+iptvportal sql -q "SELECT COUNT(id) FROM media" --dry-run
+# Transpiles to: {"function": "count", "args": "id"}
+```
+
+**COUNT(DISTINCT field)** - Counts unique values (uses nested function format):
+```bash
+iptvportal sql -q "SELECT COUNT(DISTINCT mac_addr) FROM terminal" --dry-run
+# Transpiles to: 
+# {
+#   "function": "count",
+#   "args": {
+#     "function": "distinct",
+#     "args": "mac_addr"
+#   }
+# }
+```
+
+**Multiple aggregates with aliases**:
+```bash
+iptvportal sql -q "
+  SELECT 
+    COUNT(*) AS cnt, 
+    COUNT(DISTINCT inet_addr) AS uniq 
+  FROM media
+" --show-request
+
+# Result example: [[651232, 14381]]
 ```
 
 ### JSONSQL Subapp

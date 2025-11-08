@@ -2,75 +2,103 @@
 
 from typing import Any
 
+
 def build_function(name: str, args: list[Any], alias: str | None = None) -> dict[str, Any]:
     """
     Build a function call in JSONSQL format.
-    
+
     Args:
         name: Function name (e.g., 'COUNT', 'SUM')
         args: Function arguments
         alias: Optional alias for the result
-        
+
     Returns:
         Dictionary representing the function in JSONSQL format
+
+    Note:
+        - COUNT(*) uses array: ["*"]
+        - Single field uses string: "field"
+        - Multiple fields use array: ["field1", "field2"]
     """
-    # Keep args as list for consistency with JSONSQL spec
-    # Single arg should still be in a list (e.g., COUNT(*) -> ["*"])
-    result: dict[str, Any] = {
-        "function": name.lower(),
-        "args": args if args else []
-    }
-    
+    # Normalize args based on JSONSQL best practices:
+    # - Keep ["*"] as array for COUNT(*)
+    # - Single non-star argument as string
+    # - Multiple arguments as array
+    if not args:
+        args_out = []
+    elif len(args) == 1 and args[0] != "*":
+        # Single argument (except *) -> use string
+        args_out = args[0]
+    else:
+        # Multiple args or COUNT(*) -> use array
+        args_out = args
+
+    result: dict[str, Any] = {"function": name.lower(), "args": args_out}
+
     if alias:
         result["as"] = alias
-        
+
     return result
+
 
 def build_distinct_function(args: list[Any]) -> dict[str, Any]:
     """
     Build a DISTINCT function in JSONSQL format.
-    
+
     Args:
         args: Columns to select distinctly
-        
+
     Returns:
         Dictionary representing DISTINCT in JSONSQL format
+
+    Note:
+        - Single field uses string: "field"
+        - Multiple fields use array: ["field1", "field2"]
     """
-    return {
-        "function": "distinct",
-        "args": args if len(args) > 1 else args[0] if args else []
-    }
+    # Normalize args: single arg -> string, multiple -> array
+    if not args:
+        args_out = []
+    elif len(args) == 1:
+        args_out = args[0]
+    else:
+        args_out = args
+
+    return {"function": "distinct", "args": args_out}
+
 
 def build_aggregate_function(name: str, column: Any, alias: str | None = None) -> dict[str, Any]:
     """
     Build an aggregate function (COUNT, SUM, AVG, etc.) in JSONSQL format.
-    
+
     Args:
         name: Aggregate function name
         column: Column to aggregate
         alias: Optional alias for the result
-        
+
     Returns:
         Dictionary representing the aggregate function
     """
     return build_function(name, [column], alias)
 
-def build_nested_function(outer_func: str, inner_func: str, 
-                         inner_args: list[Any], alias: str | None = None) -> dict[str, Any]:
+
+def build_nested_function(
+    outer_func: str, inner_func: str, inner_args: list[Any], alias: str | None = None
+) -> dict[str, Any]:
     """
     Build nested function calls like COUNT(DISTINCT column).
-    
+
     Args:
         outer_func: Outer function name (e.g., 'COUNT')
         inner_func: Inner function name (e.g., 'DISTINCT')
         inner_args: Arguments for inner function
         alias: Optional alias for the result
-        
+
     Returns:
         Dictionary representing nested functions
     """
     inner = build_function(inner_func, inner_args)
     return build_function(outer_func, [inner], alias)
+
 
 # Common SQL functions that need special handling
 SPECIAL_FUNCTIONS = {
@@ -83,6 +111,7 @@ SPECIAL_FUNCTIONS = {
     "MAX": "max",
     "DISTINCT": "distinct",
 }
+
 
 def normalize_function_name(name: str) -> str:
     """Normalize function name to JSONSQL format."""
