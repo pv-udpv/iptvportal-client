@@ -8,9 +8,10 @@ Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync sup
 - ⚡ **Async/Sync APIs** - Identical interfaces for both paradigms
 - 🔧 **Python DSL** - Intuitive query builder with Field API and Q objects
 - 🔐 **Secure** - SecretStr for passwords, session caching, SSL verification
-- 🔄 **Resilient** - Exponential backoff retry mechanism
+- 🔄 **Resilient** - Exponential backoff retry mechanism with enhanced error messages
 - 📦 **Resource Managers** - High-level CRUD operations
 - 🎯 **Context Managers** - Automatic connection management
+- 🔄 **SQL Transpiler** - Convert PostgreSQL to JSONSQL automatically
 
 ## Installation
 
@@ -94,7 +95,7 @@ asyncio.run(main())
 
 ## CLI Usage
 
-The package includes a powerful CLI for working with IPTVPortal API:
+The package includes a powerful CLI with two subapps for working with IPTVPortal API:
 
 ```bash
 # Install with CLI support
@@ -106,15 +107,16 @@ iptvportal config init
 # Test authentication
 iptvportal auth
 
-# Execute queries
-iptvportal query select --from subscriber --limit 10
-iptvportal query select --from-sql "SELECT * FROM subscriber WHERE disabled = false"
+# Execute SQL queries (auto-transpiled to JSONSQL)
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 10"
+iptvportal sql --edit  # Open editor for complex queries
 
-# Transpile SQL to JSONSQL
+# Execute native JSONSQL queries
+iptvportal jsonsql select --from subscriber --limit 10
+iptvportal jsonsql select --edit  # Editor mode
+
+# Transpile SQL to JSONSQL (without execution)
 iptvportal transpile "SELECT * FROM subscriber"
-
-# Dry-run mode (show query without executing)
-iptvportal query select --from subscriber --limit 5 --dry-run
 ```
 
 ### CLI Commands
@@ -128,58 +130,123 @@ iptvportal auth
 iptvportal auth --renew
 ```
 
-#### Query Commands
+#### SQL Queries (Auto-transpiled)
 
-**SELECT (Native JSONSQL)**
+**Basic Queries**
 ```bash
-iptvportal query select \
-  --data "id,username,disabled" \
+# Direct SQL query
+iptvportal sql -q "SELECT * FROM subscriber WHERE disabled = false LIMIT 10"
+
+# Open editor for complex queries
+iptvportal sql --edit
+iptvportal sql -e
+
+# Dry-run mode (preview transpilation without execution)
+iptvportal sql -q "SELECT * FROM subscriber" --dry-run
+
+# Show JSON-RPC request along with result
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --show-request
+```
+
+**Aggregate Functions**
+```bash
+# COUNT(*) - counts all rows
+iptvportal sql -q "SELECT COUNT(*) FROM tv_channel"
+
+# COUNT(field) - counts non-null values
+iptvportal sql -q "SELECT COUNT(id) FROM subscriber"
+
+# COUNT(DISTINCT field) - counts unique values
+iptvportal sql -q "SELECT COUNT(DISTINCT mac_addr) FROM terminal"
+
+# Multiple aggregates with aliases
+iptvportal sql -q "
+  SELECT 
+    COUNT(*) AS total, 
+    COUNT(DISTINCT inet_addr) AS unique_ips 
+  FROM media
+"
+```
+
+**Complex JOINs**
+```bash
+# JOIN with EPG data
+iptvportal sql -q "
+  SELECT 
+    c.name AS channel,
+    p.title AS program,
+    cat.name AS category,
+    cat.genre AS genre
+  FROM tv_program p
+  JOIN tv_channel c ON p.channel_id = c.id
+  JOIN tv_program_category pc ON pc.program_id = p.id
+  JOIN tv_category cat ON pc.category_id = cat.id
+  WHERE p.epg_provider_id = 36
+  LIMIT 10
+"
+```
+
+**DML Operations**
+```bash
+# INSERT with RETURNING
+iptvportal sql -q "INSERT INTO package (name, paid) VALUES ('Premium', true) RETURNING id"
+
+# UPDATE with WHERE
+iptvportal sql -q "UPDATE subscriber SET disabled = true WHERE username = 'test' RETURNING id"
+
+# DELETE
+iptvportal sql -q "DELETE FROM terminal WHERE id = 123 RETURNING id"
+```
+
+#### Native JSONSQL Queries
+
+**SELECT**
+```bash
+# Basic SELECT
+iptvportal jsonsql select \
   --from subscriber \
+  --data "id,username,disabled" \
+  --limit 10
+
+# With WHERE condition
+iptvportal jsonsql select \
+  --from subscriber \
+  --data "id,username" \
   --where '{"eq": ["disabled", false]}' \
   --order-by username \
   --limit 10
-```
 
-**SELECT (SQL Mode)**
-```bash
-iptvportal query select \
-  --from-sql "SELECT id, username FROM subscriber WHERE disabled = false LIMIT 10"
+# Editor mode
+iptvportal jsonsql select --edit
 ```
 
 **INSERT**
 ```bash
-iptvportal query insert \
-  --from-sql "INSERT INTO package (name, paid) VALUES ('test', true) RETURNING id"
-  
-# Native mode
-iptvportal query insert \
+iptvportal jsonsql insert \
   --into package \
   --columns "name,paid" \
-  --values '[["movie", true]]' \
+  --values '[["Premium", true]]' \
   --returning id
+
+# Editor mode
+iptvportal jsonsql insert --edit
 ```
 
 **UPDATE**
 ```bash
-iptvportal query update \
-  --from-sql "UPDATE subscriber SET disabled = true WHERE username = 'test'"
-  
-# Native mode
-iptvportal query update \
+iptvportal jsonsql update \
   --table subscriber \
   --set '{"disabled": true}' \
-  --where '{"eq": ["username", "test"]}'
+  --where '{"eq": ["username", "test"]}' \
+  --returning id
 ```
 
 **DELETE**
 ```bash
-iptvportal query delete \
-  --from-sql "DELETE FROM terminal WHERE id = 123"
-  
-# Native mode
-iptvportal query delete \
+iptvportal jsonsql delete \
   --from terminal \
-  --where '{"eq": ["id", 123]}'
+  --where '{"eq": ["id", 123]}' \
+  --returning id
 ```
 
 #### Transpile Command
@@ -213,34 +280,19 @@ iptvportal config get domain
 #### Output Formats
 ```bash
 # Table format (default for SELECT)
-iptvportal query select --from subscriber --limit 5
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
 
 # JSON format
-iptvportal query select --from subscriber --limit 5 --format json
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --format json
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f json
 
 # YAML format
-iptvportal query select --from subscriber --limit 5 --format yaml
-```
-
-#### Dry-Run Mode
-```bash
-# Preview query without executing
-iptvportal query select \
-  --from-sql "SELECT * FROM subscriber LIMIT 5" \
-  --dry-run
-  
-# Shows:
-# - SQL Input (if using --from-sql)
-# - Transpiled JSONSQL
-# - JSON-RPC Request
-# - "Query will NOT be executed" message
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f yaml
 ```
 
 ## SQL to JSONSQL Transpiler
 
 Convert PostgreSQL queries to JSONSQL format using the built-in transpiler:
-
-### Python API
 
 ### Python API
 
@@ -268,6 +320,9 @@ result = transpiler.transpile(sql)
 - **SELECT statements** with columns, aliases, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, DISTINCT
 - **JOINs** (INNER, LEFT, RIGHT, FULL, CROSS) with complex ON conditions
 - **Aggregate functions** (COUNT, SUM, AVG, MIN, MAX) with DISTINCT support
+  - `COUNT(*)` → `{"function": "count", "args": ["*"]}`
+  - `COUNT(field)` → `{"function": "count", "args": "field"}`
+  - `COUNT(DISTINCT field)` → `{"function": "count", "args": {"function": "distinct", "args": "field"}}`
 - **Subqueries** in FROM, WHERE, and SELECT clauses
 - **Comparison operators**: `=`, `!=`, `>`, `<`, `>=`, `<=`, `IS`, `IS NOT`
 - **Logical operators**: `AND`, `OR`, `NOT`
@@ -275,7 +330,9 @@ result = transpiler.transpile(sql)
 - **Pattern matching**: `LIKE`, `ILIKE`
 - **Set operations**: `IN`, `NOT IN`
 - **INSERT, UPDATE, DELETE** statements with RETURNING clause
-- **Special functions**: COUNT(DISTINCT col), REGEXP_REPLACE, and more
+- **Special functions**: REGEXP_REPLACE, and more
+
+**Coverage**: ~95% of documented JSONSQL features
 
 ## Query Building
 
@@ -335,6 +392,25 @@ query = qb.select(
 )
 ```
 
+## Enhanced Error Handling
+
+Both sync and async clients provide detailed error messages with response body information:
+
+```python
+from iptvportal import IPTVPortalClient
+from iptvportal.exceptions import IPTVPortalAPIError
+
+with IPTVPortalClient() as client:
+    try:
+        result = client.execute(invalid_query)
+    except IPTVPortalAPIError as e:
+        # Error message includes:
+        # - HTTP status code
+        # - Full response body (up to 500 chars)
+        # - Parsed JSON error details when available
+        print(f"API Error: {e}")
+```
+
 ## Architecture
 
 ```
@@ -349,12 +425,22 @@ iptvportal-client/
 │   │   ├── builder.py     # Query builder
 │   │   ├── field.py       # Field API
 │   │   └── q_objects.py   # Q Objects
-│   └── transpiler/
-│       ├── transpiler.py  # SQL to JSONSQL transpiler
-│       ├── operators.py   # Operator mappings
-│       ├── functions.py   # Function handlers
-│       └── __main__.py    # CLI interface
+│   ├── transpiler/
+│   │   ├── transpiler.py  # SQL to JSONSQL transpiler
+│   │   ├── operators.py   # Operator mappings
+│   │   ├── functions.py   # Function handlers
+│   │   └── __main__.py    # CLI interface
+│   └── cli/
+│       └── __main__.py    # CLI application
+└── docs/
+    ├── cli.md             # Comprehensive CLI guide
+    └── jsonsql.md         # JSONSQL specification
 ```
+
+## Documentation
+
+- **[CLI Documentation](docs/cli.md)** - Complete guide to CLI usage with examples
+- **[JSONSQL Specification](docs/jsonsql.md)** - IPTVPortal JSONSQL API reference
 
 ## Development
 
@@ -377,6 +463,15 @@ mypy src/iptvportal
 # Linting
 ruff check src/iptvportal
 ```
+
+### GitHub Copilot Instructions
+
+This repository includes GitHub Copilot instructions in `.github/copilot-instructions.md` that enforce:
+- **Documentation consistency checks** - Copilot verifies that changes to code are reflected in documentation
+- **Automatic doc updates** - When core functionality changes, Copilot suggests corresponding documentation updates
+- **CLI reference accuracy** - Ensures CLI examples in README.md match the actual command structure
+
+When contributing, Copilot will help maintain sync between code and documentation automatically.
 
 ## License
 
