@@ -72,6 +72,7 @@ class SchemaIntrospector:
         # 2. Автоматическая генерация определений полей
         fields = {}
         field_name_overrides = field_name_overrides or {}
+        used_names = set()  # Track used field names to avoid duplicates
 
         for position, value in enumerate(sample_row):
             field_type = self._infer_field_type(value)
@@ -81,9 +82,15 @@ class SchemaIntrospector:
                 field_name = field_name_overrides[position]
                 description = "Manually specified field"
             else:
-                field_name = self._infer_field_name(position, value, field_type)
+                base_name = self._infer_field_name(position, value, field_type)
+                # Handle duplicate names by appending position
+                if base_name in used_names:
+                    field_name = f"{base_name}_{position}"
+                else:
+                    field_name = base_name
                 description = "Auto-detected field"
-
+            
+            used_names.add(field_name)
             fields[position] = FieldDefinition(
                 name=field_name, position=position, field_type=field_type, description=description
             )
