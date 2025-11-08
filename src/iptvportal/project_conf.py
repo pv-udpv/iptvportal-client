@@ -80,7 +80,7 @@ def _init_dynaconf() -> Dynaconf:
         environments=False,  # Single environment mode
         load_dotenv=True,  # Load from .env files
         merge_enabled=True,  # Enable deep merging
-        lowercase_read=False,  # Preserve case in keys
+        lowercase_read=True,  # Enable lowercase access (e.g., conf.core.timeout)
         validators=[
             # Core validators - ensure required fields are set (can be empty for init)
             Validator("core.timeout", gte=0, default=30.0),
