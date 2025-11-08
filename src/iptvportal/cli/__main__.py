@@ -8,6 +8,8 @@ from iptvportal.cli.commands.sql import sql_app
 from iptvportal.cli.commands.jsonsql import jsonsql_app
 from iptvportal.cli.commands.transpile import transpile_command
 from iptvportal.cli.commands.config import config_app
+from iptvportal.cli.commands.schema import schema_app
+from iptvportal.cli.commands.cache import cache_app
 
 console = Console()
 
@@ -25,6 +27,8 @@ app.command(name="transpile", help="Transpile SQL to JSONSQL format")(transpile_
 app.add_typer(config_app, name="config")
 app.add_typer(sql_app, name="sql")
 app.add_typer(jsonsql_app, name="jsonsql")
+app.add_typer(schema_app, name="schema")
+app.add_typer(cache_app, name="cache")
 
 def main() -> None:
     """Main entry point."""
