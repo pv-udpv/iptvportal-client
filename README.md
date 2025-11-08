@@ -5,6 +5,9 @@ Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync sup
 ## Features
 
  - 🧬 **Schema-Aware Formatting** - CLI auto-generates or reuses table schemas to render column names in table/JSON output (disable with `--no-map-schema`)
+ - 🗄️ **SQLite Sync Cache** - Local SQLite database caching with full/incremental/on-demand sync strategies for improved performance and offline capability
+ - 🔄 **Smart Sync Strategies** - Choose between full table sync, incremental updates, or on-demand lazy loading based on your needs
+ - 📊 **Sync Management CLI** - Complete command-line interface for cache initialization, status monitoring, and maintenance operations
 
 ## Installation
 
@@ -264,6 +267,29 @@ iptvportal transpile "SELECT * FROM subscriber" --format yaml
 iptvportal transpile --file query.sql
 ```
 
+#### Sync Cache Commands
+```bash
+# Initialize cache database
+iptvportal sync init
+
+# Show cache status and registered tables
+iptvportal sync status
+
+# List all registered tables
+iptvportal sync tables
+
+# Clear cache for specific table or all tables
+iptvportal sync clear subscriber
+iptvportal sync clear --all
+
+# Show detailed cache statistics
+iptvportal sync stats
+
+# Vacuum and optimize cache database
+iptvportal sync vacuum
+iptvportal sync vacuum --analyze
+```
+
 #### Configuration Commands
 ```bash
 # Show current configuration
@@ -424,6 +450,11 @@ iptvportal-client/
 │   ├── auth.py            # Auth managers (sync/async)
 │   ├── client.py          # Sync client
 │   ├── async_client.py    # Async client
+│   ├── sync/
+│   │   ├── __init__.py    # Sync module exports
+│   │   ├── database.py    # SQLite cache database layer
+│   │   ├── manager.py     # Sync orchestration and strategies
+│   │   └── exceptions.py  # Sync-specific exceptions
 │   ├── query/
 │   │   ├── builder.py     # Query builder
 │   │   ├── field.py       # Field API
@@ -433,8 +464,12 @@ iptvportal-client/
 │   │   ├── operators.py   # Operator mappings
 │   │   ├── functions.py   # Function handlers
 │   │   └── __main__.py    # CLI interface
+│   ├── schema.py          # Table schema management
 │   └── cli/
-│       └── __main__.py    # CLI application
+│       ├── __main__.py    # CLI application
+│       └── commands/
+│           ├── sync.py    # Sync cache management commands
+│           └── ...        # Other CLI commands
 └── docs/
     ├── cli.md             # Comprehensive CLI guide
     └── jsonsql.md         # JSONSQL specification

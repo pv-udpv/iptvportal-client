@@ -17,7 +17,6 @@ schemas:
         type: string
         description: "Название медиа-источника"
       2:
-        name: protocol
         type: string
         alias: proto
         description: "Протокол передачи (udp, http, rtsp, etc.)"

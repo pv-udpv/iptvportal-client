@@ -136,6 +136,87 @@ class IPTVPortalSettings(BaseSettings):
         description="Automatically add ORDER BY id to SELECT queries without explicit ordering",
     )
 
+    # ==================== SQLite Cache Settings ====================
+
+    cache_db_path: str = Field(
+        default="~/.iptvportal/cache.db",
+        description="Path to SQLite cache database"
+    )
+
+    enable_persistent_cache: bool = Field(
+        default=True,
+        description="Enable SQLite persistent cache (vs in-memory only)"
+    )
+
+    cache_db_journal_mode: Literal["DELETE", "WAL", "MEMORY"] = Field(
+        default="WAL",
+        description="SQLite journal mode (WAL recommended for concurrency)"
+    )
+
+    cache_db_page_size: int = Field(
+        default=4096,
+        description="SQLite page size in bytes"
+    )
+
+    cache_db_cache_size: int = Field(
+        default=-64000,
+        description="SQLite cache size (negative = KB, positive = pages)"
+    )
+
+    # ==================== Sync Behavior ====================
+
+    default_sync_strategy: Literal["full", "incremental", "on_demand"] = Field(
+        default="full",
+        description="Default sync strategy for tables without explicit config"
+    )
+
+    default_sync_ttl: int = Field(
+        default=3600,
+        description="Default cache TTL in seconds (1 hour)"
+    )
+
+    default_chunk_size: int = Field(
+        default=1000,
+        description="Default chunk size for bulk sync operations"
+    )
+
+    auto_sync_on_startup: bool = Field(
+        default=False,
+        description="Automatically sync all tables on client startup"
+    )
+
+    auto_sync_stale_tables: bool = Field(
+        default=True,
+        description="Automatically sync stale tables on first access"
+    )
+
+    max_concurrent_syncs: int = Field(
+        default=3,
+        description="Maximum number of tables to sync concurrently"
+    )
+
+    # ==================== Maintenance ====================
+
+    auto_vacuum_enabled: bool = Field(
+        default=True,
+        description="Automatically vacuum database on maintenance"
+    )
+
+    vacuum_threshold_mb: int = Field(
+        default=100,
+        description="Trigger vacuum when wasted space exceeds this (MB)"
+    )
+
+    auto_analyze_enabled: bool = Field(
+        default=True,
+        description="Automatically run ANALYZE for query optimization"
+    )
+
+    analyze_interval_hours: int = Field(
+        default=24,
+        description="Run ANALYZE every N hours"
+    )
+
 
 class CLISettings(BaseSettings):
     """CLI-specific configuration with defaults and guardrails.

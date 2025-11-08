@@ -1,0 +1,78 @@
+# IPTVPortal Client - Workspace Rules
+
+## Project Management
+- **Package Manager**: This project uses `uv` as the Python package manager
+- **Virtual Environment**: `uv` automatically manages virtual environments
+- **Dependencies**: All dependencies are managed through `uv.lock`
+- **Python Version**: Managed by `uv` (see `pyproject.toml`)
+
+## Command Execution
+All commands must use `uv run` prefix for proper environment isolation:
+
+```bash
+# Running tests
+uv run pytest
+
+# Running specific test files
+uv run pytest tests/test_sync_config.py
+
+# Running with coverage
+uv run pytest --cov=src/iptvportal/sync --cov-report=html
+
+# Running the CLI
+uv run python -m iptvportal.cli --help
+
+# Running sync commands
+uv run python -m iptvportal.cli sync --help
+
+# Adding dependencies
+uv add pytest-asyncio pytest-mock
+
+# Installing in development mode
+uv sync
+
+# Running linters/formatters
+uv run ruff check .
+uv run ruff format .
+```
+
+## Development Workflow
+1. **Setup**: `uv sync` to install dependencies
+2. **Testing**: `uv run pytest` to run all tests
+3. **Linting**: `uv run ruff check .` and `uv run ruff format .`
+4. **CLI Testing**: `uv run python -m iptvportal.cli [command]`
+5. **Adding Packages**: `uv add [package]` for new dependencies
+
+## Testing Guidelines
+- All tests must be runnable with `uv run pytest`
+- Use `pytest-asyncio` for async tests
+- Mock external dependencies (API calls, database connections)
+- Test files should be in `tests/` directory
+- Use descriptive test names and docstrings
+- Aim for >90% coverage on new code
+
+## Code Quality
+- Use `uv run ruff` for linting and formatting
+- Follow existing code patterns and naming conventions
+- Add type hints for new functions
+- Write comprehensive docstrings
+- Use async/await for I/O operations
+
+## File Structure
+- Source code in `src/iptvportal/`
+- Tests in `tests/`
+- Configuration in `config/`
+- Documentation in `docs/`
+- Use `uv run` for all executable commands
+
+## Git Workflow
+- Commit messages should be descriptive
+- Test before committing
+- Use `uv run pytest` to verify tests pass
+- Update documentation for new features
+
+## Important Notes
+- Never use `pip` directly - always use `uv add` or `uv sync`
+- Never use `python` directly - always use `uv run python`
+- All scripts and tools should work with `uv run`
+- Virtual environment is managed automatically by `uv`

@@ -80,9 +80,12 @@ class SyncConfig:
     # Sync scheduling
     auto_sync: bool = False
     """Автоматически синхронизировать при первом обращении"""
-    
+
     sync_interval: Optional[int] = None
     """Интервал автоматической пересинхронизации в секундах"""
+
+    disabled: bool = False
+    """Отключить синхронизацию для этой таблицы (например, из-за отсутствия доступа)"""
     
     # Data filtering
     include_fields: Optional[List[str]] = None
@@ -160,7 +163,9 @@ class SyncConfig:
             result['prefetch_relationships'] = self.prefetch_relationships
         if self.max_concurrent_chunks != 3:
             result['max_concurrent_chunks'] = self.max_concurrent_chunks
-        
+        if self.disabled:
+            result['disabled'] = self.disabled
+
         return result
 
 @dataclass
@@ -213,12 +218,13 @@ class TableMetadata:
 class FieldDefinition:
     """
     Описание поля таблицы.
-    
+
     Attributes:
         name: Имя поля в БД
         position: Позиция поля в порядке SELECT * (начиная с 0)
         alias: Алиас для маппинга (как в Pydantic Field(alias=...))
         python_name: Имя для Python (для snake_case преобразования)
+        remote_name: Имя поля в удалённой схеме (для column-based extraction)
         field_type: Тип поля
         description: Описание поля
         validator: Функция валидации
@@ -228,6 +234,7 @@ class FieldDefinition:
     position: int
     alias: Optional[str] = None
     python_name: Optional[str] = None
+    remote_name: Optional[str] = None
     field_type: FieldType = FieldType.UNKNOWN
     description: Optional[str] = None
     validator: Optional[Callable] = None
@@ -698,11 +705,18 @@ class SchemaLoader:
                 transformer = SchemaLoader.BUILTIN_TRANSFORMERS[transformer_name]
             
             # Создать описание поля
+            # Use name if provided, otherwise use alias or generate default name
+            field_name = field_config.get('name')
+            if not field_name:
+                # If no name, use alias or generate Field_{position}
+                field_name = field_config.get('alias') or f"Field_{position}"
+
             field_def = FieldDefinition(
-                name=field_config['name'],
+                name=field_name,
                 position=position,
                 alias=field_config.get('alias'),
                 python_name=field_config.get('python_name'),
+                remote_name=field_config.get('remote_name'),
                 field_type=field_type,
                 description=field_config.get('description'),
                 transformer=transformer
@@ -741,6 +755,7 @@ class SchemaLoader:
             cache_strategy=config.get('cache_strategy', 'full'),
             auto_sync=config.get('auto_sync', False),
             sync_interval=config.get('sync_interval'),
+            disabled=config.get('disabled', False),
             include_fields=config.get('include_fields'),
             exclude_fields=config.get('exclude_fields'),
             incremental_field=config.get('incremental_field'),
