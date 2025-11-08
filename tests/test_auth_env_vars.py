@@ -166,14 +166,8 @@ class TestAuthWithEnvVars:
 
     def test_missing_required_env_vars_raises_error(self):
         """Test that missing required environment variables raises validation error."""
-        # Clear environment variables
-        env_to_clear = {
-            "IPTVPORTAL_DOMAIN": None,
-            "IPTVPORTAL_USERNAME": None,
-            "IPTVPORTAL_PASSWORD": None,
-        }
-
-        with patch.dict(os.environ, env_to_clear, clear=True):
+        # Clear all environment variables and don't set any IPTVPORTAL_ ones
+        with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(Exception):  # Pydantic ValidationError
                 IPTVPortalSettings()
 
@@ -217,7 +211,7 @@ class TestEnvVarConfiguration:
             # Optional vars not set
         }
 
-        with patch.dict(os.environ, test_env, clear=False):
+        with patch.dict(os.environ, test_env, clear=True):
             settings = IPTVPortalSettings()
 
             # Verify defaults are used
@@ -279,14 +273,8 @@ IPTVPORTAL_TIMEOUT=50.0
         try:
             os.chdir(tmp_path)
 
-            # Clear environment to ensure loading from file
-            env_to_clear = {
-                "IPTVPORTAL_DOMAIN": None,
-                "IPTVPORTAL_USERNAME": None,
-                "IPTVPORTAL_PASSWORD": None,
-            }
-
-            with patch.dict(os.environ, env_to_clear, clear=False):
+            # Clear all environment variables to ensure loading from file
+            with patch.dict(os.environ, {}, clear=True):
                 settings = IPTVPortalSettings()
 
                 # Verify settings loaded from .env file

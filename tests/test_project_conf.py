@@ -127,9 +127,10 @@ class TestProjectConf:
         all_settings = list_settings()
         
         assert isinstance(all_settings, dict)
-        assert "core" in all_settings
-        assert "cli" in all_settings
-        assert "sync" in all_settings
+        # Dynaconf returns uppercase keys by default, even with lowercase_read=True
+        assert "CORE" in all_settings or "core" in all_settings
+        assert "CLI" in all_settings or "cli" in all_settings
+        assert "SYNC" in all_settings or "sync" in all_settings
 
     def test_list_settings_with_prefix(self):
         """Test listing settings with prefix."""
