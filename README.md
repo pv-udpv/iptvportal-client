@@ -9,6 +9,7 @@ Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync sup
  - 🔄 **Smart Sync Strategies** - Choose between full table sync, incremental updates, or on-demand lazy loading based on your needs
  - 📊 **Sync Management CLI** - Complete command-line interface for cache initialization, status monitoring, and maintenance operations
  - ⚙️ **Modular Configuration** - Dynaconf-based hierarchical configuration with schema-specific overrides and environment variable support
+ - 🐛 **Debug Mode** - Step-by-step logging with `--debug` flag for troubleshooting, showing SQL transpilation, JSONSQL, JSON-RPC requests, and full error tracebacks
 
 ## Installation
 
@@ -257,6 +258,30 @@ iptvportal sql -q "UPDATE subscriber SET disabled = true WHERE username = 'test'
 # DELETE
 iptvportal sql -q "DELETE FROM terminal WHERE id = 123 RETURNING id"
 ```
+
+**Debug Mode**
+```bash
+# Enable debug mode for detailed step-by-step logging
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --debug
+
+# Debug with JSON format (for automation)
+iptvportal sql -q "SELECT * FROM subscriber" --debug --debug-format json
+
+# Save debug logs to file
+iptvportal sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
+
+# Combine with dry-run to see transpilation without execution
+iptvportal sql -q "SELECT * FROM media LIMIT 10" --dry-run --debug
+```
+
+Debug mode shows:
+- SQL input and transpilation steps
+- Transpiled JSONSQL query
+- JSON-RPC request details
+- Configuration used
+- Full error tracebacks
+
+Tip: Use `--debug` when troubleshooting JOIN queries, schema mapping issues, or any errors.
 
 #### Native JSONSQL Queries
 
