@@ -1,0 +1,233 @@
+# IPTVPortal Table Schemas Configuration
+# Схемы таблиц для работы с SELECT * и частичным описанием полей
+# Неописанные поля будут автоматически именованы как Field_{n}
+
+schemas:
+  # Таблица медиа-источников (ТВ каналы, видео, аудио потоки)
+  media:
+    total_fields: 15
+    description: "Медиа-источники: ТВ каналы, видео, аудио потоки"
+    fields:
+      0:
+        name: id
+        type: integer
+        description: "Уникальный идентификатор медиа"
+      1:
+        name: name
+        type: string
+        description: "Название медиа-источника"
+      2:
+        name: protocol
+        type: string
+        alias: proto
+        description: "Протокол передачи (udp, http, rtsp, etc.)"
+      3:
+        name: inet_addr
+        type: string
+        alias: ip_address
+        python_name: ip
+        description: "IP адрес источника"
+      4:
+        name: port
+        type: integer
+        description: "Порт источника"
+      5:
+        name: is_tv
+        type: boolean
+        description: "Является ли ТВ каналом"
+      6:
+        name: is_radio
+        type: boolean
+        description: "Является ли радио"
+      9:
+        name: created_at
+        type: datetime
+        transformer: datetime
+        description: "Дата создания записи"
+      10:
+        name: updated_at
+        type: datetime
+        transformer: datetime
+        description: "Дата обновления записи"
+
+  # Таблица абонентов
+  subscriber:
+    total_fields: 20
+    description: "Абоненты системы"
+    fields:
+      0:
+        name: id
+        type: integer
+        description: "ID абонента"
+      1:
+        name: username
+        type: string
+        description: "Логин абонента"
+      2:
+        name: password
+        type: string
+        description: "Хэш пароля"
+      3:
+        name: disabled
+        type: boolean
+        description: "Флаг отключения"
+      4:
+        name: email
+        type: string
+        description: "Email абонента"
+      5:
+        name: phone
+        type: string
+        description: "Телефон"
+      6:
+        name: balance
+        type: float
+        description: "Баланс счёта"
+      7:
+        name: created_at
+        type: datetime
+        transformer: datetime
+        description: "Дата регистрации"
+      8:
+        name: last_login
+        type: datetime
+        transformer: datetime
+        description: "Последний вход"
+
+  # Таблица устройств абонентов
+  terminal:
+    total_fields: 12
+    description: "Устройства (приставки, смарт-ТВ) абонентов"
+    fields:
+      0:
+        name: id
+        type: integer
+      1:
+        name: subscriber_id
+        type: integer
+        description: "ID абонента-владельца"
+      2:
+        name: mac_addr
+        type: string
+        alias: mac
+        description: "MAC адрес устройства"
+      3:
+        name: model
+        type: string
+        description: "Модель устройства"
+      4:
+        name: active
+        type: boolean
+        description: "Активно ли устройство"
+      5:
+        name: created_at
+        type: datetime
+        transformer: datetime
+
+  # Таблица ТВ каналов
+  tv_channel:
+    total_fields: 12
+    description: "Телевизионные каналы"
+    fields:
+      0:
+        name: id
+        type: integer
+      1:
+        name: name
+        type: string
+        description: "Название канала"
+      2:
+        name: epg_id
+        type: integer
+        description: "ID для программы передач"
+      3:
+        name: logo_url
+        type: string
+        alias: logo
+        description: "URL логотипа канала"
+      4:
+        name: category
+        type: string
+        description: "Категория (новости, спорт, фильмы, etc.)"
+      5:
+        name: sort_order
+        type: integer
+        alias: position
+        description: "Порядок сортировки"
+
+  # Таблица пакетов подписки
+  package:
+    total_fields: 10
+    description: "Пакеты каналов и услуг"
+    fields:
+      0:
+        name: id
+        type: integer
+      1:
+        name: name
+        type: string
+        description: "Название пакета"
+      2:
+        name: paid
+        type: boolean
+        description: "Платный ли пакет"
+      3:
+        name: price
+        type: float
+        description: "Цена подписки"
+      4:
+        name: period_days
+        type: integer
+        description: "Период подписки в днях"
+      5:
+        name: description
+        type: string
+        description: "Описание пакета"
+
+  # Таблица связи каналов и пакетов (many-to-many)
+  package_channel:
+    total_fields: 5
+    description: "Связь пакетов и каналов"
+    fields:
+      0:
+        name: id
+        type: integer
+      1:
+        name: package_id
+        type: integer
+      2:
+        name: channel_id
+        type: integer
+      3:
+        name: created_at
+        type: datetime
+        transformer: datetime
+
+  # Таблица подписок абонентов
+  subscription:
+    total_fields: 8
+    description: "Подписки абонентов на пакеты"
+    fields:
+      0:
+        name: id
+        type: integer
+      1:
+        name: subscriber_id
+        type: integer
+      2:
+        name: package_id
+        type: integer
+      3:
+        name: start_date
+        type: datetime
+        transformer: datetime
+        description: "Дата начала подписки"
+      4:
+        name: end_date
+        type: datetime
+        transformer: datetime
+        description: "Дата окончания подписки"
+      5:
+        name: active
+        type: boolean
+        description: "Активна ли подписка"

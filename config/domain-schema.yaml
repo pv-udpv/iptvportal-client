@@ -1,0 +1,672 @@
+schemas:
+  domain:
+    total_fields: 167
+    fields:
+      '0':
+        name: id
+        type: integer
+        description: Auto-generated field
+      '1':
+        name: name
+        type: string
+        description: Manually specified field
+      '2':
+        name: logo_url
+        type: unknown
+        description: Manually specified field
+      '3':
+        name: epg_url
+        type: unknown
+        description: Manually specified field
+      '4':
+        name: Field_4
+        type: integer
+        description: Auto-generated field
+      '5':
+        name: Field_5
+        type: boolean
+        description: Auto-generated field
+      '6':
+        name: Field_6
+        type: unknown
+        description: Auto-generated field
+      '7':
+        name: Field_7
+        type: boolean
+        description: Auto-generated field
+      '8':
+        name: Field_8
+        type: integer
+        description: Auto-generated field
+      '9':
+        name: Field_9
+        type: unknown
+        description: Auto-generated field
+      '10':
+        name: Field_10
+        type: unknown
+        description: Auto-generated field
+      '11':
+        name: Field_11
+        type: boolean
+        description: Auto-generated field
+      '12':
+        name: Field_12
+        type: unknown
+        description: Auto-generated field
+      '13':
+        name: Field_13
+        type: unknown
+        description: Auto-generated field
+      '14':
+        name: Field_14
+        type: unknown
+        description: Auto-generated field
+      '15':
+        name: Field_15
+        type: unknown
+        description: Auto-generated field
+      '16':
+        name: Field_16
+        type: unknown
+        description: Auto-generated field
+      '17':
+        name: url
+        type: string
+        description: Auto-generated field
+      '18':
+        name: Field_18
+        type: unknown
+        description: Auto-generated field
+      '19':
+        name: Field_19
+        type: unknown
+        description: Auto-generated field
+      '20':
+        name: Field_20
+        type: unknown
+        description: Auto-generated field
+      '21':
+        name: Field_21
+        type: unknown
+        description: Auto-generated field
+      '22':
+        name: Field_22
+        type: unknown
+        description: Auto-generated field
+      '23':
+        name: Field_23
+        type: unknown
+        description: Auto-generated field
+      '24':
+        name: Field_24
+        type: unknown
+        description: Auto-generated field
+      '25':
+        name: Field_25
+        type: unknown
+        description: Auto-generated field
+      '26':
+        name: Field_26
+        type: unknown
+        description: Auto-generated field
+      '27':
+        name: Field_27
+        type: unknown
+        description: Auto-generated field
+      '28':
+        name: Field_28
+        type: unknown
+        description: Auto-generated field
+      '29':
+        name: Field_29
+        type: string
+        description: Auto-generated field
+      '30':
+        name: Field_30
+        type: string
+        description: Auto-generated field
+      '31':
+        name: timestamp_31
+        type: datetime
+        description: Auto-generated field
+      '32':
+        name: Field_32
+        type: boolean
+        description: Auto-generated field
+      '33':
+        name: Field_33
+        type: integer
+        description: Auto-generated field
+      '34':
+        name: Field_34
+        type: unknown
+        description: Auto-generated field
+      '35':
+        name: Field_35
+        type: unknown
+        description: Auto-generated field
+      '36':
+        name: Field_36
+        type: unknown
+        description: Auto-generated field
+      '37':
+        name: Field_37
+        type: integer
+        description: Auto-generated field
+      '38':
+        name: Field_38
+        type: boolean
+        description: Auto-generated field
+      '39':
+        name: Field_39
+        type: unknown
+        description: Auto-generated field
+      '40':
+        name: Field_40
+        type: unknown
+        description: Auto-generated field
+      '41':
+        name: Field_41
+        type: unknown
+        description: Auto-generated field
+      '42':
+        name: Field_42
+        type: unknown
+        description: Auto-generated field
+      '43':
+        name: Field_43
+        type: unknown
+        description: Auto-generated field
+      '44':
+        name: Field_44
+        type: string
+        description: Auto-generated field
+      '45':
+        name: Field_45
+        type: string
+        description: Auto-generated field
+      '46':
+        name: Field_46
+        type: unknown
+        description: Auto-generated field
+      '47':
+        name: Field_47
+        type: string
+        description: Auto-generated field
+      '48':
+        name: Field_48
+        type: unknown
+        description: Auto-generated field
+      '49':
+        name: Field_49
+        type: string
+        description: Auto-generated field
+      '50':
+        name: Field_50
+        type: unknown
+        description: Auto-generated field
+      '51':
+        name: Field_51
+        type: unknown
+        description: Auto-generated field
+      '52':
+        name: Field_52
+        type: unknown
+        description: Auto-generated field
+      '53':
+        name: Field_53
+        type: unknown
+        description: Auto-generated field
+      '54':
+        name: Field_54
+        type: unknown
+        description: Auto-generated field
+      '55':
+        name: Field_55
+        type: unknown
+        description: Auto-generated field
+      '56':
+        name: Field_56
+        type: unknown
+        description: Auto-generated field
+      '57':
+        name: Field_57
+        type: unknown
+        description: Auto-generated field
+      '58':
+        name: Field_58
+        type: unknown
+        description: Auto-generated field
+      '59':
+        name: Field_59
+        type: boolean
+        description: Auto-generated field
+      '60':
+        name: Field_60
+        type: boolean
+        description: Auto-generated field
+      '61':
+        name: timestamp_61
+        type: datetime
+        description: Auto-generated field
+      '62':
+        name: Field_62
+        type: unknown
+        description: Auto-generated field
+      '63':
+        name: Field_63
+        type: unknown
+        description: Auto-generated field
+      '64':
+        name: Field_64
+        type: unknown
+        description: Auto-generated field
+      '65':
+        name: Field_65
+        type: unknown
+        description: Auto-generated field
+      '66':
+        name: Field_66
+        type: unknown
+        description: Auto-generated field
+      '67':
+        name: Field_67
+        type: unknown
+        description: Auto-generated field
+      '68':
+        name: Field_68
+        type: string
+        description: Auto-generated field
+      '69':
+        name: Field_69
+        type: unknown
+        description: Auto-generated field
+      '70':
+        name: Field_70
+        type: unknown
+        description: Auto-generated field
+      '71':
+        name: Field_71
+        type: unknown
+        description: Auto-generated field
+      '72':
+        name: Field_72
+        type: unknown
+        description: Auto-generated field
+      '73':
+        name: Field_73
+        type: unknown
+        description: Auto-generated field
+      '74':
+        name: Field_74
+        type: unknown
+        description: Auto-generated field
+      '75':
+        name: Field_75
+        type: unknown
+        description: Auto-generated field
+      '76':
+        name: Field_76
+        type: boolean
+        description: Auto-generated field
+      '77':
+        name: Field_77
+        type: unknown
+        description: Auto-generated field
+      '78':
+        name: Field_78
+        type: unknown
+        description: Auto-generated field
+      '79':
+        name: Field_79
+        type: unknown
+        description: Auto-generated field
+      '80':
+        name: Field_80
+        type: unknown
+        description: Auto-generated field
+      '81':
+        name: Field_81
+        type: integer
+        description: Auto-generated field
+      '82':
+        name: Field_82
+        type: unknown
+        description: Auto-generated field
+      '83':
+        name: Field_83
+        type: unknown
+        description: Auto-generated field
+      '84':
+        name: Field_84
+        type: integer
+        description: Auto-generated field
+      '85':
+        name: Field_85
+        type: integer
+        description: Auto-generated field
+      '86':
+        name: Field_86
+        type: unknown
+        description: Auto-generated field
+      '87':
+        name: Field_87
+        type: unknown
+        description: Auto-generated field
+      '88':
+        name: Field_88
+        type: unknown
+        description: Auto-generated field
+      '89':
+        name: Field_89
+        type: string
+        description: Auto-generated field
+      '90':
+        name: Field_90
+        type: unknown
+        description: Auto-generated field
+      '91':
+        name: Field_91
+        type: unknown
+        description: Auto-generated field
+      '92':
+        name: Field_92
+        type: boolean
+        description: Auto-generated field
+      '93':
+        name: Field_93
+        type: unknown
+        description: Auto-generated field
+      '94':
+        name: Field_94
+        type: boolean
+        description: Auto-generated field
+      '95':
+        name: Field_95
+        type: unknown
+        description: Auto-generated field
+      '96':
+        name: Field_96
+        type: unknown
+        description: Auto-generated field
+      '97':
+        name: Field_97
+        type: unknown
+        description: Auto-generated field
+      '98':
+        name: Field_98
+        type: unknown
+        description: Auto-generated field
+      '99':
+        name: Field_99
+        type: unknown
+        description: Auto-generated field
+      '100':
+        name: Field_100
+        type: unknown
+        description: Auto-generated field
+      '101':
+        name: Field_101
+        type: unknown
+        description: Auto-generated field
+      '102':
+        name: Field_102
+        type: unknown
+        description: Auto-generated field
+      '103':
+        name: Field_103
+        type: unknown
+        description: Auto-generated field
+      '104':
+        name: Field_104
+        type: integer
+        description: Auto-generated field
+      '105':
+        name: Field_105
+        type: boolean
+        description: Auto-generated field
+      '106':
+        name: Field_106
+        type: string
+        description: Auto-generated field
+      '107':
+        name: Field_107
+        type: unknown
+        description: Auto-generated field
+      '108':
+        name: Field_108
+        type: unknown
+        description: Auto-generated field
+      '109':
+        name: Field_109
+        type: unknown
+        description: Auto-generated field
+      '110':
+        name: Field_110
+        type: unknown
+        description: Auto-generated field
+      '111':
+        name: Field_111
+        type: unknown
+        description: Auto-generated field
+      '112':
+        name: Field_112
+        type: unknown
+        description: Auto-generated field
+      '113':
+        name: Field_113
+        type: unknown
+        description: Auto-generated field
+      '114':
+        name: Field_114
+        type: unknown
+        description: Auto-generated field
+      '115':
+        name: Field_115
+        type: unknown
+        description: Auto-generated field
+      '116':
+        name: Field_116
+        type: unknown
+        description: Auto-generated field
+      '117':
+        name: Field_117
+        type: unknown
+        description: Auto-generated field
+      '118':
+        name: Field_118
+        type: unknown
+        description: Auto-generated field
+      '119':
+        name: Field_119
+        type: unknown
+        description: Auto-generated field
+      '120':
+        name: Field_120
+        type: unknown
+        description: Auto-generated field
+      '121':
+        name: Field_121
+        type: unknown
+        description: Auto-generated field
+      '122':
+        name: Field_122
+        type: unknown
+        description: Auto-generated field
+      '123':
+        name: Field_123
+        type: unknown
+        description: Auto-generated field
+      '124':
+        name: Field_124
+        type: unknown
+        description: Auto-generated field
+      '125':
+        name: Field_125
+        type: unknown
+        description: Auto-generated field
+      '126':
+        name: Field_126
+        type: unknown
+        description: Auto-generated field
+      '127':
+        name: Field_127
+        type: unknown
+        description: Auto-generated field
+      '128':
+        name: Field_128
+        type: unknown
+        description: Auto-generated field
+      '129':
+        name: Field_129
+        type: string
+        description: Auto-generated field
+      '130':
+        name: Field_130
+        type: unknown
+        description: Auto-generated field
+      '131':
+        name: Field_131
+        type: unknown
+        description: Auto-generated field
+      '132':
+        name: Field_132
+        type: unknown
+        description: Auto-generated field
+      '133':
+        name: Field_133
+        type: unknown
+        description: Auto-generated field
+      '134':
+        name: Field_134
+        type: unknown
+        description: Auto-generated field
+      '135':
+        name: Field_135
+        type: unknown
+        description: Auto-generated field
+      '136':
+        name: Field_136
+        type: unknown
+        description: Auto-generated field
+      '137':
+        name: Field_137
+        type: unknown
+        description: Auto-generated field
+      '138':
+        name: timestamp_138
+        type: datetime
+        description: Auto-generated field
+      '139':
+        name: Field_139
+        type: unknown
+        description: Auto-generated field
+      '140':
+        name: Field_140
+        type: unknown
+        description: Auto-generated field
+      '141':
+        name: Field_141
+        type: unknown
+        description: Auto-generated field
+      '142':
+        name: Field_142
+        type: unknown
+        description: Auto-generated field
+      '143':
+        name: Field_143
+        type: unknown
+        description: Auto-generated field
+      '144':
+        name: Field_144
+        type: unknown
+        description: Auto-generated field
+      '145':
+        name: Field_145
+        type: unknown
+        description: Auto-generated field
+      '146':
+        name: Field_146
+        type: unknown
+        description: Auto-generated field
+      '147':
+        name: Field_147
+        type: unknown
+        description: Auto-generated field
+      '148':
+        name: Field_148
+        type: unknown
+        description: Auto-generated field
+      '149':
+        name: Field_149
+        type: unknown
+        description: Auto-generated field
+      '150':
+        name: Field_150
+        type: unknown
+        description: Auto-generated field
+      '151':
+        name: Field_151
+        type: unknown
+        description: Auto-generated field
+      '152':
+        name: Field_152
+        type: unknown
+        description: Auto-generated field
+      '153':
+        name: Field_153
+        type: unknown
+        description: Auto-generated field
+      '154':
+        name: Field_154
+        type: unknown
+        description: Auto-generated field
+      '155':
+        name: Field_155
+        type: unknown
+        description: Auto-generated field
+      '156':
+        name: Field_156
+        type: unknown
+        description: Auto-generated field
+      '157':
+        name: Field_157
+        type: unknown
+        description: Auto-generated field
+      '158':
+        name: Field_158
+        type: unknown
+        description: Auto-generated field
+      '159':
+        name: Field_159
+        type: unknown
+        description: Auto-generated field
+      '160':
+        name: Field_160
+        type: unknown
+        description: Auto-generated field
+      '161':
+        name: Field_161
+        type: unknown
+        description: Auto-generated field
+      '162':
+        name: Field_162
+        type: unknown
+        description: Auto-generated field
+      '163':
+        name: Field_163
+        type: unknown
+        description: Auto-generated field
+      '164':
+        name: Field_164
+        type: unknown
+        description: Auto-generated field
+      '165':
+        name: Field_165
+        type: unknown
+        description: Auto-generated field
+      '166':
+        name: Field_166
+        type: unknown
+        description: Auto-generated field

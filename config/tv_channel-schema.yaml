@@ -1,0 +1,63 @@
+schemas:
+  tv_channel:
+    total_fields: 13
+    fields:
+      '0':
+        name: id
+        type: integer
+        description: Auto-detected field
+      '1':
+        name: Field_1
+        type: string
+        description: Auto-detected field
+      '2':
+        name: url
+        type: string
+        description: Auto-detected field
+      '3':
+        name: Field_3
+        type: unknown
+        description: Auto-detected field
+      '4':
+        name: Field_4
+        type: unknown
+        description: Auto-detected field
+      '5':
+        name: Field_5
+        type: unknown
+        description: Auto-detected field
+      '6':
+        name: Field_6
+        type: unknown
+        description: Auto-detected field
+      '7':
+        name: Field_7
+        type: unknown
+        description: Auto-detected field
+      '8':
+        name: Field_8
+        type: integer
+        description: Auto-detected field
+      '9':
+        name: Field_9
+        type: unknown
+        description: Auto-detected field
+      '10':
+        name: Field_10
+        type: unknown
+        description: Auto-detected field
+      '11':
+        name: Field_11
+        type: unknown
+        description: Auto-detected field
+      '12':
+        name: Field_12
+        type: unknown
+        description: Auto-detected field
+    sync_config:
+      chunk_size: 100
+      ttl: 3600
+      auto_sync: true
+    metadata:
+      row_count: 0
+      analyzed_at: '2025-11-08T07:01:01.134578'
