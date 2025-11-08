@@ -526,6 +526,92 @@ Useful for:
 - Learning JSONSQL format
 - API integration development
 
+### Debug Mode
+
+Enable detailed step-by-step logging for troubleshooting and understanding query execution flow.
+
+**Available in:** `sql` and `jsonsql` commands
+
+```bash
+# Basic debug mode (human-readable text format)
+iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --debug
+
+# Debug with JSON format
+iptvportal sql -q "SELECT * FROM subscriber" --debug --debug-format json
+
+# Debug with YAML format
+iptvportal sql -q "SELECT * FROM media LIMIT 10" --debug --debug-format yaml
+
+# Save debug logs to file
+iptvportal sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
+
+# Works with dry-run mode too
+iptvportal sql -q "SELECT * FROM subscriber" --dry-run --debug
+```
+
+**Debug output includes:**
+- SQL input (for sql command)
+- Transpilation step (SQL → JSONSQL)
+- Transpiled JSONSQL query
+- Detected query method
+- Configuration being used
+- JSON-RPC request built
+- Table name extraction (for schema mapping)
+- Query execution and results
+- Full traceback for errors
+
+**Debug formats:**
+- `text` (default): Human-readable format with syntax highlighting
+- `json`: Machine-readable JSON for automation
+- `yaml`: YAML format for better readability
+
+**Use cases:**
+- Troubleshooting query errors
+- Understanding SQL to JSONSQL transpilation
+- Debugging schema mapping issues
+- Verifying JOIN query handling
+- Learning the query execution flow
+- Integration testing and automation
+
+**Error handling in debug mode:**
+When an error occurs:
+- **Without --debug**: Shows concise error message with suggestion to use `--debug`
+- **With --debug**: Shows full exception traceback and debug logs for all steps
+
+**Example debug output:**
+
+```
+[DEBUG] SQL Input
+SELECT id, username FROM subscriber LIMIT 5
+
+[DEBUG] Transpilation
+Transpiling SQL to JSONSQL...
+
+[DEBUG] Transpiled JSONSQL
+{
+  "data": ["id", "username"],
+  "from": "subscriber",
+  "order_by": "id",
+  "limit": 5
+}
+
+[DEBUG] Detected Method
+select
+
+[DEBUG] JSON-RPC Request
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "select",
+  "params": {
+    "data": ["id", "username"],
+    "from": "subscriber",
+    "order_by": "id",
+    "limit": 5
+  }
+}
+```
+
 ## Editor Integration
 
 The CLI supports opening your preferred editor for writing queries.
