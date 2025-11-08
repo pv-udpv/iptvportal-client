@@ -66,10 +66,46 @@ uv run ruff format .
 - Use `uv run` for all executable commands
 
 ## Git Workflow
-- Commit messages should be descriptive
-- Test before committing
-- Use `uv run pytest` to verify tests pass
-- Update documentation for new features
+- **Automated Workflow**: Use `./scripts/git-workflow.sh` for complete commit → test → push → PR workflow
+- **Conventional Commits**: All commits must follow `type(scope): description` format
+- **Git Hooks**: Automatic quality checks via `.githooks/` (setup with `./scripts/setup-hooks.sh`)
+- **Branch Naming**: Use `issue-123-feature-name` for issue-related branches
+- **PR Creation**: Use `./scripts/create-pr.sh` with automatic issue linking
+- **Quality Gates**: Pre-commit hooks enforce linting, formatting, and testing
+
+### Workflow Scripts
+```bash
+# One-time setup
+chmod +x scripts/*.sh
+./scripts/setup-hooks.sh
+
+# Daily workflow
+./scripts/git-workflow.sh                    # Full automated workflow
+./scripts/commit-helper.sh                   # Interactive commit builder
+./scripts/create-pr.sh --issue 123           # Create PR with issue link
+./scripts/issue-branch.sh 456                # Create branch from issue
+./scripts/validate-commit.sh --all           # Validate commit messages
+```
+
+### Conventional Commit Format
+```
+type(scope): description
+
+# Types: feat, fix, docs, test, refactor, chore, perf, style, ci, revert, build
+# Scopes: sync, cli, transpiler, schema, cache, config, docs, test, ci, deps
+# Examples:
+feat(sync): Add incremental sync strategy
+fix(cli): Handle invalid command arguments
+test(schema): Add validation tests
+```
+
+### Git Hooks (Automatic)
+- **pre-commit**: Linting, formatting, quick tests, debug statement detection
+- **commit-msg**: Message format validation, issue reference suggestions
+- **post-commit**: Helpful suggestions, PR creation offers, status updates
+- **pre-push**: Full test suite, coverage check, main branch protection
+
+**Skip hooks**: Use `--no-verify` flag (e.g., `git commit --no-verify`)
 
 ## Important Notes
 - Never use `pip` directly - always use `uv add` or `uv sync`

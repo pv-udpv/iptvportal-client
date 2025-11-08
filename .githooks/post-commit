@@ -1,0 +1,160 @@
+#!/bin/bash
+# IPTVPortal post-commit hook
+# Provides helpful information and suggestions after commits
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+log_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
+}
+
+log_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+log_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+# Show commit summary
+show_commit_summary() {
+    local commit_hash=$(git rev-parse HEAD)
+    local commit_msg=$(git log -1 --pretty=%B | head -n 1)
+    local author=$(git log -1 --pretty=%an)
+    local date=$(git log -1 --pretty=%ad --date=short)
+
+    echo ""
+    log_success "Commit created successfully!"
+    echo "  Hash: $commit_hash"
+    echo "  Message: $commit_msg"
+    echo "  Author: $author"
+    echo "  Date: $date"
+    echo ""
+}
+
+# Check if branch is ahead of remote
+check_branch_status() {
+    local branch=$(git branch --show-current)
+    local remote_status=""
+
+    # Check if remote branch exists
+    if git ls-remote --heads origin "$branch" > /dev/null 2>&1; then
+        local ahead=$(git rev-list --count "origin/$branch..$branch" 2>/dev/null || echo "0")
+        local behind=$(git rev-list --count "$branch..origin/$branch" 2>/dev/null || echo "0")
+
+        if [ "$ahead" -gt 0 ] && [ "$behind" -eq 0 ]; then
+            log_info "Branch '$branch' is $ahead commit(s) ahead of remote"
+            log_info "Consider pushing: git push origin $branch"
+        elif [ "$behind" -gt 0 ]; then
+            log_warning "Branch '$branch' is $behind commit(s) behind remote"
+            log_info "Consider pulling: git pull origin $branch"
+        fi
+    else
+        log_info "No remote branch found for '$branch'"
+        log_info "Consider pushing to create remote branch: git push -u origin $branch"
+    fi
+}
+
+# Suggest PR creation
+suggest_pr_creation() {
+    local branch=$(git branch --show-current)
+    local main_branch="main"
+
+    # Don't suggest PR for main branch
+    if [ "$branch" = "$main_branch" ]; then
+        return
+    fi
+
+    # Check if branch has commits ahead of main
+    local ahead_count=$(git rev-list --count "$main_branch..$branch" 2>/dev/null || echo "0")
+
+    if [ "$ahead_count" -gt 0 ]; then
+        echo ""
+        log_info "Branch '$branch' has $ahead_count commit(s) ready for PR"
+        log_info "Consider creating a Pull Request:"
+        echo "  ./scripts/create-pr.sh --issue <number>  # Link to issue"
+        echo "  ./scripts/create-pr.sh --draft           # Create draft PR"
+        echo "  ./scripts/git-workflow.sh                # Full workflow"
+
+        # Check if gh CLI is available
+        if command -v gh &> /dev/null; then
+            log_info "Or manually: gh pr create --title \"$(git log -1 --pretty=%B | head -n 1)\" --base $main_branch"
+        fi
+    fi
+}
+
+# Check test coverage
+check_test_coverage() {
+    # Only check if we're in a uv environment and have coverage data
+    if command -v uv &> /dev/null && [ -d "htmlcov" ]; then
+        local coverage_file="htmlcov/index.html"
+        if [ -f "$coverage_file" ]; then
+            log_info "Coverage report available: $coverage_file"
+            log_info "Open in browser to check test coverage"
+        fi
+    fi
+}
+
+# Check for documentation updates
+check_documentation() {
+    local changed_files=$(git diff --name-only HEAD~1 2>/dev/null || echo "")
+
+    # Check if code files changed but no docs
+    local code_changed=false
+    local docs_changed=false
+
+    while IFS= read -r file; do
+        if [[ $file =~ \.(py|js|ts|java|cpp|c)$ ]]; then
+            code_changed=true
+        fi
+        if [[ $file =~ ^docs/ ]] || [[ $file =~ \.(md|rst|txt)$ ]]; then
+            docs_changed=true
+        fi
+    done <<< "$changed_files"
+
+    if $code_changed && ! $docs_changed; then
+        log_info "Code changes detected - consider updating documentation"
+        log_info "Check: docs/ directory and README.md"
+    fi
+}
+
+# Show next steps
+show_next_steps() {
+    echo ""
+    log_info "Next steps you might want to consider:"
+    echo "  • Push your changes: git push"
+    echo "  • Create PR: ./scripts/create-pr.sh"
+    echo "  • Run full tests: uv run pytest"
+    echo "  • Check coverage: open htmlcov/index.html"
+    echo ""
+}
+
+# Main function
+main() {
+    # Skip for merge commits
+    if git log -1 --pretty=%B | grep -q "^Merge"; then
+        return
+    fi
+
+    show_commit_summary
+    check_branch_status
+    suggest_pr_creation
+    check_test_coverage
+    check_documentation
+    show_next_steps
+}
+
+# Run main function
+main "$@"

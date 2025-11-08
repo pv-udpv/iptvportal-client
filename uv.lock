@@ -281,6 +281,7 @@ dev = [
 dev = [
     { name = "ipython" },
     { name = "pytest" },
+    { name = "pytest-cov" },
 ]
 
 [package.metadata]
@@ -309,6 +310,7 @@ provides-extras = ["dev", "cli"]
 dev = [
     { name = "ipython", specifier = ">=8.27.0" },
     { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
 ]
 
 [[package]]
