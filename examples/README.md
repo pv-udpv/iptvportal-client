@@ -167,9 +167,14 @@ iptvportal schema generate-models config/your-schema.yaml
 3. **Iterate**: Generate models, test them, refine your schema
 4. **Version Control**: Keep schemas in git alongside your code
 5. **Document**: Add descriptions to all fields for better generated documentation
-
+## Documentation
+Documentation for the project is managed in the `docs/` directory and `mkdocs` build system. Please refer to the relevant sections for detailed information on architecture, CLI usage, schema definitions, and more.
 ## See Also
-
+- [Concepts and thoughts](../docs/concepts.md)
 - [Schema-Driven Development Guide](../docs/schema-driven.md)
+- [Model Generation Documentation](../docs/model-generation.md)
+- [Architecture Documentation](../docs/architecture/index.md)
 - [CLI Documentation](../docs/cli.md)
+- [API Documentation](../docs/api/index.md)
 - [Configuration Guide](../docs/configuration.md)
+ - Main architecture and flows in root README (Mermaid diagrams)
