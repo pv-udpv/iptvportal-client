@@ -11,9 +11,13 @@ from .operators import (
     build_pattern,
     build_in,
     build_not,
+    build_math,
+    build_is,
+    build_is_not,
     COMPARISON_OPERATORS,
     LOGICAL_OPERATORS,
     PATTERN_OPERATORS,
+    MATH_OPERATORS,
 )
 from .functions import build_function, build_distinct_function, normalize_function_name
 
@@ -284,12 +288,12 @@ class SQLTranspiler:
             return str(expr)
 
     def _transpile_binary(self, binary: exp.Binary) -> dict[str, Any]:
-        """Transpile binary operations (comparisons, logical ops)."""
+        """Transpile binary operations (comparisons, logical ops, math)."""
         operator = binary.key.upper()
         left = self._transpile_expression(binary.left)
         right = self._transpile_expression(binary.right)
 
-        # Check for comparison operators
+        # Check for comparison operators (including IS/IS NOT)
         if operator in COMPARISON_OPERATORS:
             return build_comparison(operator, left, right)
 
@@ -300,6 +304,12 @@ class SQLTranspiler:
         # Check for pattern matching
         elif operator in PATTERN_OPERATORS:
             return build_pattern(operator, left, right)
+
+        # Check for mathematical operators
+        elif operator in MATH_OPERATORS or binary.key in MATH_OPERATORS:
+            # Use the symbol for operators like +, -, *, /, %
+            op_key = binary.key if binary.key in MATH_OPERATORS else operator
+            return build_math(op_key, left, right)
 
         else:
             raise UnsupportedFeatureError(f"Unsupported binary operator: {operator}")

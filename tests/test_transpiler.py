@@ -83,6 +83,58 @@ class TestWhereClause:
         result = transpiler.transpile(sql)
         assert "where" in result
         assert "like" in result["where"]
+    
+    def test_where_is(self, transpiler):
+        """Test WHERE with IS (from docs/jsonsql.md)."""
+        sql = "SELECT id, name FROM media WHERE is_tv IS TRUE"
+        result = transpiler.transpile(sql)
+        assert "where" in result
+        assert "is" in result["where"]
+        assert result["where"]["is"] == ["is_tv", True]
+    
+    def test_where_is_not(self, transpiler):
+        """Test WHERE with IS NOT."""
+        sql = "SELECT id FROM users WHERE disabled IS NOT NULL"
+        result = transpiler.transpile(sql)
+        assert "where" in result
+        assert "is_not" in result["where"]
+
+class TestMathOperators:
+    """Test mathematical operators (from docs/jsonsql.md)."""
+    
+    def test_addition(self, transpiler):
+        """Test addition operator."""
+        sql = "SELECT id, price + tax AS total FROM orders"
+        result = transpiler.transpile(sql)
+        assert "data" in result
+        # Check that addition is in the data
+        total_field = result["data"][1]
+        assert isinstance(total_field, dict)
+        assert "add" in total_field or "as" in total_field
+    
+    def test_subtraction(self, transpiler):
+        """Test subtraction operator."""
+        sql = "SELECT id, price - discount AS final_price FROM products"
+        result = transpiler.transpile(sql)
+        assert "data" in result
+    
+    def test_multiplication(self, transpiler):
+        """Test multiplication operator."""
+        sql = "SELECT id, quantity * price AS total FROM order_items"
+        result = transpiler.transpile(sql)
+        assert "data" in result
+    
+    def test_division(self, transpiler):
+        """Test division operator."""
+        sql = "SELECT id, total / count AS average FROM statistics"
+        result = transpiler.transpile(sql)
+        assert "data" in result
+    
+    def test_modulo(self, transpiler):
+        """Test modulo operator."""
+        sql = "SELECT id, value % 10 AS remainder FROM numbers"
+        result = transpiler.transpile(sql)
+        assert "data" in result
 
 class TestJoins:
     """Test JOIN transpilation."""
@@ -232,6 +284,110 @@ class TestComplexQueries:
         assert isinstance(result["from"], list)
         assert "where" in result
         assert "and" in result["where"]
+
+class TestDocExamples:
+    """Test examples from docs/jsonsql.md."""
+    
+    def test_doc_select_example(self, transpiler):
+        """Test SELECT example from docs."""
+        sql = """
+        SELECT id, name, protocol, inet_addr, port
+        FROM media
+        WHERE is_tv IS TRUE
+        ORDER BY name
+        """
+        result = transpiler.transpile(sql)
+        assert result["data"] == ["id", "name", "protocol", "inet_addr", "port"]
+        assert result["from"] == "media"
+        assert "where" in result
+        assert "is" in result["where"]
+        assert result["order_by"] == "name"
+    
+    def test_doc_insert_example(self, transpiler):
+        """Test INSERT example from docs."""
+        sql = """
+        INSERT INTO package (name, paid) VALUES
+          ('movie', true), ('sports', true)
+        RETURNING id
+        """
+        result = transpiler.transpile(sql)
+        assert result["into"] == "package"
+        assert result["columns"] == ["name", "paid"]
+        assert len(result["values"]) == 2
+        assert result["values"][0] == ["movie", True]
+        assert result["values"][1] == ["sports", True]
+        assert result["returning"] == "id"
+    
+    def test_doc_update_example(self, transpiler):
+        """Test UPDATE example from docs."""
+        sql = """
+        UPDATE subscriber 
+        SET disabled = TRUE 
+        WHERE username = '12345'
+        RETURNING id
+        """
+        result = transpiler.transpile(sql)
+        assert result["table"] == "subscriber"
+        assert result["set"] == {"disabled": True}
+        assert "where" in result
+        assert result["where"]["eq"] == ["username", "12345"]
+        assert result["returning"] == "id"
+    
+    def test_doc_delete_with_subquery(self, transpiler):
+        """Test DELETE with subquery example from docs."""
+        sql = """
+        DELETE FROM terminal
+        WHERE subscriber_id IN (
+          SELECT id FROM subscriber WHERE username = 'test'
+        )
+        RETURNING id
+        """
+        result = transpiler.transpile(sql)
+        assert result["from"] == "terminal"
+        assert "where" in result
+        assert "in" in result["where"]
+        assert result["returning"] == "id"
+    
+    def test_doc_aggregate_example(self, transpiler):
+        """Test aggregate functions example from docs."""
+        sql = """
+        SELECT 
+            COUNT(*) AS cnt,
+            COUNT(DISTINCT mac_addr) AS uniq
+        FROM terminal_playlog
+        """
+        result = transpiler.transpile(sql)
+        assert "data" in result
+        assert len(result["data"]) == 2
+        # First function: COUNT(*)
+        assert result["data"][0]["function"] == "count"
+        assert result["data"][0]["as"] == "cnt"
+        # Second function: COUNT(DISTINCT mac_addr)
+        assert result["data"][1]["function"] == "count"
+        assert result["data"][1]["as"] == "uniq"
+    
+    def test_doc_complex_join_example(self, transpiler):
+        """Test complex JOIN example from docs."""
+        sql = """
+        SELECT
+          subscriber.id,
+          subscriber.username,
+          COUNT(terminal.id) AS term_count
+        FROM subscriber
+        JOIN terminal ON subscriber.id = terminal.subscriber_id
+        WHERE subscriber.created_at > '2023-01-01 00:00:00'
+        GROUP BY subscriber.id, subscriber.username
+        ORDER BY term_count DESC
+        """
+        result = transpiler.transpile(sql)
+        assert "data" in result
+        assert len(result["data"]) == 3
+        assert isinstance(result["from"], list)
+        assert len(result["from"]) == 2
+        assert "where" in result
+        assert "group_by" in result
+        assert isinstance(result["group_by"], list)
+        assert "order_by" in result
 
 class TestErrors:
     """Test error handling."""
