@@ -63,9 +63,23 @@ class IPTVPortalClient:
             except httpx.ConnectError as e:
                 last_error = ConnectionError(f"Connection failed: {e}")
             except httpx.HTTPStatusError as e:
+                # Try to get response body for better error messages
+                try:
+                    error_body = e.response.text
+                    error_json = e.response.json() if e.response.headers.get("content-type", "").startswith("application/json") else None
+                    
+                    if error_json and "error" in error_json:
+                        error_msg = f"HTTP {e.response.status_code}: {error_json['error'].get('message', str(e))}"
+                    elif error_body:
+                        error_msg = f"HTTP {e.response.status_code}: {error_body[:500]}"  # Limit body length
+                    else:
+                        error_msg = f"HTTP {e.response.status_code}: {e}"
+                except Exception:
+                    error_msg = f"HTTP {e.response.status_code}: {e}"
+                
                 if 400 <= e.response.status_code < 500:
-                    raise APIError(f"Client error: {e}")
-                last_error = APIError(f"HTTP error: {e}")
+                    raise APIError(error_msg)
+                last_error = APIError(error_msg)
             except Exception as e:
                 last_error = IPTVPortalError(f"Unexpected error: {e}")
             if attempt < self.settings.max_retries:

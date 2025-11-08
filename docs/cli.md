@@ -175,6 +175,21 @@ iptvportal sql -q "
   GROUP BY s.username
 "
 
+# Complex JOIN with EPG data
+iptvportal sql -q "
+  SELECT 
+    c.name AS channel,
+    p.title AS program,
+    cat.name AS category,
+    cat.genre AS genre
+  FROM tv_program p
+  JOIN tv_channel c ON p.channel_id = c.id
+  JOIN tv_program_category pc ON pc.program_id = p.id
+  JOIN tv_category cat ON pc.category_id = cat.id
+  WHERE p.epg_provider_id = 36
+  LIMIT 10
+"
+
 # INSERT
 iptvportal sql -q "INSERT INTO package (name, paid) VALUES ('Premium', true) RETURNING id"
 
