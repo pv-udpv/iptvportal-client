@@ -8,6 +8,7 @@ Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync sup
  - 🗄️ **SQLite Sync Cache** - Local SQLite database caching with full/incremental/on-demand sync strategies for improved performance and offline capability
  - 🔄 **Smart Sync Strategies** - Choose between full table sync, incremental updates, or on-demand lazy loading based on your needs
  - 📊 **Sync Management CLI** - Complete command-line interface for cache initialization, status monitoring, and maintenance operations
+ - ⚙️ **Modular Configuration** - Dynaconf-based hierarchical configuration with schema-specific overrides and environment variable support
 
 ## Installation
 
@@ -45,13 +46,40 @@ iptvportal jsonsql select --from media --limit 5 --no-map-schema
 ```
 ### Configuration
 
-Create `.env` file:
+The client uses a modular configuration system powered by dynaconf:
 
+#### Quick Setup (`.env` file)
 ```env
 IPTVPORTAL_DOMAIN=adstat
 IPTVPORTAL_USERNAME=your_username
 IPTVPORTAL_PASSWORD=your_password
 ```
+
+#### Advanced Configuration
+
+View configuration:
+```bash
+# Show all settings
+iptvportal config conf
+
+# Show specific section
+iptvportal config conf sync.subscriber
+
+# Show as JSON
+iptvportal config conf --format json
+```
+
+The configuration is organized hierarchically:
+- **Core**: Connection, timeouts, retries
+- **CLI**: Output formats, safety guardrails
+- **Sync**: Cache strategies, TTLs, maintenance
+- **Schema-specific**: Per-table overrides (subscriber, terminal, package)
+
+Configuration files are automatically loaded from:
+- `config/settings.yaml` - Main settings
+- `config/schemas/*.settings.yaml` - Schema-specific overrides
+
+See [docs/configuration.md](docs/configuration.md) for detailed documentation.
 
 ### Sync Client
 
