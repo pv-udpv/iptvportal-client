@@ -1,4 +1,4 @@
-.PHONY: help install install-dev sync sync-dev clean test test-cov test-watch lint format type-check check build run cli docs
+.PHONY: help install install-dev sync sync-dev clean test test-cov test-watch lint format type-check check build run cli docs venv-init venv-activate install-user install-system cli-config-init
 
 # Default target
 .DEFAULT_GOAL := help
@@ -10,10 +10,83 @@ YELLOW := \033[0;33m
 RED := \033[0;31m
 NC := \033[0m # No Color
 
+# Virtual environment directory (override with `make VENV_DIR=/path venv-init`)
+VENV_DIR ?= .venv
+
+# Install locations (override in command line if needed)
+PREFIX ?= /usr/local
+SYSCONFDIR ?= /etc
+DATADIR ?= /var/lib
+CACHEDIR ?= /var/cache
+
+# User-level locations (aligned with project defaults)
+USER_HOME_DIR := $(HOME)/.iptvportal
+USER_BIN_DIR := $(HOME)/.local/bin
+USER_CONFIG_DIR := $(HOME)/.config/iptvportal
+USER_DATA_DIR := $(HOME)/.local/share/iptvportal
+USER_CACHE_DIR := $(HOME)/.cache/iptvportal
+
+# Source schema files
+SCHEMA_SRC := config/schemas.yaml config/*-schema.yaml
+
 help: ## Show this help message
 	@echo "$(BLUE)IPTVPortal Client - Development Commands$(NC)"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make $(GREEN)<target>$(NC)\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+install-user: ## Install CLI for current user and setup user config (~/.iptvportal)
+	@echo "$(BLUE)Installing iptvportal CLI for current user...$(NC)"
+	uv tool install --from . iptvportal
+	@echo "$(GREEN)✓ CLI installed (ensure ~/.local/bin is in your PATH)$(NC)"
+	@echo "$(BLUE)Creating user config/data/cache dirs...$(NC)"
+	@mkdir -p "$(USER_HOME_DIR)/schemas" \
+		"$(USER_HOME_DIR)/session-cache" \
+		"$(USER_HOME_DIR)/cache" \
+		"$(USER_CONFIG_DIR)" \
+		"$(USER_DATA_DIR)/schemas" \
+		"$(USER_CACHE_DIR)"
+	@echo "$(BLUE)Generating default CLI config (~/.iptvportal/cli-config.yaml)...$(NC)"
+	uv run python -c "from iptvportal.config import create_default_cli_config; create_default_cli_config()" || true
+	@echo "$(BLUE)Copying schema templates to $(USER_HOME_DIR)/schemas...$(NC)"
+	@cp -f $(SCHEMA_SRC) "$(USER_HOME_DIR)/schemas/" 2>/dev/null || true
+	@echo "$(GREEN)✓ User install complete.$(NC)"
+	@echo "$(YELLOW)Tip: manage secrets in a project .env via 'uv run iptvportal config init' (does not write during install).$(NC)"
+
+install-system: ## Install CLI system-wide under $(PREFIX) and setup /etc/iptvportal (requires sudo)
+	@echo "$(BLUE)Building wheel...$(NC)"
+	uv build
+	@echo "$(BLUE)Installing system venv and CLI under $(PREFIX) (sudo)...$(NC)"
+	sudo sh -c 'set -e; \
+	  VENV_DIR="$(PREFIX)/lib/iptvportal/.venv"; \
+	  install -d -m 755 "$$VENV_DIR"; \
+	  uv venv "$$VENV_DIR"; \
+	  WHEEL=$$(ls -1t dist/*.whl | head -1); \
+	  uv pip install --python "$$VENV_DIR/bin/python" "$$WHEEL"; \
+	  install -d -m 755 "$(PREFIX)/bin"; \
+	  ln -sf "$$VENV_DIR/bin/iptvportal" "$(PREFIX)/bin/iptvportal"; \
+	  echo Installed to $(PREFIX)/bin/iptvportal'
+	@echo "$(BLUE)Setting up system config at $(SYSCONFDIR)/iptvportal ...$(NC)"
+	sudo install -d -m 755 "$(SYSCONFDIR)/iptvportal/schemas"
+	sudo sh -c 'cp -f $(SCHEMA_SRC) "$(SYSCONFDIR)/iptvportal/schemas/" 2>/dev/null || true'
+	@echo "$(BLUE)Preparing data/cache dirs ($(DATADIR)/iptvportal, $(CACHEDIR)/iptvportal)...$(NC)"
+	sudo install -d -m 755 "$(DATADIR)/iptvportal" "$(CACHEDIR)/iptvportal"
+	@echo "$(GREEN)✓ System install complete.$(NC)"
+	@echo "$(YELLOW)To make CLI use /etc schemas, either set IPTVPORTAL_CLI_SCHEMA_DIRECTORY=$(SYSCONFDIR)/iptvportal/schemas or adjust cli-config.yaml accordingly.$(NC)"
+
+venv-init: ## Create a Python virtual environment with uv (VENV_DIR=.venv)
+	@echo "$(BLUE)Creating virtual environment at $(VENV_DIR)...$(NC)"
+	uv venv "$(VENV_DIR)"
+	@echo "$(GREEN)✓ Virtual environment ready: $(VENV_DIR)$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Activate it in your current shell with:$(NC)"
+	@echo "  source $(VENV_DIR)/bin/activate"
+	@echo ""
+	@echo "$(YELLOW)Or start a subshell with it activated via:$(NC)"
+	@echo "  make venv-activate VENV_DIR=$(VENV_DIR)"
+
+venv-activate: ## Start an interactive subshell with the venv activated (VENV_DIR=.venv)
+	@echo "$(BLUE)Launching subshell with $(VENV_DIR) activated...$(NC)"
+	@bash -c 'set -e; if [ ! -f "$(VENV_DIR)/bin/activate" ]; then echo "$(RED)No venv found at $(VENV_DIR). Run: make venv-init VENV_DIR=$(VENV_DIR)$(NC)"; exit 1; fi; source "$(VENV_DIR)/bin/activate" && echo "($(notdir $(VENV_DIR))) shell active. Type 'exit' to leave." && exec bash -i'
 
 install: ## Install production dependencies only
 	@echo "$(BLUE)Installing production dependencies...$(NC)"
@@ -106,6 +179,9 @@ cli-help: ## Show CLI help
 cli-config: ## Show current configuration
 	uv run iptvportal config show
 
+cli-config-init: ## Generate default CLI config at ~/.iptvportal/cli-config.yaml
+	uv run python -c "from iptvportal.config import create_default_cli_config; create_default_cli_config()"
+
 cli-auth: ## Authenticate with IPTVPortal
 	uv run iptvportal auth
 
@@ -119,7 +195,7 @@ cli-sync-status: ## Show sync status
 	uv run iptvportal sync status
 
 # Development shortcuts
-dev: install-dev ## Set up development environment
+dev: venv-init install-dev ## Set up development environment (creates venv, installs deps)
 	@echo "$(GREEN)Development environment ready!$(NC)"
 
 shell: ## Start IPython shell with project context
