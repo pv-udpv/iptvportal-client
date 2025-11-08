@@ -1,0 +1,111 @@
+# IPTVPortal Client - Main Configuration
+# This file uses dynaconf for modular, hierarchical configuration management
+# Settings can be overridden via environment variables with IPTVPORTAL_ prefix
+
+# ==================== Core Settings ====================
+core:
+  # Connection parameters
+  domain: ""  # Operator subdomain (e.g., 'operator' for operator.admin.iptvportal.ru)
+  username: ""
+  password: ""
+  
+  # HTTP settings
+  timeout: 30.0
+  max_retries: 3
+  retry_delay: 1.0
+  verify_ssl: true
+  
+  # Session management
+  session_cache: true
+  session_ttl: 3600  # seconds
+  
+  # Logging
+  log_level: "INFO"
+  log_requests: false
+  log_responses: false
+
+# ==================== CLI Settings ====================
+cli:
+  # Output defaults
+  default_format: "table"  # table, json, yaml, csv
+  default_table_style: "default"
+  max_table_width: null
+  truncate_strings: true
+  max_string_length: 50
+  show_row_numbers: false
+  colorize_output: true
+  
+  # Query safety & guardrails
+  enable_guardrails: true
+  require_limit_on_select: false
+  default_limit: null
+  max_limit: 10000
+  warn_large_limit: 1000
+  confirm_destructive_queries: true
+  confirm_large_updates: true
+  large_update_threshold: 100
+  dry_run_first: false
+  
+  # Performance & caching
+  enable_query_cache: true
+  cache_ttl_seconds: 300
+  cache_max_size_mb: 100
+  cache_location: "~/.iptvportal/cache"
+  enable_schema_cache: true
+  schema_cache_ttl_seconds: 3600
+  
+  # Transpiler behavior
+  transpiler_dialect: "postgres"
+  auto_order_by_id: true
+  preserve_sql_comments: false
+  validate_jsonsql: true
+  
+  # Schema mapping
+  auto_detect_schema: true
+  schema_directory: "~/.iptvportal/schemas"
+  prefer_mapped_results: false
+  
+  # Logging & debug
+  verbose: false
+  log_queries: false
+  query_log_location: "~/.iptvportal/query.log"
+  show_execution_time: true
+  show_row_count: true
+
+# ==================== Sync Settings ====================
+sync:
+  # SQLite cache database
+  cache_db_path: "~/.iptvportal/cache.db"
+  enable_persistent_cache: true
+  cache_db_journal_mode: "WAL"
+  cache_db_page_size: 4096
+  cache_db_cache_size: -64000  # negative = KB, positive = pages
+  
+  # Sync behavior
+  default_sync_strategy: "full"  # full, incremental, on_demand
+  default_sync_ttl: 3600  # seconds
+  default_chunk_size: 1000
+  auto_sync_on_startup: false
+  auto_sync_stale_tables: true
+  max_concurrent_syncs: 3
+  
+  # Maintenance
+  auto_vacuum_enabled: true
+  vacuum_threshold_mb: 100
+  auto_analyze_enabled: true
+  analyze_interval_hours: 24
+
+# ==================== Adapter Settings ====================
+adapters:
+  # Schema configuration
+  schema_file: "config/schemas.yaml"
+  schema_format: "yaml"
+  auto_load_schemas: true
+  
+  # Query caching
+  enable_query_cache: true
+  cache_ttl: 300  # seconds
+  cache_max_size: 1000
+  
+  # Query optimization
+  auto_order_by_id: true

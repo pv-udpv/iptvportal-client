@@ -1,0 +1,27 @@
+# Terminal table specific settings
+# These settings override/extend the main settings.yaml for terminal operations
+
+sync:
+  terminal:
+    # Sync strategy for terminal table
+    strategy: "full"  # Full sync for terminal data (less frequent changes)
+    ttl: 7200  # 2 hours
+    chunk_size: 1000
+    priority: 2  # Medium priority
+    
+    # Auto-sync configuration
+    auto_sync: false
+    sync_on_access: true
+
+adapters:
+  terminal:
+    # Schema-specific query optimization
+    default_fields:
+      - "id"
+      - "mac_addr"
+      - "model"
+      - "status"
+    
+    # Cache configuration for terminal queries
+    cache_ttl: 600  # 10 minutes
+    enable_cache: true

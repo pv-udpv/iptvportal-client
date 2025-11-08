@@ -1,8 +1,13 @@
 """Config command for managing configuration."""
 
+import json
+
 import typer
+import yaml
 from rich.console import Console
+from rich.syntax import Syntax
 from rich.table import Table
+from rich.tree import Tree
 
 from iptvportal.config import IPTVPortalSettings
 
@@ -160,3 +165,146 @@ def get_command(
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+
+
+@config_app.command(name="conf")
+def conf_command(
+    key: str = typer.Argument(None, help="Configuration key in dot notation (e.g., 'core.timeout', 'sync.subscriber')"),
+    set_value: str = typer.Option(None, "--set", help="Set configuration value at runtime"),
+    format: str = typer.Option("yaml", "--format", "-f", help="Output format: yaml, json, or tree"),
+    show_files: bool = typer.Option(False, "--files", help="Show configuration files being loaded"),
+) -> None:
+    """
+    Advanced configuration management using dynaconf.
+    
+    Show, list, or set configuration values from the modular settings tree.
+    
+    Examples:
+        # Show all configuration
+        iptvportal config conf
+        
+        # Show specific section
+        iptvportal config conf core
+        iptvportal config conf sync.subscriber
+        
+        # Show as JSON
+        iptvportal config conf --format json
+        
+        # Show as tree view
+        iptvportal config conf --format tree
+        
+        # Set value at runtime (not persisted)
+        iptvportal config conf core.timeout --set 60.0
+        iptvportal config conf cli.verbose --set true
+        
+        # Show loaded config files
+        iptvportal config conf --files
+    """
+    try:
+        from iptvportal import project_conf
+        
+        # Show config files if requested
+        if show_files:
+            console.print("\n[bold cyan]Configuration Files:[/bold cyan]\n")
+            files = project_conf.get_config_files()
+            for i, file_path in enumerate(files, 1):
+                console.print(f"  {i}. {file_path}")
+            console.print()
+            return
+        
+        # Set value if requested
+        if set_value is not None:
+            if not key:
+                console.print("[bold red]Error:[/bold red] Key required when using --set")
+                raise typer.Exit(1)
+            
+            # Parse value (handle boolean, numbers, strings)
+            parsed_value = set_value
+            if set_value.lower() in ("true", "false"):
+                parsed_value = set_value.lower() == "true"
+            elif set_value.isdigit():
+                parsed_value = int(set_value)
+            else:
+                try:
+                    parsed_value = float(set_value)
+                except ValueError:
+                    parsed_value = set_value
+            
+            project_conf.set_value(key, parsed_value)
+            console.print(f"[green]✓ Set {key} = {parsed_value} (runtime only)[/green]")
+            console.print("[dim]Note: Changes are not persisted to disk[/dim]\n")
+            return
+        
+        # Get configuration values
+        if key:
+            # Show specific key
+            value = project_conf.get_value(key)
+            if value is None:
+                console.print(f"[yellow]Configuration key '{key}' not found[/yellow]")
+                return
+            
+            console.print(f"\n[bold cyan]{key}:[/bold cyan]\n")
+            
+            if format == "json":
+                if isinstance(value, dict):
+                    output = json.dumps(value, indent=2)
+                    console.print(Syntax(output, "json", theme="monokai"))
+                else:
+                    console.print(f"  {value}")
+            elif format == "tree":
+                if isinstance(value, dict):
+                    _print_tree(key, value)
+                else:
+                    console.print(f"  {value}")
+            else:  # yaml
+                if isinstance(value, dict):
+                    output = yaml.dump(value, default_flow_style=False, sort_keys=False)
+                    console.print(Syntax(output, "yaml", theme="monokai"))
+                else:
+                    console.print(f"  {value}")
+        else:
+            # Show all configuration
+            all_settings = project_conf.list_settings()
+            
+            console.print("\n[bold cyan]IPTVPortal Configuration (Dynaconf)[/bold cyan]\n")
+            
+            if format == "json":
+                output = json.dumps(all_settings, indent=2)
+                console.print(Syntax(output, "json", theme="monokai"))
+            elif format == "tree":
+                _print_tree("settings", all_settings)
+            else:  # yaml
+                output = yaml.dump(all_settings, default_flow_style=False, sort_keys=False)
+                console.print(Syntax(output, "yaml", theme="monokai"))
+        
+        console.print()
+        
+    except ImportError:
+        console.print("[bold red]Error:[/bold red] dynaconf not installed")
+        console.print("Install with: pip install dynaconf")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+def _print_tree(name: str, data: dict, tree: Tree | None = None) -> Tree:
+    """Print configuration as a rich tree structure."""
+    if tree is None:
+        tree = Tree(f"[bold cyan]{name}[/bold cyan]")
+    
+    for key, value in data.items():
+        if isinstance(value, dict):
+            branch = tree.add(f"[yellow]{key}[/yellow]")
+            _print_tree(key, value, branch)
+        elif isinstance(value, list):
+            branch = tree.add(f"[yellow]{key}[/yellow]")
+            for item in value:
+                branch.add(f"[green]{item}[/green]")
+        else:
+            tree.add(f"[yellow]{key}[/yellow]: [green]{value}[/green]")
+    
+    if tree.label.plain.startswith(name):
+        console.print(tree)
+    
+    return tree
