@@ -14,9 +14,11 @@ def build_function(name: str, args: list[Any], alias: str | None = None) -> dict
     Returns:
         Dictionary representing the function in JSONSQL format
     """
+    # Keep args as list for consistency with JSONSQL spec
+    # Single arg should still be in a list (e.g., COUNT(*) -> ["*"])
     result: dict[str, Any] = {
         "function": name.lower(),
-        "args": args if len(args) > 1 else args[0] if args else []
+        "args": args if args else []
     }
     
     if alias:

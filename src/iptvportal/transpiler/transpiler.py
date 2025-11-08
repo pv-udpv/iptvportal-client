@@ -172,7 +172,9 @@ class SQLTranspiler:
         
         # Get function arguments
         args = []
-        if hasattr(func, 'expressions'):
+        
+        # First check if there are expressions (multiple arguments)
+        if hasattr(func, 'expressions') and func.expressions:
             for arg in func.expressions:
                 if isinstance(arg, exp.Distinct):
                     # Handle DISTINCT inside function like COUNT(DISTINCT col)
@@ -180,6 +182,7 @@ class SQLTranspiler:
                     args.append(build_distinct_function(inner_args))
                 else:
                     args.append(self._transpile_expression(arg))
+        # Then check for 'this' (single argument like COUNT(*) or COUNT(column))
         elif hasattr(func, 'this') and func.this:
             args.append(self._transpile_expression(func.this))
         
