@@ -23,6 +23,9 @@ dependencies = [
     "pydantic>=2.9.0",
     "pydantic-settings>=2.5.0",
     "orjson>=3.10.0",
+    "sqlglot>=27.29.0",
+    "typer>=0.20.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -37,7 +40,11 @@ dev = [
 cli = [
     "typer[all]>=0.12.0",
     "rich>=13.9.0",
+    "pyyaml>=6.0.0",
 ]
+
+[project.scripts]
+iptvportal = "iptvportal.cli.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -49,6 +56,7 @@ packages = ["src/iptvportal"]
 [tool.uv]
 dev-dependencies = [
     "ipython>=8.27.0",
+    "pytest>=8.4.2",
 ]
 
 [tool.ruff]
