@@ -236,6 +236,9 @@ class FieldDefinition:
         description: Описание поля
         validator: Функция валидации
         transformer: Функция преобразования значения при маппинге
+        remote_mapping: Метаданные валидации remote mapping (match_ratio, sample_size, validated_at, etc.)
+        constraints: Ограничения БД (unique, nullable, foreign_key, primary_key, index, default, etc.)
+        relationships: ORM отношения (type, target_table, foreign_key, back_populates, etc.)
     """
 
     name: str
@@ -247,6 +250,9 @@ class FieldDefinition:
     description: str | None = None
     validator: Callable | None = None
     transformer: Callable | None = None
+    remote_mapping: dict[str, Any] | None = None
+    constraints: dict[str, Any] | None = None
+    relationships: dict[str, Any] | None = None
 
     @property
     def mapped_name(self) -> str:
@@ -517,7 +523,11 @@ class TableSchema:
                     "type": field.field_type.value,
                     **({"alias": field.alias} if field.alias else {}),
                     **({"python_name": field.python_name} if field.python_name else {}),
+                    **({"remote_name": field.remote_name} if field.remote_name else {}),
                     **({"description": field.description} if field.description else {}),
+                    **({"remote_mapping": field.remote_mapping} if field.remote_mapping else {}),
+                    **({"constraints": field.constraints} if field.constraints else {}),
+                    **({"relationships": field.relationships} if field.relationships else {}),
                 }
                 for pos, field in self.fields.items()
             },
@@ -722,6 +732,9 @@ class SchemaLoader:
                 field_type=field_type,
                 description=field_config.get("description"),
                 transformer=transformer,
+                remote_mapping=field_config.get("remote_mapping"),
+                constraints=field_config.get("constraints"),
+                relationships=field_config.get("relationships"),
             )
 
             fields[position] = field_def
