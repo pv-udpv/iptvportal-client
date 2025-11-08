@@ -680,6 +680,264 @@ def introspect_command(
         raise typer.Exit(1)
 
 
+@schema_app.command(name="validate-mapping")
+def validate_mapping_command(
+    table_name: str = typer.Argument(..., help="Table name to validate"),
+    mappings: str = typer.Option(
+        ..., "--mappings", "-m", help="Field mappings to validate (e.g., '0:id,1:username,2:email')"
+    ),
+    sample_size: int = typer.Option(1000, "--sample-size", "-s", help="Sample size for validation"),
+    save: bool = typer.Option(False, "--save", help="Save validation results to schema"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
+) -> None:
+    """
+    Validate remote field mappings using data-driven comparison.
+
+    Uses pandas to compare local field positions with remote column values and
+    calculates match ratios to verify correctness of field mappings.
+
+    Examples:
+        iptvportal schema validate-mapping subscriber -m "0:id,1:username,2:email"
+        iptvportal schema validate-mapping media -m "0:id,1:name" --sample-size 500 --save
+    """
+    try:
+        settings = load_config(config_file)
+
+        console.print(f"\n[cyan]Validating field mappings for table: {table_name}[/cyan]")
+
+        # Parse mappings
+        field_mappings = {}
+        try:
+            for mapping in mappings.split(","):
+                mapping = mapping.strip()
+                if ":" not in mapping:
+                    console.print(
+                        f"[red]Error: Invalid mapping '{mapping}' (expected format: 'position:column_name')[/red]"
+                    )
+                    raise typer.Exit(1)
+
+                pos_str, col_name = mapping.split(":", 1)
+                position = int(pos_str.strip())
+                column_name = col_name.strip()
+                field_mappings[position] = column_name
+
+            console.print(f"[dim]Validating {len(field_mappings)} field mapping(s) with sample size {sample_size}...[/dim]\n")
+
+        except ValueError as e:
+            console.print(f"[red]Error parsing mappings: {e}[/red]")
+            raise typer.Exit(1)
+
+        # Run validation
+        import asyncio
+
+        from iptvportal.async_client import AsyncIPTVPortalClient
+        from iptvportal.validation import RemoteFieldValidator
+
+        async def do_validation():
+            async with AsyncIPTVPortalClient(settings) as client:
+                validator = RemoteFieldValidator(client)
+                return await validator.validate_table_schema(
+                    table_name=table_name,
+                    field_mappings=field_mappings,
+                    sample_size=sample_size,
+                )
+
+        results = asyncio.run(do_validation())
+
+        # Display results
+        console.print("[bold]Validation Results:[/bold]\n")
+
+        results_table = Table(show_header=True, header_style="bold cyan")
+        results_table.add_column("Position", style="dim")
+        results_table.add_column("Remote Column", style="white")
+        results_table.add_column("Match Ratio", style="green")
+        results_table.add_column("Sample Size", style="blue")
+        results_table.add_column("Dtype", style="yellow")
+        results_table.add_column("Null Count", style="dim")
+        results_table.add_column("Unique", style="dim")
+
+        all_passed = True
+        for position in sorted(results.keys()):
+            result = results[position]
+
+            if "error" in result:
+                results_table.add_row(
+                    str(position),
+                    result.get("remote_column", "?"),
+                    "[red]ERROR[/red]",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                )
+                all_passed = False
+            else:
+                match_ratio = result["match_ratio"]
+                match_ratio_str = f"{match_ratio:.2%}"
+
+                # Color code match ratio
+                if match_ratio >= 0.95:
+                    match_ratio_str = f"[green]{match_ratio_str}[/green]"
+                elif match_ratio >= 0.80:
+                    match_ratio_str = f"[yellow]{match_ratio_str}[/yellow]"
+                else:
+                    match_ratio_str = f"[red]{match_ratio_str}[/red]"
+                    all_passed = False
+
+                results_table.add_row(
+                    str(position),
+                    result["remote_column"],
+                    match_ratio_str,
+                    str(result["sample_size"]),
+                    result["dtype"],
+                    str(result["null_count"]),
+                    str(result["unique_count"]),
+                )
+
+        console.print(results_table)
+        console.print()
+
+        # Summary
+        if all_passed:
+            console.print("[bold green]✓ All validations passed (match ratio ≥ 95%)[/bold green]\n")
+        else:
+            console.print("[bold yellow]⚠ Some validations failed (match ratio < 95%)[/bold yellow]\n")
+
+        # Save results if requested
+        if save or output:
+            # Load or create schema
+            with IPTVPortalClient(settings) as client:
+                if client.schema_registry.has(table_name):
+                    schema = client.schema_registry.get(table_name)
+                else:
+                    # Create minimal schema
+                    from iptvportal.schema import FieldDefinition, FieldType, TableSchema
+
+                    fields = {}
+                    for position, col_name in field_mappings.items():
+                        result = results[position]
+                        if "error" not in result:
+                            # Infer field type from dtype
+                            dtype_str = result["dtype"]
+                            validator_inst = RemoteFieldValidator(None)  # Just for dtype inference
+                            field_type_str = validator_inst.infer_field_type_from_dtype(dtype_str)
+                            field_type = FieldType(field_type_str)
+
+                            fields[position] = FieldDefinition(
+                                name=col_name,
+                                position=position,
+                                remote_name=col_name,
+                                field_type=field_type,
+                                remote_mapping=result,
+                            )
+
+                    schema = TableSchema(
+                        table_name=table_name,
+                        fields=fields,
+                        total_fields=len(fields),
+                    )
+
+                # Update remote_mapping for each field
+                for position, result in results.items():
+                    if position in schema.fields and "error" not in result:
+                        schema.fields[position].remote_mapping = result
+
+                # Save schema
+                output_path = output or f"config/{table_name}-validated-schema.yaml"
+                schema_dict = {"schemas": {table_name: schema.to_dict()}}
+
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
+                try:
+                    import yaml
+
+                    with open(output_path, "w") as f:
+                        yaml.dump(schema_dict, f, default_flow_style=False, sort_keys=False)
+                except ImportError:
+                    import json
+
+                    output_path = output_path.replace(".yaml", ".json")
+                    with open(output_path, "w") as f:
+                        json.dump(schema_dict, f, indent=2)
+
+                console.print(f"[green]✓ Validated schema saved to: {output_path}[/green]\n")
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        import traceback
+
+        console.print(f"[red]{traceback.format_exc()}[/red]")
+        raise typer.Exit(1)
+
+
+@schema_app.command(name="generate-models")
+def generate_models_command(
+    schema_file: str = typer.Argument(..., help="Schema file to generate models from"),
+    output_dir: str = typer.Option("models", "--output", "-o", help="Output directory for models"),
+    format: str = typer.Option("sqlmodel", "--format", "-f", help="Model format (sqlmodel/pydantic)"),
+    relationships: bool = typer.Option(True, "--relationships/--no-relationships", help="Include relationships"),
+) -> None:
+    """
+    Generate ORM models (SQLModel/Pydantic) from schema files.
+
+    Generates Python code for ORM models based on schema definitions, including:
+    - Field types and constraints
+    - Primary keys and foreign keys
+    - Unique and index constraints
+    - Relationships (one-to-many, many-to-one)
+
+    Examples:
+        iptvportal schema generate-models schemas.yaml
+        iptvportal schema generate-models schemas.yaml -o ./models --format pydantic
+        iptvportal schema generate-models schemas.yaml --no-relationships
+    """
+    try:
+        if not Path(schema_file).exists():
+            console.print(f"[red]File not found: {schema_file}[/red]")
+            raise typer.Exit(1)
+
+        console.print(f"\n[cyan]Generating {format} models from: {schema_file}[/cyan]\n")
+
+        # Generate models
+        from iptvportal.codegen import ORMGenerator
+
+        results = ORMGenerator.load_and_generate(
+            schema_path=schema_file,
+            output_format=format,
+            output_dir=Path(output_dir),
+            include_relationships=relationships,
+        )
+
+        # Display results
+        console.print(f"[green]✓ Generated {len(results)} model(s):[/green]\n")
+
+        for table_name, _code in results.items():
+            # Get class name from code
+            class_name = table_name.replace("_", " ").title().replace(" ", "")
+            file_name = f"{class_name.lower()}.py"
+
+            console.print(f"  • {class_name} → {output_dir}/{file_name}")
+
+        console.print(f"\n[green]✓ Models saved to: {output_dir}/[/green]\n")
+
+        # Show a preview of the first model
+        if results:
+            first_table = list(results.keys())[0]
+            first_code = results[first_table]
+
+            console.print("[bold]Preview (first model):[/bold]\n")
+            console.print("[dim]" + "\n".join(first_code.split("\n")[:20]) + "[/dim]")
+            console.print("[dim]...[/dim]\n")
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        import traceback
+
+        console.print(f"[red]{traceback.format_exc()}[/red]")
+        raise typer.Exit(1)
+
+
 @schema_app.command(name="clear")
 def clear_command(
     table_name: str | None = typer.Argument(None, help="Table name to clear (omit to clear all)"),
