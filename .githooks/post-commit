@@ -130,6 +130,47 @@ check_documentation() {
     fi
 }
 
+# Update Cline checklist with commit SHA
+update_cline_checklist() {
+    if [ ! -f ".cline-progress" ]; then
+        return 0
+    fi
+
+    # Source the helper functions
+    if [ ! -f "scripts/cline-helpers.sh" ]; then
+        log_warning "Cline helpers not found, skipping checklist update"
+        return 0
+    fi
+
+    source "scripts/cline-helpers.sh"
+
+    local commit_hash=$(git rev-parse HEAD)
+    local commit_msg=$(git log -1 --pretty=%B)
+
+    # Look for checklist references in commit message
+    # Format: "Completes: #1, #3 (from .cline-progress)"
+    local checklist_refs=$(echo "$commit_msg" | grep -o "Completes: #[0-9]\+\(,\s*#[0-9]\+\)* (from \.cline-progress)" || true)
+
+    if [ -n "$checklist_refs" ]; then
+        log_info "Updating checklist items with commit SHA: ${commit_hash:0:7}"
+
+        # Extract item IDs from the reference
+        local item_ids=$(echo "$checklist_refs" | grep -o "#[0-9]\+" | sed 's/#//' | tr '\n' ' ')
+
+        # Update each referenced item
+        local json_data=$(read_cline_progress)
+
+        for item_id in $item_ids; do
+            # Mark item as completed and link to commit
+            update_cline_item "$item_id" "completed" "$commit_hash"
+        done
+
+        # Show updated progress
+        local progress=$(get_progress_summary)
+        log_success "Checklist updated: $progress"
+    fi
+}
+
 # Show next steps
 show_next_steps() {
     echo ""
@@ -149,6 +190,7 @@ main() {
     fi
 
     show_commit_summary
+    update_cline_checklist
     check_branch_status
     suggest_pr_creation
     check_test_coverage

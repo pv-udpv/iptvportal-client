@@ -1,7 +1,6 @@
 """Authentication managers for sync and async clients."""
 
 import time
-from typing import Any
 
 import httpx
 import orjson

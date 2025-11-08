@@ -2,14 +2,14 @@
 
 from iptvportal.sync.database import SyncDatabase
 from iptvportal.sync.exceptions import (
-    SyncError,
-    DatabaseError,
-    SyncStrategyError,
-    SchemaVersionError,
-    TableNotFoundError,
-    SyncInProgressError,
     ConfigurationError,
     ConnectionError,
+    DatabaseError,
+    SchemaVersionError,
+    SyncError,
+    SyncInProgressError,
+    SyncStrategyError,
+    TableNotFoundError,
 )
 
 __all__ = [

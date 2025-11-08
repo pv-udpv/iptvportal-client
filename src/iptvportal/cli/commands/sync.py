@@ -1,7 +1,6 @@
 """Sync cache management commands."""
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -10,7 +9,7 @@ from rich.table import Table
 app = typer.Typer(help="Sync cache management")
 console = Console()
 
-def get_database(cache_db_path: Optional[str] = None):
+def get_database(cache_db_path: str | None = None):
     """Get sync database with minimal configuration."""
     # Create minimal settings for database operations
     class MinimalSettings:
@@ -26,7 +25,7 @@ def get_database(cache_db_path: Optional[str] = None):
 
 @app.command()
 def init(
-    cache_db: Optional[str] = typer.Option(None, "--cache-db", "-d", help="Path to cache database"),
+    cache_db: str | None = typer.Option(None, "--cache-db", "-d", help="Path to cache database"),
     force: bool = typer.Option(False, "--force", "-f", help="Force re-initialization")
 ):
     """Initialize cache database."""
@@ -47,10 +46,10 @@ def init(
 
 @app.command()
 def register(
-    schema_file: Optional[str] = typer.Option(None, "--file", "-f", help="Schema file to load"),
-    table: Optional[str] = typer.Option(None, "--table", "-t", help="Specific table to register"),
-    cache_db: Optional[str] = typer.Option(None, "--cache-db", "-d", help="Path to cache database"),
-    config_file: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path")
+    schema_file: str | None = typer.Option(None, "--file", "-f", help="Schema file to load"),
+    table: str | None = typer.Option(None, "--table", "-t", help="Specific table to register"),
+    cache_db: str | None = typer.Option(None, "--cache-db", "-d", help="Path to cache database"),
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
 ):
     """
     Register table schemas for syncing.
@@ -107,8 +106,8 @@ def register(
         errors = []
 
         # Get client for metadata queries
-        from iptvportal.cli.utils import load_config
         from iptvportal.async_client import AsyncIPTVPortalClient
+        from iptvportal.cli.utils import load_config
 
         settings = load_config(config_file)
 
@@ -126,7 +125,7 @@ def register(
                             try:
                                 # Import introspector for schema introspection
                                 from iptvportal.introspector import SchemaIntrospector
-                                introspector = SchemaIntrospector(client)
+                                SchemaIntrospector(client)
 
                                 # Get sample row to determine total fields
                                 sample_sql = f"SELECT * FROM {table_name} LIMIT 1"
@@ -231,10 +230,10 @@ def register(
 
 @app.command()
 def run(
-    table: Optional[str] = typer.Argument(None, help="Specific table to sync (omit for all tables)"),
-    strategy: Optional[str] = typer.Option(None, "--strategy", "-s", help="Sync strategy (full/incremental/on_demand)"),
+    table: str | None = typer.Argument(None, help="Specific table to sync (omit for all tables)"),
+    strategy: str | None = typer.Option(None, "--strategy", "-s", help="Sync strategy (full/incremental/on_demand)"),
     force: bool = typer.Option(False, "--force", "-f", help="Force sync even if data is fresh"),
-    config_file: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path")
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path")
 ):
     """
     Run sync operation for table(s).
@@ -246,8 +245,8 @@ def run(
         iptvportal sync run tv_channel --strategy incremental
     """
     try:
-        from iptvportal.cli.utils import load_config
         from iptvportal.async_client import AsyncIPTVPortalClient
+        from iptvportal.cli.utils import load_config
         from iptvportal.sync.manager import SyncManager
 
         settings = load_config(config_file)
@@ -263,7 +262,7 @@ def run(
                     try:
                         result = database.execute_query("_sync_metadata", "SELECT table_name FROM _sync_metadata")
                         registered_tables = [row["table_name"] for row in result]
-                    except:
+                    except Exception:
                         registered_tables = []
 
                     for table_name in registered_tables:
@@ -401,7 +400,7 @@ def status():
                             from datetime import datetime
                             dt = datetime.fromisoformat(last_sync.replace('Z', '+00:00'))
                             last_sync = dt.strftime("%Y-%m-%d %H:%M")
-                        except:
+                        except Exception:
                             pass
 
                     # Format ID range
@@ -442,7 +441,7 @@ def status():
 
 @app.command()
 def clear(
-    table: Optional[str] = typer.Argument(None, help="Specific table to clear"),
+    table: str | None = typer.Argument(None, help="Specific table to clear"),
     all_tables: bool = typer.Option(False, "--all", "-a", help="Clear all tables"),
     confirm: bool = typer.Option(True, "--confirm/--no-confirm", help="Skip confirmation")
 ):
@@ -450,17 +449,16 @@ def clear(
     try:
         database = get_database()
 
-        if all_tables:
-            if confirm:
-                if not typer.confirm("Are you sure you want to clear ALL cached data?"):
-                    console.print("Operation cancelled")
-                    return
+        if all_tables and confirm:
+            if not typer.confirm("Are you sure you want to clear ALL cached data?"):
+                console.print("Operation cancelled")
+                return
 
             # Get all registered tables
             try:
                 result = database.execute_query("_sync_metadata", "SELECT table_name FROM _sync_metadata")
                 table_names = [row["table_name"] for row in result]
-            except:
+            except Exception:
                 table_names = []
 
             total_cleared = 0
@@ -471,11 +469,10 @@ def clear(
 
             console.print(f"✅ Cleared {total_cleared:,} total rows from all tables")
 
-        elif table:
-            if confirm:
-                if not typer.confirm(f"Are you sure you want to clear cache for '{table}'?"):
-                    console.print("Operation cancelled")
-                    return
+        elif table and confirm:
+            if not typer.confirm(f"Are you sure you want to clear cache for '{table}'?"):
+                console.print("Operation cancelled")
+                return
 
             cleared = database.clear_table(table)
             console.print(f"🗑️  Cleared {cleared:,} rows from {table}")

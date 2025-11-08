@@ -5,9 +5,9 @@ from rich.console import Console
 
 from iptvportal.cli.core.editor import open_sql_editor
 from iptvportal.cli.formatters import (
-    display_result,
     display_dry_run,
     display_request_and_result,
+    display_result,
 )
 from iptvportal.cli.utils import execute_query
 from iptvportal.exceptions import IPTVPortalError

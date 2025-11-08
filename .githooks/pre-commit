@@ -146,6 +146,33 @@ check_todos() {
     fi
 }
 
+# Check Cline checklist consistency
+check_cline_checklist() {
+    if [ ! -f ".cline-progress" ]; then
+        # No checklist file, skip this check
+        return 0
+    fi
+
+    log_info "Checking Cline checklist consistency..."
+
+    # Source the helper functions
+    if [ -f "scripts/cline-helpers.sh" ]; then
+        source "scripts/cline-helpers.sh"
+
+        # Validate checklist
+        if validate_checklist; then
+            log_success "Cline checklist is consistent"
+        else
+            log_warning "Cline checklist validation failed"
+            log_info "Some completed items may be missing commit references"
+            log_info "This will be fixed automatically after commit"
+            # Don't fail on this, just warn
+        fi
+    else
+        log_warning "Cline helpers not found, skipping checklist validation"
+    fi
+}
+
 # Main function
 main() {
     log_info "Running IPTVPortal pre-commit checks..."
@@ -157,6 +184,7 @@ main() {
     check_debug_statements
     check_large_files
     check_todos
+    check_cline_checklist
 
     log_success "All pre-commit checks passed! 🎉"
 }

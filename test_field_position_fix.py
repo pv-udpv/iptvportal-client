@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Test the Field_X position mapping fix."""
 
-import tempfile
 import os
-from pathlib import Path
+import tempfile
+
+# Import the actual classes we need
+from iptvportal.schema import FieldDefinition, FieldType, SyncConfig, TableSchema
+from iptvportal.sync.database import SyncDatabase
+
 
 # Minimal test classes to avoid dependency issues
 class MockSettings:
@@ -12,34 +16,13 @@ class MockSettings:
         self.cache_db_cache_size = -64000
         self.cache_db_page_size = 4096
 
-class MockFieldDefinition:
-    def __init__(self, name, field_type, position):
-        self.name = name
-        self.field_type = field_type
-        self.position = position
-        self.python_name = name
-
-class MockSyncConfig:
-    def __init__(self):
-        self.cache_strategy = "full"
-        self.ttl = 3600
-        self.chunk_size = 1000
-
-class MockTableSchema:
-    def __init__(self, table_name, fields):
-        self.table_name = table_name
-        self.fields = fields
-        self.sync_config = MockSyncConfig()
-
-# Import the actual SyncDatabase class
-from iptvportal.sync.database import SyncDatabase
 
 def test_field_position_fix():
     """Test that bulk_insert only uses configured positions."""
     print("🧪 Testing Field_X position mapping fix...")
 
     # Create temporary database
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
         db_path = tmp.name
 
     try:
@@ -49,13 +32,15 @@ def test_field_position_fix():
         db.initialize()
 
         # Create schema with only positions 0, 1, 2 (simulating config with 3 fields)
-        schema = MockTableSchema(
+        schema = TableSchema(
             table_name="test_table",
             fields={
-                0: MockFieldDefinition(name="id", field_type="INTEGER", position=0),
-                1: MockFieldDefinition(name="title", field_type="TEXT", position=1),
-                2: MockFieldDefinition(name="url", field_type="TEXT", position=2),
-            }
+                0: FieldDefinition(name="id", field_type=FieldType.INTEGER, position=0),
+                1: FieldDefinition(name="title", field_type=FieldType.STRING, position=1),
+                2: FieldDefinition(name="url", field_type=FieldType.STRING, position=2),
+            },
+            total_fields=3,
+            sync_config=SyncConfig(cache_strategy="full", ttl=3600, chunk_size=1000),
         )
 
         # Register table (creates table with only 3 columns)
@@ -74,13 +59,13 @@ def test_field_position_fix():
         print(f"✅ Successfully inserted {inserted} rows")
 
         # Verify data was inserted correctly
-        result = db.execute_query("test_table", "SELECT id, title, url FROM test_table ORDER BY id")
+        result = db.execute_query("test_table", "SELECT * FROM test_table ORDER BY id")
         print(f"✅ Retrieved {len(result)} rows from database")
 
         for row in result:
             print(f"  - ID: {row['id']}, Title: {row['title']}, URL: {row['url']}")
 
-        # Verify we only have the configured columns
+        # Verify we only have the configured columns (no extra Field_X columns)
         expected_columns = {"id", "title", "url", "_synced_at", "_sync_version", "_is_partial"}
         actual_columns = set(result[0].keys()) if result else set()
         assert actual_columns == expected_columns, f"Unexpected columns: {actual_columns}"
@@ -89,8 +74,14 @@ def test_field_position_fix():
 
         # Test upsert_rows as well
         upsert_rows = [
-            [1, "Updated Movie 1", "http://updated.com/1", "new_extra_1", "new_extra_2"],  # Update existing
-            [4, "New Movie 4", "http://example.com/4", "new_extra_3", "new_extra_4"],      # Insert new
+            [
+                1,
+                "Updated Movie 1",
+                "http://updated.com/1",
+                "new_extra_1",
+                "new_extra_2",
+            ],  # Update existing
+            [4, "New Movie 4", "http://example.com/4", "new_extra_3", "new_extra_4"],  # Insert new
         ]
 
         inserted_count, updated_count = db.upsert_rows("test_table", upsert_rows, schema)
@@ -98,7 +89,7 @@ def test_field_position_fix():
 
         # Verify final count
         final_result = db.execute_query("test_table", "SELECT COUNT(*) as count FROM test_table")
-        final_count = final_result[0]['count']
+        final_count = final_result[0]["count"]
         print(f"✅ Final row count: {final_count}")
 
         assert final_count == 4, f"Expected 4 rows, got {final_count}"
@@ -109,6 +100,7 @@ def test_field_position_fix():
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -116,6 +108,7 @@ def test_field_position_fix():
         # Cleanup
         if os.path.exists(db_path):
             os.unlink(db_path)
+
 
 if __name__ == "__main__":
     success = test_field_position_fix()

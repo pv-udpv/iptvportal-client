@@ -3,9 +3,9 @@
 import hashlib
 import json
 import time
-from typing import Any, Optional, Dict
 from collections import OrderedDict
 from threading import RLock
+from typing import Any
 
 
 class QueryCache:
@@ -20,7 +20,7 @@ class QueryCache:
     - Cache statistics tracking
     """
 
-    def __init__(self, max_size: int = 1000, default_ttl: Optional[int] = 300):
+    def __init__(self, max_size: int = 1000, default_ttl: int | None = 300):
         """
         Initialize query cache.
         
@@ -30,15 +30,15 @@ class QueryCache:
         """
         self.max_size = max_size
         self.default_ttl = default_ttl
-        self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._lock = RLock()
-        
+
         # Statistics
         self._hits = 0
         self._misses = 0
         self._evictions = 0
 
-    def compute_query_hash(self, query: Dict[str, Any]) -> str:
+    def compute_query_hash(self, query: dict[str, Any]) -> str:
         """
         Compute hash for a query dictionary.
         
@@ -54,14 +54,14 @@ class QueryCache:
             'method': query.get('method'),
             'params': query.get('params', {})
         }
-        
+
         # Convert to canonical JSON string (sorted keys for consistency)
         json_str = json.dumps(hashable_parts, sort_keys=True, ensure_ascii=True)
-        
+
         # Compute SHA256 hash
         return hashlib.sha256(json_str.encode('utf-8')).hexdigest()
 
-    def get(self, query_hash: str) -> Optional[Any]:
+    def get(self, query_hash: str) -> Any | None:
         """
         Get cached result by query hash.
         
@@ -75,23 +75,23 @@ class QueryCache:
             if query_hash not in self._cache:
                 self._misses += 1
                 return None
-            
+
             entry = self._cache[query_hash]
-            
+
             # Check if entry has expired
             if entry['expires_at'] is not None and time.time() > entry['expires_at']:
                 # Remove expired entry
                 del self._cache[query_hash]
                 self._misses += 1
                 return None
-            
+
             # Move to end (mark as recently used)
             self._cache.move_to_end(query_hash)
-            
+
             self._hits += 1
             return entry['result']
 
-    def set(self, query_hash: str, result: Any, ttl: Optional[int] = None) -> None:
+    def set(self, query_hash: str, result: Any, ttl: int | None = None) -> None:
         """
         Cache a query result.
         
@@ -104,29 +104,29 @@ class QueryCache:
             # Determine TTL
             if ttl is None:
                 ttl = self.default_ttl
-            
+
             # Calculate expiration time
             expires_at = None
             if ttl is not None and ttl > 0:
                 expires_at = time.time() + ttl
-            
+
             # If at capacity, evict least recently used
             if query_hash not in self._cache and len(self._cache) >= self.max_size:
                 # Remove oldest (first) entry
                 self._cache.popitem(last=False)
                 self._evictions += 1
-            
+
             # Store entry
             self._cache[query_hash] = {
                 'result': result,
                 'cached_at': time.time(),
                 'expires_at': expires_at,
             }
-            
+
             # Move to end (mark as recently used)
             self._cache.move_to_end(query_hash)
 
-    def clear(self, table_name: Optional[str] = None) -> int:
+    def clear(self, table_name: str | None = None) -> int:
         """
         Clear cache entries.
         
@@ -143,14 +143,13 @@ class QueryCache:
                 count = len(self._cache)
                 self._cache.clear()
                 return count
-            else:
-                # TODO: Implement selective clearing by table name
-                # This would require storing table metadata with each entry
-                count = len(self._cache)
-                self._cache.clear()
-                return count
+            # TODO: Implement selective clearing by table name
+            # This would require storing table metadata with each entry
+            count = len(self._cache)
+            self._cache.clear()
+            return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
         
@@ -160,7 +159,7 @@ class QueryCache:
         with self._lock:
             total_requests = self._hits + self._misses
             hit_rate = (self._hits / total_requests * 100) if total_requests > 0 else 0.0
-            
+
             return {
                 'size': len(self._cache),
                 'max_size': self.max_size,
@@ -178,7 +177,7 @@ class QueryCache:
             self._misses = 0
             self._evictions = 0
 
-    def is_read_query(self, query: Dict[str, Any]) -> bool:
+    def is_read_query(self, query: dict[str, Any]) -> bool:
         """
         Check if query is a read operation (cacheable).
         
@@ -189,6 +188,6 @@ class QueryCache:
             True if query is cacheable (SELECT operation)
         """
         method = query.get('method', '').lower()
-        
+
         # Cache only SELECT queries
         return method in ('select', 'query', 'get')

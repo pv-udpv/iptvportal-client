@@ -1,25 +1,26 @@
 """Main SQL to JSONSQL transpiler."""
 
-from typing import Any, Optional
+from typing import Any
+
 import sqlglot
 from sqlglot import exp
 
-from .exceptions import TranspilerError, UnsupportedFeatureError, ParseError
+from .exceptions import ParseError, TranspilerError, UnsupportedFeatureError
+from .functions import build_distinct_function, build_function, normalize_function_name
 from .operators import (
-    build_comparison,
-    build_logical,
-    build_pattern,
-    build_in,
-    build_not,
-    build_math,
-    build_is,
-    build_is_not,
     COMPARISON_OPERATORS,
     LOGICAL_OPERATORS,
-    PATTERN_OPERATORS,
     MATH_OPERATORS,
+    PATTERN_OPERATORS,
+    build_comparison,
+    build_in,
+    build_is,
+    build_is_not,
+    build_logical,
+    build_math,
+    build_not,
+    build_pattern,
 )
-from .functions import build_function, build_distinct_function, normalize_function_name
 
 
 class SQLTranspiler:
@@ -36,7 +37,7 @@ class SQLTranspiler:
     def __init__(
         self,
         dialect: str = "postgres",
-        schema_registry: Optional[Any] = None,
+        schema_registry: Any | None = None,
         auto_order_by_id: bool = True,
     ):
         """
@@ -73,16 +74,15 @@ class SQLTranspiler:
             # Handle different statement types
             if isinstance(parsed, exp.Select):
                 return self._transpile_select(parsed)
-            elif isinstance(parsed, exp.Insert):
+            if isinstance(parsed, exp.Insert):
                 return self._transpile_insert(parsed)
-            elif isinstance(parsed, exp.Update):
+            if isinstance(parsed, exp.Update):
                 return self._transpile_update(parsed)
-            elif isinstance(parsed, exp.Delete):
+            if isinstance(parsed, exp.Delete):
                 return self._transpile_delete(parsed)
-            else:
-                raise UnsupportedFeatureError(f"Unsupported statement type: {type(parsed)}")
+            raise UnsupportedFeatureError(f"Unsupported statement type: {type(parsed)}")
 
-        except sqlglot.errors.ParseError as e:
+        except sqlglot.ParseError as e:
             raise ParseError(f"Failed to parse SQL: {e}") from e
         except Exception as e:
             if isinstance(e, (TranspilerError, UnsupportedFeatureError, ParseError)):
@@ -207,7 +207,16 @@ class SQLTranspiler:
         def check_expr(expr: exp.Expression) -> bool:
             """Recursively check if expression contains aggregate functions."""
             if isinstance(expr, (exp.Anonymous, exp.Func)):
-                func_name = expr.sql_name() if hasattr(expr, "sql_name") else type(expr).__name__
+                # Get function name safely
+                if isinstance(expr, exp.Func) and hasattr(expr, "sql_name"):
+                    func_name = expr.sql_name()
+                elif hasattr(expr, "this") and hasattr(expr.this, "name"):
+                    func_name = expr.this.name
+                elif hasattr(expr, "key"):
+                    func_name = expr.key
+                else:
+                    func_name = type(expr).__name__
+
                 if func_name.upper() in aggregate_functions:
                     return True
 
@@ -229,7 +238,7 @@ class SQLTranspiler:
         return any(check_expr(expr) for expr in expressions)
 
     def _transpile_select_columns(
-        self, expressions: list[exp.Expression], from_table: Optional[str] = None
+        self, expressions: list[exp.Expression], from_table: str | None = None
     ) -> list[Any]:
         """Transpile SELECT column expressions."""
         columns = []
@@ -267,22 +276,30 @@ class SQLTranspiler:
             if expr.table:
                 return {expr.table: expr.name}
             return expr.name
-        elif isinstance(expr, exp.Literal):
+        if isinstance(expr, exp.Literal):
             return self._transpile_literal(expr)
-        elif isinstance(expr, exp.Anonymous) or isinstance(expr, exp.Func):
+        if isinstance(expr, (exp.Anonymous, exp.Func)):
             # Function call
             return self._transpile_function(expr)
-        elif isinstance(expr, exp.Distinct):
+        if isinstance(expr, exp.Distinct):
             # DISTINCT
             args = [self._transpile_column_expression(arg) for arg in expr.expressions]
             return build_distinct_function(args)
-        else:
-            # Try to transpile as expression
-            return self._transpile_expression(expr)
+        # Try to transpile as expression
+        return self._transpile_expression(expr)
 
     def _transpile_function(self, func: exp.Expression) -> dict[str, Any]:
         """Transpile function call."""
-        func_name = func.sql_name() if hasattr(func, "sql_name") else type(func).__name__
+        # Get function name safely
+        if isinstance(func, exp.Func) and hasattr(func, "sql_name"):
+            func_name = func.sql_name()
+        elif hasattr(func, "this") and hasattr(func.this, "name"):
+            func_name = func.this.name
+        elif hasattr(func, "key"):
+            func_name = func.key
+        else:
+            func_name = type(func).__name__
+
         func_name = normalize_function_name(func_name)
 
         # Get function arguments
@@ -319,19 +336,19 @@ class SQLTranspiler:
             if not main_table.alias:
                 # Check if there are joins - if so, need full format
                 if joins:
-                    table_ref = {"table": main_table.name, "as": main_table.name}
+                    table_ref: dict[str, Any] = {"table": main_table.name, "as": main_table.name}
                     tables.append(table_ref)
                 else:
                     # Simple case: just return table name
                     return main_table.name
             else:
                 # Table with alias
-                table_ref = {"table": main_table.name, "as": main_table.alias}
+                table_ref: dict[str, Any] = {"table": main_table.name, "as": main_table.alias}
                 tables.append(table_ref)
         elif isinstance(main_table, exp.Subquery):
             # Subquery in FROM
             subquery_result = self._transpile_select(main_table.this)
-            table_ref = {"select": subquery_result}
+            table_ref: dict[str, Any] = {"select": subquery_result}
             if main_table.alias:
                 table_ref["as"] = main_table.alias
             tables.append(table_ref)
@@ -351,7 +368,6 @@ class SQLTranspiler:
         result: dict[str, Any] = {}
 
         # Determine join type (default to INNER JOIN)
-        join_type = "join"  # JSONSQL uses "join" for all join types
 
         # Get table name
         if isinstance(join_table, exp.Table):
@@ -381,56 +397,54 @@ class SQLTranspiler:
                 return {expr.table: expr.name}
             return expr.name
 
-        elif isinstance(expr, exp.Literal):
+        if isinstance(expr, exp.Literal):
             return self._transpile_literal(expr)
 
-        elif isinstance(expr, exp.Is):
+        if isinstance(expr, exp.Is):
             # Handle IS NULL / IS <value>
             left = self._transpile_expression(expr.this)
             right = self._transpile_expression(expr.expression)
             return build_is(left, right)
 
-        elif isinstance(expr, exp.Binary):
+        if isinstance(expr, exp.Binary):
             return self._transpile_binary(expr)
 
-        elif isinstance(expr, exp.In):
+        if isinstance(expr, exp.In):
             return self._transpile_in(expr)
 
-        elif isinstance(expr, exp.Not):
+        if isinstance(expr, exp.Not):
             # Check if this is IS NOT (NOT wrapping IS expression)
             if isinstance(expr.this, exp.Is):
                 # Handle IS NOT NULL / IS NOT <value>
                 left = self._transpile_expression(expr.this.this)
                 right = self._transpile_expression(expr.this.expression)
                 return build_is_not(left, right)
-            else:
-                # Regular NOT operator
-                operand = self._transpile_expression(expr.this)
-                return build_not(operand)
+            # Regular NOT operator
+            operand = self._transpile_expression(expr.this)
+            return build_not(operand)
 
-        elif isinstance(expr, (exp.Anonymous, exp.Func)):
+        if isinstance(expr, (exp.Anonymous, exp.Func)):
             return self._transpile_function(expr)
 
-        elif isinstance(expr, exp.Paren):
+        if isinstance(expr, exp.Paren):
             return self._transpile_expression(expr.this)
 
-        elif isinstance(expr, exp.Star):
+        if isinstance(expr, exp.Star):
             return "*"
 
-        elif isinstance(expr, exp.Alias):
+        if isinstance(expr, exp.Alias):
             return self._transpile_column_expression(expr.this)
 
-        elif isinstance(expr, exp.Null):
+        if isinstance(expr, exp.Null):
             # Handle NULL literal
             return None
 
-        elif isinstance(expr, exp.Boolean):
+        if isinstance(expr, exp.Boolean):
             # Handle TRUE/FALSE literals
             return expr.this
 
-        else:
-            # Fallback: try to convert to string
-            return str(expr)
+        # Fallback: try to convert to string
+        return str(expr)
 
     def _transpile_binary(self, binary: exp.Binary) -> dict[str, Any]:
         """Transpile binary operations (comparisons, logical ops, math)."""
@@ -443,36 +457,44 @@ class SQLTranspiler:
             return build_comparison(operator, left, right)
 
         # Check for logical operators
-        elif operator in LOGICAL_OPERATORS:
+        if operator in LOGICAL_OPERATORS:
             return build_logical(operator, [left, right])
 
         # Check for pattern matching
-        elif operator in PATTERN_OPERATORS:
+        if operator in PATTERN_OPERATORS:
             return build_pattern(operator, left, right)
 
         # Check for mathematical operators
-        elif operator in MATH_OPERATORS or binary.key in MATH_OPERATORS:
+        if operator in MATH_OPERATORS or binary.key in MATH_OPERATORS:
             # Use the symbol for operators like +, -, *, /, %
             op_key = binary.key if binary.key in MATH_OPERATORS else operator
             return build_math(op_key, left, right)
 
-        else:
-            raise UnsupportedFeatureError(f"Unsupported binary operator: {operator}")
+        raise UnsupportedFeatureError(f"Unsupported binary operator: {operator}")
 
     def _transpile_in(self, in_expr: exp.In) -> dict[str, Any]:
         """Transpile IN expression."""
         column = self._transpile_expression(in_expr.this)
 
-        # Handle values
-        values = []
-        if isinstance(in_expr.expressions[0], exp.Tuple):
-            for val in in_expr.expressions[0].expressions:
-                values.append(self._transpile_expression(val))
+        # Handle subquery case
+        if in_expr.args.get("query"):
+            subquery = in_expr.args["query"]
+            if isinstance(subquery, exp.Subquery):
+                subquery_result = self._transpile_select(subquery.this)
+                result = build_in(column, [subquery_result])
+            else:
+                result = build_in(column, [self._transpile_expression(subquery)])
         else:
-            for val in in_expr.expressions:
-                values.append(self._transpile_expression(val))
+            # Handle values
+            values = []
+            if in_expr.expressions and isinstance(in_expr.expressions[0], exp.Tuple):
+                for val in in_expr.expressions[0].expressions:
+                    values.append(self._transpile_expression(val))
+            else:
+                for val in in_expr.expressions:
+                    values.append(self._transpile_expression(val))
 
-        result = build_in(column, values)
+            result = build_in(column, values)
 
         # Handle NOT IN
         if in_expr.args.get("negated"):
@@ -484,20 +506,19 @@ class SQLTranspiler:
         """Transpile literal value."""
         if literal.is_string:
             return literal.this
-        elif literal.is_int:
+        if literal.is_int:
             return int(literal.this)
-        elif literal.is_number:
+        if literal.is_number:
             return float(literal.this)
-        else:
-            # Handle boolean and null
-            value = literal.this.upper()
-            if value == "TRUE":
-                return True
-            elif value == "FALSE":
-                return False
-            elif value == "NULL":
-                return None
-            return literal.this
+        # Handle boolean and null
+        value = literal.this.upper()
+        if value == "TRUE":
+            return True
+        if value == "FALSE":
+            return False
+        if value == "NULL":
+            return None
+        return literal.this
 
     def _transpile_group_by(self, group: exp.Group) -> list[Any]:
         """Transpile GROUP BY clause."""
@@ -528,21 +549,22 @@ class SQLTranspiler:
         result: dict[str, Any] = {}
 
         # Get table name
-        if insert.this:
-            result["into"] = insert.this.name
+        if insert.this and hasattr(insert.this, "this") and insert.this.this:
+            result["into"] = insert.this.this.name
+        else:
+            result["into"] = ""
 
         # Get columns
-        if insert.args.get("columns"):
-            result["columns"] = [col.name for col in insert.args["columns"]]
+        if insert.this and hasattr(insert.this, "expressions") and insert.this.expressions:
+            result["columns"] = [col.name for col in insert.this.expressions]
 
         # Get values
-        if insert.expression:
-            if isinstance(insert.expression, exp.Values):
-                values = []
-                for tuple_expr in insert.expression.expressions:
-                    row = [self._transpile_expression(val) for val in tuple_expr.expressions]
-                    values.append(row)
-                result["values"] = values
+        if insert.expression and isinstance(insert.expression, exp.Values):
+            values = []
+            for tuple_expr in insert.expression.expressions:
+                row = [self._transpile_expression(val) for val in tuple_expr.expressions]
+                values.append(row)
+            result["values"] = values
 
         # Handle RETURNING
         if insert.args.get("returning"):

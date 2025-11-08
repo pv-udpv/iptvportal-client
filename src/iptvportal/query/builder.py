@@ -1,6 +1,7 @@
 """Query builder with Python DSL and operators."""
 
-from typing import Any, Optional, Union
+from typing import Any
+
 
 class QueryBuilder:
     """
@@ -8,17 +9,17 @@ class QueryBuilder:
     """
     def __init__(self):
         self._request_id = 1
-    
+
     def select(
         self,
         data: list[str],
         from_: str,
-        where: Optional[Any] = None,
-        order_by: Optional[Union[str, list[str]]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        where: Any | None = None,
+        order_by: str | list[str] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         distinct: bool = False,
-        group_by: Optional[Union[str, list[str]]] = None
+        group_by: str | list[str] | None = None
     ) -> dict[str, Any]:
         params: dict[str, Any] = {
             "data": data,
@@ -42,7 +43,7 @@ class QueryBuilder:
         into: str,
         columns: list[str],
         values: list[list[Any]],
-        returning: Optional[Union[str, list[str]]] = None
+        returning: str | list[str] | None = None
     ) -> dict[str, Any]:
         params = {
             "into": into,
@@ -56,8 +57,8 @@ class QueryBuilder:
         self,
         table: str,
         set_: dict[str, Any],
-        where: Optional[Any] = None,
-        returning: Optional[Union[str, list[str]]] = None
+        where: Any | None = None,
+        returning: str | list[str] | None = None
     ) -> dict[str, Any]:
         params = {
             "table": table,
@@ -71,8 +72,8 @@ class QueryBuilder:
     def delete(
         self,
         from_: str,
-        where: Optional[Any] = None,
-        returning: Optional[Union[str, list[str]]] = None
+        where: Any | None = None,
+        returning: str | list[str] | None = None
     ) -> dict[str, Any]:
         params = {"from": from_}
         if where:

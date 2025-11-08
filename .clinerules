@@ -107,6 +107,111 @@ test(schema): Add validation tests
 
 **Skip hooks**: Use `--no-verify` flag (e.g., `git commit --no-verify`)
 
+## Cline Workflow Integration
+
+Cline AI assistant integrates with the git workflow to provide continuous checklist tracking, automatic progress updates, and seamless GitHub integration.
+
+### Cline Checklist Tracking
+
+**Always use `task_progress` parameter** in Cline responses to track task progress. This enables automatic synchronization with git workflow.
+
+**Checklist Format:**
+```markdown
+- [x] Completed task with commit reference
+- [ ] In progress task
+- [ ] Pending task
+```
+
+**Auto-save to `.cline-progress`**: Cline automatically maintains task progress in JSON format for integration with git workflow scripts.
+
+### Cline Workflow Scripts
+
+```bash
+# Initialize Cline tracking for an issue
+./scripts/cline-init.sh --issue 123
+
+# Make commits with checklist references
+./scripts/cline-commit.sh --items "1,3" --type feat --scope sync
+
+# Create PR with full checklist integration
+./scripts/cline-pr.sh --sync-issue
+
+# Sync progress to GitHub issue comments
+./scripts/cline-sync.sh --to-issue
+
+# View current progress dashboard
+./scripts/cline-status.sh
+```
+
+### Cline Commit Guidelines
+
+**Always reference checklist items** in commit messages:
+```
+feat(sync): Add incremental sync strategy
+
+Completes: #1, #3 (from .cline-progress)
+Related: issue-123
+
+- [x] Setup database schema
+- [x] Add incremental logic
+- [ ] Add tests (next commit)
+```
+
+**Link checklist items to commits**: Each completed checklist item should reference the commit SHA that implements it.
+
+### Cline PR Integration
+
+**PR descriptions include full checklists** with:
+- Completed items linked to commits
+- In-progress items clearly marked
+- Completion percentage
+- Issue and branch references
+
+**Automatic issue linking**: PRs automatically link to GitHub issues via branch names (`issue-123-feature`) or explicit `--issue` flags.
+
+### Cline GitHub Integration
+
+**Real-time progress updates**: Post checklist progress to GitHub issue comments automatically or on-demand.
+
+**GitHub API/MCP fallback**: Uses `gh` CLI when available, falls back to GitHub API or MCP servers for integration.
+
+### Cline Task Progress Rules
+
+1. **Always use `task_progress`** parameter in tool calls
+2. **Format checklists consistently** with `- [x]` for completed, `- [ ]` for pending
+3. **Reference issue numbers** in all operations when working on issue-related tasks
+4. **Link checklist items to commits** when marking items complete
+5. **Update progress regularly** to maintain accurate tracking
+6. **Use descriptive task names** that clearly indicate what was accomplished
+
+### Cline Quality Gates
+
+**Pre-commit validation**: Git hooks validate checklist consistency and warn about incomplete critical items.
+
+**Commit message validation**: Ensures checklist references are properly formatted and linked.
+
+**PR creation validation**: Verifies all checklist items have appropriate commit references.
+
+### Cline Progress Persistence
+
+**`.cline-progress` file**: JSON format tracking all checklist items with metadata:
+- Issue and branch references
+- Completion status and timestamps
+- Commit SHA links
+- Priority levels and dependencies
+
+**Git-tracked**: Progress file is committed to git for full audit trail.
+
+### Cline Advanced Features
+
+**Priority levels**: Mark critical items that must complete before PR creation.
+
+**Dependency tracking**: Define task dependencies to prevent working on blocked items.
+
+**Time tracking**: Automatic duration calculation for productivity metrics.
+
+**Multi-issue support**: Work on multiple issues simultaneously with separate progress tracking.
+
 ## Makefile Commands
 - **Build System**: Comprehensive Makefile with uv integration for all development tasks
 - **Help**: Run `make` or `make help` to see all available commands with descriptions

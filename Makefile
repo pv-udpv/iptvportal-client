@@ -1,4 +1,4 @@
-.PHONY: help install install-dev sync sync-dev clean test test-cov test-watch lint format type-check check build run cli docs venv-init venv-activate install-user install-system cli-config-init
+.PHONY: help install install-dev sync sync-dev clean test test-cov test-watch lint lint-grouped lint-summary format type-check check build run cli docs venv-init venv-activate install-user install-system cli-config-init
 
 # Default target
 .DEFAULT_GOAL := help
@@ -84,9 +84,15 @@ venv-init: ## Create a Python virtual environment with uv (VENV_DIR=.venv)
 	@echo "$(YELLOW)Or start a subshell with it activated via:$(NC)"
 	@echo "  make venv-activate VENV_DIR=$(VENV_DIR)"
 
-venv-activate: ## Start an interactive subshell with the venv activated (VENV_DIR=.venv)
+venv-activate: ## Start an interactive subshell with the venv activated (cannot modify parent shell)
+	@if [ ! -f "$(VENV_DIR)/bin/activate" ]; then \
+		printf "$(RED)No venv found at %s. Run: make venv-init VENV_DIR=%s$(NC)\n" "$(VENV_DIR)" "$(VENV_DIR)"; \
+		exit 1; \
+	fi
 	@echo "$(BLUE)Launching subshell with $(VENV_DIR) activated...$(NC)"
-	@bash -c 'set -e; if [ ! -f "$(VENV_DIR)/bin/activate" ]; then echo "$(RED)No venv found at $(VENV_DIR). Run: make venv-init VENV_DIR=$(VENV_DIR)$(NC)"; exit 1; fi; source "$(VENV_DIR)/bin/activate" && echo "($(notdir $(VENV_DIR))) shell active. Type 'exit' to leave." && exec bash -i'
+	@echo "$(YELLOW)Note: make cannot change your current shell. To activate in-place, run: source $(VENV_DIR)/bin/activate$(NC)"
+	@# Spawn an interactive bash that sources the venv and then hands you a real interactive shell
+	@bash -i -c 'source "$(VENV_DIR)/bin/activate" && echo "($(notdir $(VENV_DIR))) shell active. Type exit to leave." && exec bash -i'
 
 install: ## Install production dependencies only
 	@echo "$(BLUE)Installing production dependencies...$(NC)"
@@ -141,6 +147,14 @@ test-specific: ## Run specific test file (usage: make test-specific TEST=test_fi
 lint: ## Run ruff linter
 	@echo "$(BLUE)Running linter...$(NC)"
 	uv run ruff check .
+
+lint-grouped: ## Run ruff linter with grouped output by rule
+	@echo "$(BLUE)Running linter with grouped output...$(NC)"
+	uv run ruff check --output-format=grouped .
+
+lint-summary: ## Run ruff linter with summary statistics
+	@echo "$(BLUE)Running linter with summary...$(NC)"
+	uv run ruff check --statistics .
 
 lint-fix: ## Run ruff linter with auto-fix
 	@echo "$(BLUE)Running linter with auto-fix...$(NC)"

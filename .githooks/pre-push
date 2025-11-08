@@ -139,7 +139,8 @@ check_recent_commits() {
         fi
 
         # Check conventional commit format
-        if [[ ! $message =~ ^(feat|fix|docs|test|refactor|chore|perf|style|ci|revert|build)(\([^)]+\))?:[[:space:]] ]]; then
+        local pattern='^(feat|fix|docs|test|refactor|chore|perf|style|ci|revert|build)(\([^)]+\))?:[[:space:]]'
+        if [[ ! $message =~ $pattern ]]; then
             invalid_commits+=("$commit: $message")
         fi
     done
@@ -188,6 +189,60 @@ check_large_files_in_commits() {
     log_success "No large files found in commits"
 }
 
+# Check Cline checklist completion before push
+check_cline_checklist_completion() {
+    if [ ! -f ".cline-progress" ]; then
+        # No checklist file, skip this check
+        return 0
+    fi
+
+    # Source the helper functions
+    if [ ! -f "scripts/cline-helpers.sh" ]; then
+        log_warning "Cline helpers not found, skipping checklist completion check"
+        return 0
+    fi
+
+    source "scripts/cline-helpers.sh"
+
+    log_info "Checking Cline checklist completion..."
+
+    local json_data=$(read_cline_progress)
+    local total_items=$(echo "$json_data" | jq '.metadata.total_items')
+    local completed_items=$(echo "$json_data" | jq '.metadata.completed_items')
+    local in_progress_items=$(echo "$json_data" | jq '.metadata.in_progress_items')
+
+    # Check for completed items without commit references
+    local invalid_completed=$(echo "$json_data" | jq -r '.items[] | select(.status == "completed" and (.commit == null or .commit == "")) | "\(.id): \(.text)"')
+
+    if [ -n "$invalid_completed" ]; then
+        log_error "Found completed checklist items without commit references:"
+        echo "$invalid_completed"
+        log_error "All completed items must be linked to commits before pushing"
+        log_info "Use 'Completes: #X (from .cline-progress)' in commit messages"
+        exit 1
+    fi
+
+    # Check for critical items that are not completed
+    local critical_pending=$(echo "$json_data" | jq -r '.items[] | select(.priority == "critical" and .status != "completed") | "\(.id): \(.text)"')
+
+    if [ -n "$critical_pending" ]; then
+        log_error "Found incomplete critical checklist items:"
+        echo "$critical_pending"
+        log_error "All critical items must be completed before pushing"
+        exit 1
+    fi
+
+    # Show progress summary
+    local progress=$(get_progress_summary)
+    log_success "Checklist validation passed: $progress"
+
+    # Warn about in-progress items
+    if [ "$in_progress_items" -gt 0 ]; then
+        log_warning "Branch has $in_progress_items in-progress checklist items"
+        log_info "Consider completing these before merging"
+    fi
+}
+
 # Show push summary
 show_push_summary() {
     local commits_to_push=$(git rev-list --count "origin/$BRANCH..$BRANCH" 2>/dev/null || echo "unknown")
@@ -211,6 +266,7 @@ main() {
     check_main_branch_push
     check_recent_commits
     check_large_files_in_commits
+    check_cline_checklist_completion
     run_full_tests
     check_coverage
 

@@ -5,13 +5,14 @@ Run with:
     uv run pytest tests/test_introspector.py -v
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime
+from unittest.mock import AsyncMock
 
-from iptvportal.introspector import SchemaIntrospector
-from iptvportal.schema import TableSchema, FieldDefinition, FieldType, SyncConfig, TableMetadata
+import pytest
+
 from iptvportal.async_client import AsyncIPTVPortalClient
+from iptvportal.introspector import SchemaIntrospector
+from iptvportal.schema import FieldDefinition, FieldType, TableMetadata
+
 
 class TestSchemaIntrospector:
     """Test SchemaIntrospector functionality."""
@@ -19,8 +20,7 @@ class TestSchemaIntrospector:
     @pytest.fixture
     def mock_client(self):
         """Mock AsyncIPTVPortalClient."""
-        client = AsyncMock(spec=AsyncIPTVPortalClient)
-        return client
+        return AsyncMock(spec=AsyncIPTVPortalClient)
 
     @pytest.fixture
     def introspector(self, mock_client):
@@ -72,8 +72,14 @@ class TestSchemaIntrospector:
         assert introspector._infer_field_name(4, "+1234567890", FieldType.STRING) == "phone"
 
         # Test datetime fields
-        assert introspector._infer_field_name(1, "2023-01-01T12:00:00", FieldType.DATETIME) == "created_at"
-        assert introspector._infer_field_name(2, "2023-01-01T12:00:00", FieldType.DATETIME) == "updated_at"
+        assert (
+            introspector._infer_field_name(1, "2023-01-01T12:00:00", FieldType.DATETIME)
+            == "created_at"
+        )
+        assert (
+            introspector._infer_field_name(2, "2023-01-01T12:00:00", FieldType.DATETIME)
+            == "updated_at"
+        )
 
         # Test date fields
         assert introspector._infer_field_name(5, "2023-01-01", FieldType.DATE) == "date_5"
@@ -126,6 +132,7 @@ class TestSchemaIntrospector:
         fields = {
             0: FieldDefinition(name="id", position=0, field_type=FieldType.INTEGER),
             1: FieldDefinition(name="name", position=1, field_type=FieldType.STRING),
+            2: FieldDefinition(name="updated_at", position=2, field_type=FieldType.DATETIME),
         }
 
         config = introspector._generate_sync_config("large_table", metadata, fields)
@@ -168,6 +175,7 @@ class TestSchemaIntrospector:
         assert "disabled = false" in where_parts
         assert "archived = false" in where_parts
         assert "active = true" in where_parts
+        assert "active = true" in where_parts
 
     def test_sync_config_with_incremental_field(self, introspector):
         """Test sync config generation with incremental field."""
@@ -205,17 +213,15 @@ class TestSchemaIntrospector:
         # Mock the sample query response
         sample_data = [
             [1, "John Doe", "john@example.com", "2023-01-01T10:00:00"],
-            [2, "Jane Smith", "jane@example.com", "2023-01-02T11:00:00"]
+            [2, "Jane Smith", "jane@example.com", "2023-01-02T11:00:00"],
         ]
-        mock_client.execute = AsyncMock(return_value=sample_data)
 
-        # Mock metadata queries
+        # Mock metadata queries with correct format
         mock_client.execute.side_effect = [
-            sample_data,  # Sample query
-            [{"count": 2}],  # COUNT query
-            [{"max_id": 2, "min_id": 1}],  # ID stats query
-            [{"created_at_min": "2023-01-01T10:00:00", "created_at_max": "2023-01-02T11:00:00"}],  # timestamp range
-            [{"updated_at_min": None, "updated_at_max": None}],  # another timestamp field
+            sample_data,  # Sample query for field analysis
+            [[2]],  # COUNT query - returns [[count]]
+            [[2, 1]],  # ID stats query - returns [[max_id, min_id]]
+            [["2023-01-01T10:00:00", "2023-01-02T11:00:00"]],  # timestamp range for timestamp_3
         ]
 
         schema = await introspector.introspect_table("users")
@@ -233,7 +239,7 @@ class TestSchemaIntrospector:
         assert schema.fields[2].name == "email"
         assert schema.fields[2].field_type == FieldType.STRING
 
-        assert schema.fields[3].name == "created_at"
+        assert schema.fields[3].name == "timestamp_3"  # Position 3 -> timestamp_3, not created_at
         assert schema.fields[3].field_type == FieldType.DATETIME
 
         # Check metadata
@@ -243,7 +249,7 @@ class TestSchemaIntrospector:
 
         # Check sync config
         assert schema.sync_config.cache_strategy == "full"
-        assert schema.sync_config.chunk_size == 2  # Same as row count for small table
+        assert schema.sync_config.chunk_size == 100  # max(row_count, 100) = max(2, 100) = 100
 
     @pytest.mark.asyncio
     async def test_introspect_table_with_field_overrides(self, introspector, mock_client):
@@ -260,10 +266,7 @@ class TestSchemaIntrospector:
 
         field_overrides = {1: "full_name", 2: "contact_email"}
 
-        schema = await introspector.introspect_table(
-            "users",
-            field_name_overrides=field_overrides
-        )
+        schema = await introspector.introspect_table("users", field_name_overrides=field_overrides)
 
         assert schema.fields[0].name == "id"  # Auto-detected
         assert schema.fields[1].name == "full_name"  # Overridden

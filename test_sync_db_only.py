@@ -2,10 +2,9 @@
 """Test sync database functionality in isolation."""
 
 import sqlite3
-import json
-import hashlib
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 
 # Copy the core database functionality for testing
 class TestSyncDatabase:

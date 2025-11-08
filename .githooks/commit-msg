@@ -142,6 +142,62 @@ validate_content() {
     fi
 }
 
+# Parse and validate Cline checklist references
+validate_cline_references() {
+    local message="$1"
+
+    if [ ! -f ".cline-progress" ]; then
+        # No checklist file, skip this check
+        return 0
+    fi
+
+    # Source the helper functions
+    if [ ! -f "scripts/cline-helpers.sh" ]; then
+        log_warning "Cline helpers not found, skipping checklist reference validation"
+        return 0
+    fi
+
+    source "scripts/cline-helpers.sh"
+
+    # Look for checklist references in commit message
+    # Format: "Completes: #1, #3 (from .cline-progress)"
+    local checklist_refs=$(echo "$message" | grep -o "Completes: #[0-9]\+\(,\s*#[0-9]\+\)* (from \.cline-progress)" || true)
+
+    if [ -n "$checklist_refs" ]; then
+        log_info "Found checklist references in commit message"
+
+        # Extract item IDs from the reference
+        local item_ids=$(echo "$checklist_refs" | grep -o "#[0-9]\+" | sed 's/#//' | tr '\n' ' ')
+
+        # Validate that referenced items exist and are not already completed
+        local json_data=$(read_cline_progress)
+
+        for item_id in $item_ids; do
+            local item_status=$(echo "$json_data" | jq -r --arg id "$item_id" '.items[] | select(.id == ($id | tonumber)) | .status')
+            local item_commit=$(echo "$json_data" | jq -r --arg id "$item_id" '.items[] | select(.id == ($id | tonumber)) | .commit')
+
+            if [ -z "$item_status" ]; then
+                log_error "Checklist item #$item_id not found in .cline-progress"
+                exit 1
+            fi
+
+            if [ "$item_status" = "completed" ] && [ "$item_commit" != "null" ] && [ -n "$item_commit" ]; then
+                log_warning "Checklist item #$item_id is already marked as completed with commit $item_commit"
+                log_info "This commit will update the reference to the new commit SHA"
+            fi
+        done
+
+        log_success "Checklist references validated"
+    else
+        # No checklist references found - check if this commit should reference checklist items
+        local branch=$(git branch --show-current)
+        if [[ $branch =~ issue- ]]; then
+            log_info "Working on issue branch but no checklist references found"
+            log_info "Consider adding 'Completes: #X (from .cline-progress)' to link checklist items"
+        fi
+    fi
+}
+
 # Main validation function
 validate_commit_message() {
     local message="$1"
@@ -160,6 +216,7 @@ validate_commit_message() {
     check_issue_reference "$message"
     check_wip_commits "$message"
     check_fixup_on_main "$message"
+    validate_cline_references "$message"
 
     log_success "Commit message validation passed"
 }

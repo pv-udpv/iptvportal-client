@@ -4,13 +4,13 @@ import typer
 from rich.console import Console
 
 from iptvportal.cli.commands.auth import auth_command
-from iptvportal.cli.commands.sql import sql_app
-from iptvportal.cli.commands.jsonsql import jsonsql_app
-from iptvportal.cli.commands.transpile import transpile_command
-from iptvportal.cli.commands.config import config_app
-from iptvportal.cli.commands.schema import schema_app
 from iptvportal.cli.commands.cache import cache_app
+from iptvportal.cli.commands.config import config_app
+from iptvportal.cli.commands.jsonsql import jsonsql_app
+from iptvportal.cli.commands.schema import schema_app
+from iptvportal.cli.commands.sql import sql_app
 from iptvportal.cli.commands.sync import app as sync_app
+from iptvportal.cli.commands.transpile import transpile_command
 
 console = Console()
 

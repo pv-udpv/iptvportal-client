@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Basic test script for sync functionality."""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 def test_sync_database():

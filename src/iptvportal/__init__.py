@@ -1,14 +1,14 @@
 """Modern Python client for IPTVPortal JSONSQL API."""
 
-from iptvportal.client import IPTVPortalClient
 from iptvportal.async_client import AsyncIPTVPortalClient
+from iptvportal.client import IPTVPortalClient
 from iptvportal.config import IPTVPortalSettings
 from iptvportal.exceptions import (
-    IPTVPortalError,
-    AuthenticationError,
     APIError,
-    TimeoutError,
+    AuthenticationError,
     ConnectionError,
+    IPTVPortalError,
+    TimeoutError,
 )
 
 __version__ = "0.1.0"

@@ -1,16 +1,15 @@
 """SQLite database layer for sync operations."""
 
-import sqlite3
-import json
 import hashlib
-from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple, Union
-from datetime import datetime, timedelta
+import json
+import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
-from iptvportal.config import IPTVPortalSettings
-from iptvportal.schema import TableSchema, FieldDefinition, FieldType
-from iptvportal.sync.exceptions import DatabaseError, SchemaVersionError, TableNotFoundError
+from iptvportal.schema import FieldDefinition, FieldType, TableSchema
+from iptvportal.sync.exceptions import TableNotFoundError
 
 
 class SyncDatabase:
@@ -36,7 +35,7 @@ class SyncDatabase:
         """
         self.db_path = Path(db_path).expanduser()
         self.settings = settings
-        self._connection: Optional[sqlite3.Connection] = None
+        self._connection: sqlite3.Connection | None = None
 
         # Ensure parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -47,7 +46,7 @@ class SyncDatabase:
             # Enable foreign keys and set pragmas for performance
             conn.execute("PRAGMA foreign_keys = ON")
             conn.execute(f"PRAGMA journal_mode = {self.settings.cache_db_journal_mode}")
-            conn.execute(f"PRAGMA synchronous = NORMAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
             conn.execute(f"PRAGMA cache_size = {self.settings.cache_db_cache_size}")
             conn.execute(f"PRAGMA page_size = {self.settings.cache_db_page_size}")
             conn.execute("PRAGMA temp_store = MEMORY")
@@ -342,7 +341,7 @@ class SyncDatabase:
         used_names = set()
 
         # First, add configured fields with their aliases
-        for pos, field_def in schema.fields.items():
+        for _pos, field_def in schema.fields.items():
             local_column = self._get_unique_column_name(field_def, used_names)
             # Use remote_name if available, otherwise use field name
             alias_name = field_def.remote_name or field_def.name
@@ -467,7 +466,7 @@ class SyncDatabase:
         json_str = json.dumps(hash_data, sort_keys=True)
         return hashlib.md5(json_str.encode()).hexdigest()
 
-    def get_metadata(self, table_name: str) -> Optional[Dict[str, Any]]:
+    def get_metadata(self, table_name: str) -> dict[str, Any] | None:
         """Get sync metadata for table."""
         with self._get_connection() as conn:
             row = conn.execute(
@@ -483,7 +482,7 @@ class SyncDatabase:
             return
 
         with self._get_connection() as conn:
-            set_clause = ", ".join(f"{k} = ?" for k in kwargs.keys())
+            set_clause = ", ".join(f"{k} = ?" for k in kwargs)
             values = list(kwargs.values()) + [datetime.now().isoformat(), table_name]
 
             conn.execute(f"""
@@ -510,7 +509,7 @@ class SyncDatabase:
         except (ValueError, TypeError):
             return True
 
-    def bulk_insert(self, table_name: str, rows: List[List[Any]],
+    def bulk_insert(self, table_name: str, rows: list[list[Any]],
                    schema: TableSchema, on_conflict: str = "FAIL") -> int:
         """
         Insert multiple rows efficiently.
@@ -580,8 +579,8 @@ class SyncDatabase:
 
             return len(rows)
 
-    def upsert_rows(self, table_name: str, rows: List[List[Any]],
-                   schema: TableSchema) -> Tuple[int, int]:
+    def upsert_rows(self, table_name: str, rows: list[list[Any]],
+                   schema: TableSchema) -> tuple[int, int]:
         """
         Upsert rows (insert or update).
 
@@ -624,7 +623,7 @@ class SyncDatabase:
             return inserted, updated
 
     def _insert_row(self, conn: sqlite3.Connection, table_name: str,
-                   row: List[Any], schema: TableSchema) -> None:
+                   row: list[Any], schema: TableSchema) -> None:
         """Insert single row."""
         # Get column names for ALL remote fields (Field_0, Field_1, ..., Field_N)
         total_fields = schema.total_fields or max(schema.fields.keys()) + 1
@@ -665,7 +664,7 @@ class SyncDatabase:
         """, values)
 
     def _update_row(self, conn: sqlite3.Connection, table_name: str,
-                   row: List[Any], schema: TableSchema) -> None:
+                   row: list[Any], schema: TableSchema) -> None:
         """Update single row."""
         # Get primary key value (assume first configured field is ID)
         configured_positions = sorted(schema.fields.keys())
@@ -733,7 +732,7 @@ class SyncDatabase:
             return count
 
     def execute_query(self, table_name: str, sql: str,
-                     params: Optional[Dict] = None) -> List[Dict[str, Any]]:
+                     params: dict | None = None) -> list[dict[str, Any]]:
         """
         Execute SQL query on cached table.
 
@@ -766,7 +765,7 @@ class SyncDatabase:
 
             return result
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get global cache statistics."""
         with self._get_connection() as conn:
             # Get database file size

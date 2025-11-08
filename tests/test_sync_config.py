@@ -5,10 +5,8 @@ Run with:
     uv run pytest tests/test_sync_config.py -v
 """
 
-import pytest
-from datetime import datetime, timedelta
 
-from iptvportal.schema import SyncConfig, FieldType
+from iptvportal.schema import SyncConfig
 
 
 class TestSyncConfigValidation:

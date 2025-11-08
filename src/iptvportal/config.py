@@ -1,8 +1,9 @@
 """Configuration management with Pydantic Settings."""
 
-from typing import Optional, Literal
 from pathlib import Path
-from pydantic import Field, SecretStr, field_validator, model_validator
+from typing import Literal
+
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -99,7 +100,7 @@ class IPTVPortalSettings(BaseSettings):
     )
 
     # Schema configuration
-    schema_file: Optional[str] = Field(
+    schema_file: str | None = Field(
         default=None,
         description="Path to schema configuration file (YAML or JSON)",
     )
@@ -626,6 +627,7 @@ def load_cli_config(config_path: str | None = None) -> CLISettings:
 def _load_config_from_file(path: Path) -> CLISettings:
     """Load configuration from YAML or JSON file."""
     import json
+
     import yaml
 
     content = path.read_text()
@@ -654,8 +656,9 @@ def save_cli_config(config: CLISettings, path: str | None = None, format: str = 
         >>> save_cli_config(config)
         >>> save_cli_config(config, "my-config.yaml", "yaml")
     """
-    from pathlib import Path
     import json
+    from pathlib import Path
+
     import yaml
 
     if path is None:

@@ -35,6 +35,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "pytest-httpx>=0.30.0",
     "pytest-mock>=3.14.0",
+    "pytest-timeout>=2.3.1",
     "mypy>=1.11.0",
     "ruff>=0.6.0",
 ]
@@ -58,7 +59,12 @@ packages = ["src/iptvportal"]
 dev = [
     "ipython>=8.27.0",
     "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
+    "pytest-httpx>=0.35.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.3.1",
+    "ruff>=0.14.4",
 ]
 
 [tool.ruff]
@@ -67,7 +73,15 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "DTZ", "T10", "RET", "SIM"]
-ignore = ["N802", "N803", "N806"]
+ignore = [
+    "N802", "N803", "N806",  # Naming conventions
+    "W291", "W293",          # Whitespace issues
+    "E712",                  # Comparison to True/False
+    "A001", "A002", "A004",  # Shadowing builtins (common in APIs)
+    "B904",                  # Exception chaining (can be noisy)
+    "DTZ005",                # Timezone-naive datetime (acceptable for logs)
+    "E501",                  # Line length (handled by ruff)
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -86,4 +100,5 @@ addopts = [
 asyncio_mode = "auto"
 markers = [
     "asyncio: marks tests as async (using pytest-asyncio)",
+    "timeout: per-test timeout in seconds (pytest-timeout)",
 ]

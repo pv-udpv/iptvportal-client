@@ -1,10 +1,10 @@
 """Schema introspection from remote tables with automatic metadata gathering."""
 
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
-from datetime import datetime
 import asyncio
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from .schema import TableSchema, FieldDefinition, FieldType, SyncConfig, TableMetadata
+from .schema import FieldDefinition, FieldType, SyncConfig, TableMetadata, TableSchema
 from .transpiler import SQLTranspiler
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ class SchemaIntrospector:
         self,
         table_name: str,
         gather_metadata: bool = True,
-        field_name_overrides: Optional[Dict[int, str]] = None,
+        field_name_overrides: dict[int, str] | None = None,
     ) -> TableSchema:
         """
         Интроспекция таблицы с автоматической генерацией схемы.
@@ -84,10 +84,7 @@ class SchemaIntrospector:
             else:
                 base_name = self._infer_field_name(position, value, field_type)
                 # Handle duplicate names by appending position
-                if base_name in used_names:
-                    field_name = f"{base_name}_{position}"
-                else:
-                    field_name = base_name
+                field_name = f"{base_name}_{position}" if base_name in used_names else base_name
                 description = "Auto-detected field"
 
             used_names.add(field_name)
@@ -114,7 +111,7 @@ class SchemaIntrospector:
         )
 
     async def _gather_metadata(
-        self, table_name: str, fields: Dict[int, FieldDefinition]
+        self, table_name: str, fields: dict[int, FieldDefinition]
     ) -> TableMetadata:
         """
         Сбор метаданных таблицы.
@@ -183,7 +180,7 @@ class SchemaIntrospector:
         return metadata
 
     def _generate_sync_config(
-        self, table_name: str, metadata: Optional[TableMetadata], fields: Dict[int, FieldDefinition]
+        self, table_name: str, metadata: TableMetadata | None, fields: dict[int, FieldDefinition]
     ) -> SyncConfig:
         """
         Генерация умной конфигурации синхронизации на основе метаданных.
@@ -227,21 +224,16 @@ class SchemaIntrospector:
         if deleted_field:
             where_clauses.append(f"{deleted_field.name} IS NULL")
 
-        # Проверить поля disabled/archived/active
-        flag_field = next(
-            (
-                f
-                for f in fields.values()
-                if f.name.lower() in ("disabled", "archived") and f.field_type == FieldType.BOOLEAN
-            ),
-            None,
-        )
-        if flag_field:
-            # Для disabled/archived - FALSE, для active - TRUE
-            if flag_field.name.lower() in ("disabled", "archived"):
-                where_clauses.append(f"{flag_field.name} = false")
-            else:
-                where_clauses.append(f"{flag_field.name} = true")
+        # Проверить поля disabled/archived/active - обработать ВСЕ флаговые поля
+        for field in fields.values():
+            if field.field_type == FieldType.BOOLEAN:
+                field_name_lower = field.name.lower()
+                if field_name_lower in ("disabled", "archived"):
+                    # Для disabled/archived - FALSE
+                    where_clauses.append(f"{field.name} = false")
+                elif field_name_lower in ("active", "enabled"):
+                    # Для active/enabled - TRUE
+                    where_clauses.append(f"{field.name} = true")
 
         where_clause = " AND ".join(where_clauses) if where_clauses else None
 
@@ -287,13 +279,13 @@ class SchemaIntrospector:
 
         value_type = type(value)
 
-        if value_type == int:
+        if value_type is int:
             return FieldType.INTEGER
-        elif value_type == float:
+        if value_type is float:
             return FieldType.FLOAT
-        elif value_type == bool:
+        if value_type is bool:
             return FieldType.BOOLEAN
-        elif value_type == str:
+        if value_type is str:
             # Попробовать определить datetime
             try:
                 datetime.fromisoformat(value)
@@ -344,19 +336,21 @@ class SchemaIntrospector:
         ):
             return "uuid"
 
-        # Телефон паттерн
+        # Телефон паттерн - улучшенный, чтобы избежать ложных срабатываний на даты
         phone_clean = value_str.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-        if re.match(r"^\+?[1-9]\d{1,14}$", phone_clean):
+        # Проверяем что это не дата (не содержит только цифры в формате YYYYMMDD)
+        if re.match(r"^\+?[1-9]\d{1,14}$", phone_clean) and not re.match(
+            r"^\d{8}$", phone_clean
+        ):  # Исключаем YYYYMMDD формат
             return "phone"
 
         # Datetime поля
         if field_type == FieldType.DATETIME:
             if position == 1:
                 return "created_at"
-            elif position == 2:
+            if position == 2:
                 return "updated_at"
-            else:
-                return f"timestamp_{position}"
+            return f"timestamp_{position}"
 
         if field_type == FieldType.DATE:
             return f"date_{position}"
@@ -365,8 +359,8 @@ class SchemaIntrospector:
         return f"Field_{position}"
 
     async def introspect_all_tables(
-        self, table_names: List[str], gather_metadata: bool = True
-    ) -> Dict[str, TableSchema]:
+        self, table_names: list[str], gather_metadata: bool = True
+    ) -> dict[str, TableSchema]:
         """
         Интроспекция нескольких таблиц параллельно.
 
@@ -382,7 +376,7 @@ class SchemaIntrospector:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         schemas = {}
-        for table_name, result in zip(table_names, results):
+        for table_name, result in zip(table_names, results, strict=False):
             if isinstance(result, Exception):
                 print(f"Error introspecting {table_name}: {result}")
             else:

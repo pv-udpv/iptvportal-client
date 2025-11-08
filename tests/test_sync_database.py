@@ -5,15 +5,16 @@ Run with:
     uv run pytest tests/test_sync_database.py -v
 """
 
-import pytest
-import tempfile
 import os
-from pathlib import Path
+import tempfile
 from unittest.mock import MagicMock
 
-from iptvportal.sync.database import SyncDatabase
-from iptvportal.schema import TableSchema, FieldDefinition, FieldType, SyncConfig, TableMetadata
+import pytest
+
 from iptvportal.config import IPTVPortalSettings
+from iptvportal.schema import FieldDefinition, FieldType, SyncConfig, TableMetadata, TableSchema
+from iptvportal.sync.database import SyncDatabase
+
 
 class TestSyncDatabase:
     """Test SyncDatabase functionality."""
@@ -404,7 +405,8 @@ class TestSyncDatabase:
 
     def test_execute_query_nonexistent_table(self, db):
         """Test executing query on non-existent table."""
-        with pytest.raises(Exception):  # Should raise TableNotFoundError
+        from iptvportal.sync.exceptions import TableNotFoundError
+        with pytest.raises(TableNotFoundError):  # Should raise TableNotFoundError
             db.execute_query("nonexistent_table", "SELECT 1")
 
     def test_vacuum_and_analyze(self, db):
