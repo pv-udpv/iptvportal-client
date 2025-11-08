@@ -92,25 +92,155 @@ async def main():
 asyncio.run(main())
 ```
 
+## CLI Usage
+
+The package includes a powerful CLI for working with IPTVPortal API:
+
+```bash
+# Install with CLI support
+pip install iptvportal-client[cli]
+
+# Initialize configuration
+iptvportal config init
+
+# Test authentication
+iptvportal auth
+
+# Execute queries
+iptvportal query select --from subscriber --limit 10
+iptvportal query select --from-sql "SELECT * FROM subscriber WHERE disabled = false"
+
+# Transpile SQL to JSONSQL
+iptvportal transpile "SELECT * FROM subscriber"
+
+# Dry-run mode (show query without executing)
+iptvportal query select --from subscriber --limit 5 --dry-run
+```
+
+### CLI Commands
+
+#### Authentication
+```bash
+# Check authentication status
+iptvportal auth
+
+# Force re-authentication
+iptvportal auth --renew
+```
+
+#### Query Commands
+
+**SELECT (Native JSONSQL)**
+```bash
+iptvportal query select \
+  --data "id,username,disabled" \
+  --from subscriber \
+  --where '{"eq": ["disabled", false]}' \
+  --order-by username \
+  --limit 10
+```
+
+**SELECT (SQL Mode)**
+```bash
+iptvportal query select \
+  --from-sql "SELECT id, username FROM subscriber WHERE disabled = false LIMIT 10"
+```
+
+**INSERT**
+```bash
+iptvportal query insert \
+  --from-sql "INSERT INTO package (name, paid) VALUES ('test', true) RETURNING id"
+  
+# Native mode
+iptvportal query insert \
+  --into package \
+  --columns "name,paid" \
+  --values '[["movie", true]]' \
+  --returning id
+```
+
+**UPDATE**
+```bash
+iptvportal query update \
+  --from-sql "UPDATE subscriber SET disabled = true WHERE username = 'test'"
+  
+# Native mode
+iptvportal query update \
+  --table subscriber \
+  --set '{"disabled": true}' \
+  --where '{"eq": ["username", "test"]}'
+```
+
+**DELETE**
+```bash
+iptvportal query delete \
+  --from-sql "DELETE FROM terminal WHERE id = 123"
+  
+# Native mode
+iptvportal query delete \
+  --from terminal \
+  --where '{"eq": ["id", 123]}'
+```
+
+#### Transpile Command
+```bash
+# Transpile SQL to JSONSQL
+iptvportal transpile "SELECT id, name FROM subscriber WHERE disabled = false"
+
+# Output as YAML
+iptvportal transpile "SELECT * FROM subscriber" --format yaml
+
+# From file
+iptvportal transpile --file query.sql
+```
+
+#### Configuration Commands
+```bash
+# Show current configuration
+iptvportal config show
+
+# Initialize configuration interactively
+iptvportal config init
+
+# Set specific values
+iptvportal config set domain operator
+iptvportal config set timeout 60
+
+# Get specific value
+iptvportal config get domain
+```
+
+#### Output Formats
+```bash
+# Table format (default for SELECT)
+iptvportal query select --from subscriber --limit 5
+
+# JSON format
+iptvportal query select --from subscriber --limit 5 --format json
+
+# YAML format
+iptvportal query select --from subscriber --limit 5 --format yaml
+```
+
+#### Dry-Run Mode
+```bash
+# Preview query without executing
+iptvportal query select \
+  --from-sql "SELECT * FROM subscriber LIMIT 5" \
+  --dry-run
+  
+# Shows:
+# - SQL Input (if using --from-sql)
+# - Transpiled JSONSQL
+# - JSON-RPC Request
+# - "Query will NOT be executed" message
+```
+
 ## SQL to JSONSQL Transpiler
 
 Convert PostgreSQL queries to JSONSQL format using the built-in transpiler:
 
-### CLI Usage
-
-```bash
-# Transpile SQL string
-python -m iptvportal.transpiler "SELECT id, name FROM users WHERE age > 18"
-
-# Pretty-print output
-python -m iptvportal.transpiler -p "SELECT * FROM users LIMIT 10"
-
-# From file
-python -m iptvportal.transpiler -f query.sql
-
-# Specify dialect
-python -m iptvportal.transpiler -d mysql "SELECT * FROM users"
-```
+### Python API
 
 ### Python API
 
