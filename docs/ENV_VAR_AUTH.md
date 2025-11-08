@@ -94,9 +94,16 @@ export IPTVPORTAL_DOMAIN=adstat
 export IPTVPORTAL_USERNAME=admin
 export IPTVPORTAL_PASSWORD=secret123
 
-# Use CLI - automatically uses env vars
+# Run queries directly - automatically authenticated
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT id, name, disabled FROM subscriber WHERE login LIKE 'admin%'"
+iptvportal sql -q "SELECT COUNT(*) FROM media"
+
+# Check authentication status
 iptvportal auth
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+
+# Use different query formats
+iptvportal jsonsql select --from tv_channel --limit 10
 ```
 
 ### 2. Using .env File
@@ -169,23 +176,26 @@ asyncio.run(main())
 All CLI commands automatically use environment variables:
 
 ```bash
-# Check authentication status
+# Run SQL queries - most common use case
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT id, username, balance FROM subscriber WHERE disabled=false LIMIT 20"
+iptvportal sql -q "SELECT COUNT(*) FROM media"
+
+# Run JSONSQL queries
+iptvportal jsonsql select --from tv_channel --limit 10
+iptvportal jsonsql select --from subscriber --data id,username --limit 20
+
+# Transpile SQL to JSONSQL (dry-run - see what will be executed)
+iptvportal sql -q "SELECT * FROM media WHERE active=true" --dry-run
+
+# Check authentication status (optional - queries auto-authenticate)
 iptvportal auth
 
-# Force re-authentication
+# Force re-authentication if needed
 iptvportal auth --renew
 
 # Show current configuration
 iptvportal config show
-
-# Run SQL queries
-iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
-
-# Run JSONSQL queries
-iptvportal jsonsql select --from subscriber --limit 10
-
-# Transpile SQL to JSONSQL (dry-run)
-iptvportal sql -q "SELECT * FROM media WHERE active=true" --dry-run
 ```
 
 ## Configuration Priority
@@ -230,9 +240,14 @@ IPTVPORTAL_VERIFY_SSL=false
 IPTVPORTAL_MAX_RETRIES=2
 ```
 
-These can be used immediately for authentication:
+These can be used immediately for running queries:
 
 ```bash
+# Run queries directly - authentication happens automatically
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
+
+# Check auth status if needed
 iptvportal auth
 # ✓ Authentication successful
 # Session ID: abc123...

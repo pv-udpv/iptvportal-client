@@ -80,9 +80,10 @@ export IPTVPORTAL_DOMAIN=adstat
 export IPTVPORTAL_USERNAME=pasha
 export IPTVPORTAL_PASSWORD=secret
 
-# Use CLI - automatically authenticated
-iptvportal auth
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+# Run queries directly - automatically authenticated
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT id, username FROM subscriber LIMIT 20"
+iptvportal sql -q "SELECT COUNT(*) FROM media"
 ```
 
 ```python
@@ -91,7 +92,12 @@ from iptvportal import IPTVPortalClient
 
 with IPTVPortalClient() as client:
     # Automatically uses env vars for auth
-    result = client.execute(...)
+    query = client.query.select(
+        data=["id", "name"],
+        from_="tv_channel",
+        limit=10
+    )
+    result = client.execute(query)
 ```
 
 ## Environment Variables Available

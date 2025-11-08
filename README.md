@@ -56,6 +56,10 @@ Set environment variables with the `IPTVPORTAL_` prefix:
 export IPTVPORTAL_DOMAIN=adstat
 export IPTVPORTAL_USERNAME=your_username
 export IPTVPORTAL_PASSWORD=your_password
+
+# Now run queries directly - automatically authenticated
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
 ```
 
 Or use a `.env` file:

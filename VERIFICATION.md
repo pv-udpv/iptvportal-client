@@ -105,13 +105,15 @@ export IPTVPORTAL_DOMAIN=adstat
 export IPTVPORTAL_USERNAME=pasha
 export IPTVPORTAL_PASSWORD=secret
 
-# Test authentication
+# Run queries directly - automatically authenticated
+iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
+iptvportal sql -q "SELECT id, username, balance FROM subscriber WHERE disabled=false LIMIT 20"
+
+# Test authentication if needed
 iptvportal auth
 # ✓ Authentication successful
 # Session ID: abc123...
-
-# Run query
-iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
 ```
 
 **Python:**
