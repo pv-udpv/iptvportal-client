@@ -38,5 +38,5 @@ test_*_manual.py
 .DS_Store
 Thumbs.db
 
-# Generated documentation
-PROJECT_STRUCTURE.md
+# Generated documentation (root only)
+/PROJECT_STRUCTURE.md
