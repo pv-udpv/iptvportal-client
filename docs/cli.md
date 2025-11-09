@@ -2,6 +2,9 @@
 
 Comprehensive guide to using the IPTVPortal command-line interface.
 
+> **Note**: The CLI now uses a service-oriented architecture with auto-discovery.  
+> See [CLI Architecture](cli-architecture.md) for details on the service design.
+
 ## Installation
 
 ```bash
@@ -19,20 +22,32 @@ uv pip install iptvportal-client[cli]
 iptvportal config init
 
 # 2. Test authentication
-iptvportal auth
+iptvportal jsonsql auth
 
 # 3. Run your first SQL query
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5"
 
 # Or use native JSONSQL
 iptvportal jsonsql select --from subscriber --limit 5
  
 # (New) Schema mapping ON by default: column names shown using schema (auto-generated if missing)
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"               # mapped
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema  # disable mapping
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5"               # mapped
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema  # disable mapping
 iptvportal jsonsql select --from subscriber --limit 5                # mapped
 iptvportal jsonsql select --from subscriber --limit 5 --no-map-schema # disable mapping
 ```
+
+## Service Structure
+
+The CLI is organized into services, each handling a specific domain:
+
+- **config**: Global configuration management
+- **cache**: Query result cache management
+- **schema**: Table schema management
+- **jsonsql**: API operations (auth, SQL, JSONSQL, utilities)
+- **sync**: SQLite sync cache management
+
+Each service has its own commands and optional `config` subcommand for service-specific settings.
 
 ## Configuration
 
@@ -74,12 +89,30 @@ iptvportal config get domain
 iptvportal config get timeout
 ```
 
+### Service-Specific Configuration
+
+Each service can have its own configuration:
+
+```bash
+# Cache configuration
+iptvportal cache config show
+iptvportal cache config get ttl
+
+# Schema configuration
+iptvportal schema config show
+iptvportal schema config get file
+
+# JSONSQL/API configuration
+iptvportal jsonsql config show
+iptvportal jsonsql config get timeout
+```
+
 ## Authentication
 
 ### Check Authentication Status
 
 ```bash
-iptvportal auth
+iptvportal jsonsql auth
 ```
 
 Shows:
@@ -91,17 +124,17 @@ Shows:
 ### Force Re-authentication
 
 ```bash
-iptvportal auth --renew
+iptvportal jsonsql auth --renew
 ```
 
 ## Query Commands
 
-The CLI provides two separate subapps for queries:
+The CLI provides SQL and JSONSQL query capabilities under the `jsonsql` service:
 
-1. **`iptvportal sql`** - Execute SQL queries (auto-transpiled to JSONSQL)
-2. **`iptvportal jsonsql`** - Execute native JSONSQL queries with subcommands
+1. **`iptvportal jsonsql sql`** - Execute SQL queries (auto-transpiled to JSONSQL)
+2. **`iptvportal jsonsql select/insert/update/delete`** - Execute native JSONSQL queries
 
-### SQL Subapp
+### SQL Subcommand
 
 Execute SQL queries that are automatically transpiled to JSONSQL.
 
@@ -109,10 +142,10 @@ Execute SQL queries that are automatically transpiled to JSONSQL.
 
 ```bash
 # Direct query with --query or -q
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 10"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 10"
 
 # Multi-line query
-iptvportal sql --query "
+iptvportal jsonsql sql --query "
   SELECT id, username, email 
   FROM subscriber 
   WHERE disabled = false 
@@ -120,22 +153,22 @@ iptvportal sql --query "
 "
 
 # Open editor to write query
-iptvportal sql --edit
-iptvportal sql -e
+iptvportal jsonsql sql --edit
+iptvportal jsonsql sql -e
 ```
 
 #### Output Formats
 
 ```bash
 # Table format (default)
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5"
 
 # JSON format
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --format json
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f json
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --format json
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" -f json
 
 # YAML format
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f yaml
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" -f yaml
 ```
 
 #### Dry-Run Mode
@@ -143,7 +176,7 @@ iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f yaml
 Preview the transpiled JSONSQL without executing:
 
 ```bash
-iptvportal sql -q "SELECT * FROM subscriber WHERE disabled = false" --dry-run
+iptvportal jsonsql sql -q "SELECT * FROM subscriber WHERE disabled = false" --dry-run
 ```
 
 Shows:
@@ -157,7 +190,7 @@ Shows:
 Execute query and show both the request and result:
 
 ```bash
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --show-request
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --show-request
 ```
 
 Shows:
@@ -168,13 +201,13 @@ Shows:
 
 ```bash
 # Simple SELECT
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 10"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 10"
 
 # With WHERE clause
-iptvportal sql -q "SELECT id, username FROM subscriber WHERE disabled = false"
+iptvportal jsonsql sql -q "SELECT id, username FROM subscriber WHERE disabled = false"
 
 # With JOIN
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT s.username, COUNT(t.id) as device_count 
   FROM subscriber s 
   JOIN terminal t ON s.id = t.subscriber_id 
@@ -182,7 +215,7 @@ iptvportal sql -q "
 "
 
 # Complex JOIN with EPG data
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT 
     c.name AS channel,
     p.title AS program,
@@ -197,21 +230,21 @@ iptvportal sql -q "
 "
 
 # INSERT
-iptvportal sql -q "INSERT INTO package (name, paid) VALUES ('Premium', true) RETURNING id"
+iptvportal jsonsql sql -q "INSERT INTO package (name, paid) VALUES ('Premium', true) RETURNING id"
 
 # UPDATE
-iptvportal sql -q "UPDATE subscriber SET disabled = true WHERE username = 'test' RETURNING id"
+iptvportal jsonsql sql -q "UPDATE subscriber SET disabled = true WHERE username = 'test' RETURNING id"
 
 # DELETE
-iptvportal sql -q "DELETE FROM terminal WHERE id = 123 RETURNING id"
+iptvportal jsonsql sql -q "DELETE FROM terminal WHERE id = 123 RETURNING id"
 
 # Aggregate functions
-iptvportal sql -q "SELECT COUNT(*) FROM media"
-iptvportal sql -q "SELECT COUNT(id) FROM subscriber"
-iptvportal sql -q "SELECT COUNT(DISTINCT inet_addr) FROM media"
+iptvportal jsonsql sql -q "SELECT COUNT(*) FROM media"
+iptvportal jsonsql sql -q "SELECT COUNT(id) FROM subscriber"
+iptvportal jsonsql sql -q "SELECT COUNT(DISTINCT inet_addr) FROM media"
 
 # Complex aggregates
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT 
     COUNT(*) AS total_count, 
     COUNT(DISTINCT inet_addr) AS unique_addrs 
@@ -219,7 +252,7 @@ iptvportal sql -q "
 "
 
 # Group by with aggregates
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT subscriber_id, COUNT(*) as device_count 
   FROM terminal 
   GROUP BY subscriber_id 
@@ -233,19 +266,19 @@ The SQL transpiler properly handles aggregate functions with optimal JSONSQL for
 
 **COUNT(\*)** - Counts all rows (uses array format per JSONSQL spec):
 ```bash
-iptvportal sql -q "SELECT COUNT(*) FROM tv_channel" --dry-run
+iptvportal jsonsql sql -q "SELECT COUNT(*) FROM tv_channel" --dry-run
 # Transpiles to: {"function": "count", "args": ["*"]}
 ```
 
 **COUNT(field)** - Counts non-null values in a specific field (uses string format):
 ```bash
-iptvportal sql -q "SELECT COUNT(id) FROM media" --dry-run
+iptvportal jsonsql sql -q "SELECT COUNT(id) FROM media" --dry-run
 # Transpiles to: {"function": "count", "args": "id"}
 ```
 
 **COUNT(DISTINCT field)** - Counts unique values (uses nested function format):
 ```bash
-iptvportal sql -q "SELECT COUNT(DISTINCT mac_addr) FROM terminal" --dry-run
+iptvportal jsonsql sql -q "SELECT COUNT(DISTINCT mac_addr) FROM terminal" --dry-run
 # Transpiles to: 
 # {
 #   "function": "count",
@@ -258,7 +291,7 @@ iptvportal sql -q "SELECT COUNT(DISTINCT mac_addr) FROM terminal" --dry-run
 
 **Multiple aggregates with aliases**:
 ```bash
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT 
     COUNT(*) AS cnt, 
     COUNT(DISTINCT inet_addr) AS uniq 
@@ -420,13 +453,13 @@ Convert SQL queries to JSONSQL format without executing them.
 
 ```bash
 # Simple query
-iptvportal transpile "SELECT * FROM subscriber"
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
 
 # With WHERE clause
-iptvportal transpile "SELECT id, username FROM subscriber WHERE disabled = false"
+iptvportal jsonsql utils transpile "SELECT id, username FROM subscriber WHERE disabled = false"
 
 # Complex query with JOIN
-iptvportal transpile "
+iptvportal jsonsql utils transpile "
   SELECT s.username, t.mac_addr 
   FROM subscriber s 
   JOIN terminal t ON s.id = t.subscriber_id 
@@ -438,20 +471,20 @@ iptvportal transpile "
 
 ```bash
 # JSON format (default)
-iptvportal transpile "SELECT * FROM subscriber"
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
 
 # YAML format
-iptvportal transpile "SELECT * FROM subscriber" --format yaml
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber" --format yaml
 ```
 
 ### From File
 
 ```bash
 # Read SQL from file
-iptvportal transpile --file query.sql
+iptvportal jsonsql utils transpile --file query.sql
 
 # With specific format
-iptvportal transpile --file query.sql --format yaml
+iptvportal jsonsql utils transpile --file query.sql --format yaml
 ```
 
 ## Output Formats
@@ -461,7 +494,7 @@ All query commands support multiple output formats:
 ### Table Format (Default for SELECT)
 
 ```bash
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5"
 
 # Output (schema-mapped by default):
 # ┏━━━━┳━━━━━━━━━━┳━━━━━━━━━━┓
@@ -471,13 +504,13 @@ iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
 # │ 2  │ user456  │ false    │
 # └────┴──────────┴──────────┘
 # Disable mapping if you need raw positional inference:
-# iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema
+# iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema
 ```
 
 ### JSON Format
 
 ```bash
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 2" --format json
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 2" --format json
 
 # Output (schema-mapped keys):
 # [
@@ -489,7 +522,7 @@ iptvportal sql -q "SELECT * FROM subscriber LIMIT 2" --format json
 ### YAML Format
 
 ```bash
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 2" -f yaml
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 2" -f yaml
 
 # Output (schema-mapped keys):
 # - id: 1
@@ -510,7 +543,7 @@ Preview queries before execution without actually running them.
 
 ```bash
 # SQL dry-run
-iptvportal sql -q "SELECT * FROM subscriber WHERE disabled = false" --dry-run
+iptvportal jsonsql sql -q "SELECT * FROM subscriber WHERE disabled = false" --dry-run
 
 # JSONSQL dry-run
 iptvportal jsonsql select --from subscriber --limit 5 --dry-run
@@ -530,7 +563,7 @@ Execute query normally but also display the JSON-RPC request.
 
 ```bash
 # SQL with request
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --show-request
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --show-request
 
 # JSONSQL with request
 iptvportal jsonsql select --from subscriber --limit 5 --show-request
@@ -554,19 +587,19 @@ Enable detailed step-by-step logging for troubleshooting and understanding query
 
 ```bash
 # Basic debug mode (human-readable text format)
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --debug
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --debug
 
 # Debug with JSON format
-iptvportal sql -q "SELECT * FROM subscriber" --debug --debug-format json
+iptvportal jsonsql sql -q "SELECT * FROM subscriber" --debug --debug-format json
 
 # Debug with YAML format
-iptvportal sql -q "SELECT * FROM media LIMIT 10" --debug --debug-format yaml
+iptvportal jsonsql sql -q "SELECT * FROM media LIMIT 10" --debug --debug-format yaml
 
 # Save debug logs to file
-iptvportal sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
+iptvportal jsonsql sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
 
 # Works with dry-run mode too
-iptvportal sql -q "SELECT * FROM subscriber" --dry-run --debug
+iptvportal jsonsql sql -q "SELECT * FROM subscriber" --dry-run --debug
 
 # Debug mode also works with jsonsql commands
 iptvportal jsonsql select --from subscriber --limit 5 --debug
@@ -662,8 +695,8 @@ The CLI will automatically detect common editors: vim, vi, nano, emacs.
 
 ```bash
 # SQL editor
-iptvportal sql --edit
-iptvportal sql -e
+iptvportal jsonsql sql --edit
+iptvportal jsonsql sql -e
 
 # JSONSQL editors
 iptvportal jsonsql select --edit
@@ -915,7 +948,7 @@ iptvportal schema generate-models schemas.yaml --format sqlmodel
 ### 1. Check Active Subscribers
 
 ```bash
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT id, username, email 
   FROM subscriber 
   WHERE disabled = false 
@@ -926,7 +959,7 @@ iptvportal sql -q "
 ### 2. Count Devices per Subscriber
 
 ```bash
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT subscriber_id, COUNT(*) as device_count 
   FROM terminal 
   GROUP BY subscriber_id 
@@ -937,7 +970,7 @@ iptvportal sql -q "
 ### 3. Find Subscribers Without Devices
 
 ```bash
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT s.id, s.username 
   FROM subscriber s 
   LEFT JOIN terminal t ON s.id = t.subscriber_id 
@@ -949,7 +982,7 @@ iptvportal sql -q "
 
 ```bash
 # Preview first
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   UPDATE subscriber 
   SET disabled = true 
   WHERE username LIKE 'test%' 
@@ -957,7 +990,7 @@ iptvportal sql -q "
 " --dry-run
 
 # Execute after review
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   UPDATE subscriber 
   SET disabled = true 
   WHERE username LIKE 'test%' 
@@ -968,7 +1001,7 @@ iptvportal sql -q "
 ### 5. Clean Old Terminal Sessions
 
 ```bash
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   DELETE FROM terminal_playlog 
   WHERE start < '2020-01-01 00:00:00' 
   RETURNING id
@@ -979,12 +1012,12 @@ iptvportal sql -q "
 
 ```bash
 # Use editor for complex queries
-iptvportal sql --edit
+iptvportal jsonsql sql --edit
 
 # Or break into steps with dry-run
-iptvportal sql -q "YOUR_COMPLEX_QUERY" --dry-run
-iptvportal transpile "YOUR_COMPLEX_QUERY"  # Check JSONSQL
-iptvportal sql -q "YOUR_COMPLEX_QUERY"      # Execute
+iptvportal jsonsql sql -q "YOUR_COMPLEX_QUERY" --dry-run
+iptvportal jsonsql utils transpile "YOUR_COMPLEX_QUERY"  # Check JSONSQL
+iptvportal jsonsql sql -q "YOUR_COMPLEX_QUERY"      # Execute
 ```
 
 ## Environment Variables
@@ -1013,7 +1046,7 @@ export VISUAL=code
 iptvportal config show
 
 # Test authentication
-iptvportal auth
+iptvportal jsonsql auth
 
 # Verify credentials in .env file
 cat .env
@@ -1023,10 +1056,10 @@ cat .env
 
 ```bash
 # Use dry-run to see the generated JSONSQL
-iptvportal sql -q "YOUR_QUERY" --dry-run
+iptvportal jsonsql sql -q "YOUR_QUERY" --dry-run
 
 # Or transpile separately
-iptvportal transpile "YOUR_QUERY"
+iptvportal jsonsql utils transpile "YOUR_QUERY"
 ```
 
 ### Connection Timeout
@@ -1078,15 +1111,15 @@ iptvportal config set <key> <val>   # Set value
 iptvportal config get <key>         # Get value
 
 # Authentication
-iptvportal auth                     # Check status
+iptvportal jsonsql auth                     # Check status
 iptvportal auth --renew            # Force re-auth
 
 # SQL Queries
-iptvportal sql -q "SELECT ..."                    # Execute SQL
-iptvportal sql -e                                 # Open editor
-iptvportal sql -q "SELECT ..." --dry-run         # Preview
-iptvportal sql -q "SELECT ..." --show-request    # Show request+result
-iptvportal sql -q "SELECT ..." -f json           # JSON output
+iptvportal jsonsql sql -q "SELECT ..."                    # Execute SQL
+iptvportal jsonsql sql -e                                 # Open editor
+iptvportal jsonsql sql -q "SELECT ..." --dry-run         # Preview
+iptvportal jsonsql sql -q "SELECT ..." --show-request    # Show request+result
+iptvportal jsonsql sql -q "SELECT ..." -f json           # JSON output
 
 # JSONSQL Queries
 iptvportal jsonsql select --from table --limit 10     # Native JSONSQL
@@ -1096,9 +1129,9 @@ iptvportal jsonsql update --table t --set '{...}'     # Update
 iptvportal jsonsql delete --from table --where ...    # Delete
 
 # Transpiler
-iptvportal transpile "SELECT ..."              # SQL to JSONSQL
-iptvportal transpile --file query.sql         # From file
-iptvportal transpile "SELECT ..." -f yaml     # YAML output
+iptvportal jsonsql utils transpile "SELECT ..."              # SQL to JSONSQL
+iptvportal jsonsql utils transpile --file query.sql         # From file
+iptvportal jsonsql utils transpile "SELECT ..." -f yaml     # YAML output
 
 # Schema Management
 iptvportal schema introspect tv_channel                    # Analyze table
@@ -1117,7 +1150,7 @@ iptvportal schema from-sql -q "SELECT ..." --save          # Generate & save
 #!/bin/bash
 
 # Get all active subscribers
-iptvportal sql -q "
+iptvportal jsonsql sql -q "
   SELECT id, username 
   FROM subscriber 
   WHERE disabled = false
@@ -1152,15 +1185,15 @@ for row in data:
 
 ```bash
 # Extract specific fields
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f json | \
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" -f json | \
   jq '.[] | {id, username}'
 
 # Filter results
-iptvportal sql -q "SELECT * FROM subscriber" -f json | \
+iptvportal jsonsql sql -q "SELECT * FROM subscriber" -f json | \
   jq '.[] | select(.disabled == false)'
 
 # Count results
-iptvportal sql -q "SELECT * FROM subscriber" -f json | \
+iptvportal jsonsql sql -q "SELECT * FROM subscriber" -f json | \
   jq 'length'
 ```
 
