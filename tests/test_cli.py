@@ -16,7 +16,7 @@ def test_cli_help():
 
 def test_auth_command_help():
     """Test auth command help."""
-    result = runner.invoke(app, ["auth", "--help"])
+    result = runner.invoke(app, ["jsonsql", "auth", "--help"])
     assert result.exit_code == 0
     assert "authentication" in result.stdout.lower()
 
@@ -51,7 +51,7 @@ def test_query_delete_help():
 
 def test_transpile_command_help():
     """Test transpile command help."""
-    result = runner.invoke(app, ["transpile", "--help"])
+    result = runner.invoke(app, ["jsonsql", "utils", "transpile", "--help"])
     assert result.exit_code == 0
     assert "Transpile" in result.stdout
 
@@ -65,7 +65,7 @@ def test_config_command_help():
 
 def test_transpile_simple_query():
     """Test transpiling a simple SQL query."""
-    result = runner.invoke(app, ["transpile", "SELECT * FROM subscriber"])
+    result = runner.invoke(app, ["jsonsql", "utils", "transpile", "SELECT * FROM subscriber"])
     assert result.exit_code == 0
     assert "SQL Query" in result.stdout
     assert "Transpiled JSONSQL" in result.stdout
@@ -75,7 +75,7 @@ def test_transpile_simple_query():
 def test_transpile_with_where():
     """Test transpiling SQL with WHERE clause."""
     result = runner.invoke(
-        app, ["transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
+        app, ["jsonsql", "utils", "transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
     )
     assert result.exit_code == 0
     assert '"from": "subscriber"' in result.stdout
@@ -84,7 +84,7 @@ def test_transpile_with_where():
 
 def test_transpile_yaml_format():
     """Test transpiling with YAML output format."""
-    result = runner.invoke(app, ["transpile", "SELECT * FROM subscriber", "--format", "yaml"])
+    result = runner.invoke(app, ["jsonsql", "utils", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
     assert result.exit_code == 0
     assert "from: subscriber" in result.stdout
 
@@ -396,3 +396,71 @@ def test_jsonsql_delete_debug_mode():
     assert result.exit_code == 0
     assert "[DEBUG]" in result.stdout
     assert "JSONSQL Parameters" in result.stdout
+
+
+def test_cache_service_help():
+    """Test cache service help."""
+    result = runner.invoke(app, ["cache", "--help"])
+    assert result.exit_code == 0
+    assert "Cache management service" in result.stdout
+
+
+def test_cache_config_help():
+    """Test cache config subcommand help."""
+    result = runner.invoke(app, ["cache", "config", "--help"])
+    assert result.exit_code == 0
+    assert "configuration" in result.stdout.lower()
+
+
+def test_schema_service_help():
+    """Test schema service help."""
+    result = runner.invoke(app, ["schema", "--help"])
+    assert result.exit_code == 0
+    assert "Schema management service" in result.stdout
+
+
+def test_schema_config_help():
+    """Test schema config subcommand help."""
+    result = runner.invoke(app, ["schema", "config", "--help"])
+    assert result.exit_code == 0
+    assert "configuration" in result.stdout.lower()
+
+
+def test_jsonsql_service_help():
+    """Test jsonsql service help."""
+    result = runner.invoke(app, ["jsonsql", "--help"])
+    assert result.exit_code == 0
+    assert "JSONSQL API operations" in result.stdout
+
+
+def test_jsonsql_config_help():
+    """Test jsonsql config subcommand help."""
+    result = runner.invoke(app, ["jsonsql", "config", "--help"])
+    assert result.exit_code == 0
+    assert "configuration" in result.stdout.lower()
+
+
+def test_jsonsql_utils_help():
+    """Test jsonsql utils subcommand help."""
+    result = runner.invoke(app, ["jsonsql", "utils", "--help"])
+    assert result.exit_code == 0
+    assert "utilities" in result.stdout.lower()
+
+
+def test_jsonsql_sql_help():
+    """Test jsonsql sql subcommand help."""
+    result = runner.invoke(app, ["jsonsql", "sql", "--help"])
+    assert result.exit_code == 0
+    assert "SQL" in result.stdout
+
+
+def test_service_discovery():
+    """Test that all services are discovered and registered."""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    # Check all services are present
+    assert "cache" in result.stdout
+    assert "config" in result.stdout
+    assert "jsonsql" in result.stdout
+    assert "schema" in result.stdout
+    assert "sync" in result.stdout

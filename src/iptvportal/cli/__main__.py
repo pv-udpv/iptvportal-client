@@ -1,18 +1,11 @@
-"""Main CLI entry point."""
+"""Main CLI entry point with auto-discovery."""
 
 import contextlib
 
 import typer
 from rich.console import Console
 
-from iptvportal.cli.commands.auth import auth_command
-from iptvportal.cli.commands.cache import cache_app
-from iptvportal.cli.commands.config import config_app
-from iptvportal.cli.commands.jsonsql import jsonsql_app
-from iptvportal.cli.commands.schema import schema_app
-from iptvportal.cli.commands.sql import sql_app
-from iptvportal.cli.commands.sync import app as sync_app
-from iptvportal.cli.commands.transpile import transpile_command
+from iptvportal.cli.discovery import discover_cli_modules
 
 console = Console()
 
@@ -22,16 +15,14 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Register commands
-app.command(name="auth", help="Check authentication or renew session")(auth_command)
-app.command(name="transpile", help="Transpile SQL to JSONSQL format")(transpile_command)
+# Auto-discover and register all service CLI modules
+discovered = discover_cli_modules("iptvportal", verbose=False)
+for service_name, service_app in discovered.items():
+    app.add_typer(service_app, name=service_name)
 
-# Register subapps
-app.add_typer(config_app, name="config")
-app.add_typer(sql_app, name="sql")
-app.add_typer(jsonsql_app, name="jsonsql")
-app.add_typer(schema_app, name="schema")
-app.add_typer(cache_app, name="cache")
+# Keep sync subapp from old structure for backwards compatibility
+from iptvportal.cli.commands.sync import app as sync_app
+
 app.add_typer(sync_app, name="sync")
 
 # Define typer Option defaults at module level to avoid calling functions in parameter defaults
