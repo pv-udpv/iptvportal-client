@@ -513,6 +513,11 @@ def introspect_command(
     sample_size: int = typer.Option(1000, "--sample-size", help="Sample size for DuckDB analysis"),
     no_metadata: bool = typer.Option(False, "--no-metadata", help="Skip metadata gathering"),
     no_duckdb_analysis: bool = typer.Option(False, "--no-duckdb-analysis", help="Skip DuckDB statistical analysis"),
+    sync: bool = typer.Option(False, "--sync", help="Perform table sync after introspection"),
+    sync_chunk: int | None = typer.Option(None, "--sync-chunk", help="Chunk size for sync (overrides auto-generated)"),
+    order_by_fields: str | None = typer.Option(None, "--order-by-fields", help="Order by fields for sync (e.g., 'id:asc')"),
+    sync_run_timeout: int | None = typer.Option(None, "--sync-run-timeout", help="Sync run timeout in seconds (0=no timeout)"),
+    analyze_from_cache: bool = typer.Option(False, "--analyze-from-cache", help="Run DuckDB analysis on synced cache data instead of sample"),
     save: bool = typer.Option(False, "--save", "-s", help="Save generated schema to file"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
@@ -528,6 +533,8 @@ def introspect_command(
     - Analyzes timestamp field ranges
     - Performs DuckDB statistical analysis (min, max, nulls, unique values, cardinality)
     - Generates smart sync guardrails based on table size
+    - Optionally syncs table data to local cache (with --sync flag)
+    - Can analyze from synced cache data for more comprehensive statistics
 
     Examples:
         iptvportal schema introspect tv_channel
@@ -536,6 +543,9 @@ def introspect_command(
         iptvportal schema introspect subscriber --save
         iptvportal schema introspect media --no-metadata -o schemas.yaml
         iptvportal schema introspect --table=media --sample-size=5000
+        iptvportal schema introspect tv_channel --sync
+        iptvportal schema introspect tv_program --fields='0:channel_id,1:start,2:stop' --sync
+        iptvportal schema introspect media --sync --sync-chunk=5000 --analyze-from-cache
     """
     try:
         settings = load_config(config_file)
@@ -632,6 +642,129 @@ def introspect_command(
         schema = asyncio.run(do_introspect())
 
         console.print("[green]✓ Introspection complete[/green]\n")
+
+        # Perform sync if requested
+        if sync:
+            console.print(f"[cyan]Syncing table {resolved_table_name} to local cache...[/cyan]\n")
+            
+            # Override sync config if options provided
+            if sync_chunk is not None:
+                schema.sync_config.chunk_size = sync_chunk
+            
+            if order_by_fields:
+                schema.sync_config.order_by = order_by_fields.replace(":asc", "").replace(":desc", "")
+            
+            # Perform the sync
+            async def do_sync():
+                from iptvportal.sync.database import SyncDatabase
+                from iptvportal.sync.manager import SyncManager
+                
+                async with AsyncIPTVPortalClient(settings) as client:
+                    # Initialize sync database
+                    db_path = settings.cache_db_path or "~/.iptvportal/cache.db"
+                    database = SyncDatabase(db_path, settings)
+                    database.initialize()
+                    
+                    # Register the schema
+                    from iptvportal.schema import SchemaRegistry
+                    registry = SchemaRegistry()
+                    registry.register(schema)
+                    
+                    # Register schema in database
+                    database.register_table_schema(resolved_table_name, schema)
+                    
+                    # Create sync manager
+                    sync_manager = SyncManager(database, client, registry, settings)
+                    
+                    # Perform sync with progress
+                    def progress_handler(progress):
+                        console.print(
+                            f"[dim]Progress: {progress.completed_chunks}/{progress.total_chunks} chunks, "
+                            f"{progress.rows_synced:,} rows, "
+                            f"{progress.elapsed_seconds:.1f}s elapsed[/dim]"
+                        )
+                    
+                    # Convert sync callback to async
+                    async def async_progress_callback(progress):
+                        progress_handler(progress)
+                    
+                    # Apply timeout if specified
+                    if sync_run_timeout is not None and sync_run_timeout > 0:
+                        import asyncio
+                        try:
+                            result = await asyncio.wait_for(
+                                sync_manager.sync_table(
+                                    resolved_table_name,
+                                    strategy=schema.sync_config.cache_strategy,
+                                    force=True,
+                                    progress_callback=async_progress_callback
+                                ),
+                                timeout=sync_run_timeout
+                            )
+                        except asyncio.TimeoutError:
+                            console.print(f"[yellow]⚠ Sync timeout after {sync_run_timeout}s[/yellow]")
+                            return None
+                    else:
+                        result = await sync_manager.sync_table(
+                            resolved_table_name,
+                            strategy=schema.sync_config.cache_strategy,
+                            force=True,
+                            progress_callback=async_progress_callback
+                        )
+                    
+                    return result, database
+            
+            sync_result, database = asyncio.run(do_sync())
+            
+            if sync_result:
+                console.print(f"\n[green]✓ Sync complete![/green]")
+                console.print(f"  Rows fetched: {sync_result.rows_fetched:,}")
+                console.print(f"  Rows inserted: {sync_result.rows_inserted:,}")
+                console.print(f"  Chunks processed: {sync_result.chunks_processed}")
+                console.print(f"  Duration: {sync_result.duration_ms / 1000:.2f}s\n")
+                
+                # Analyze from cache if requested
+                if analyze_from_cache and not no_duckdb_analysis:
+                    console.print("[cyan]Performing DuckDB analysis on synced cache data...[/cyan]\n")
+                    
+                    try:
+                        from iptvportal.schema.duckdb_analyzer import DuckDBAnalyzer
+                        
+                        analyzer = DuckDBAnalyzer()
+                        if analyzer.available:
+                            # Fetch data from cache
+                            cache_data = database.fetch_rows(resolved_table_name, limit=sample_size)
+                            
+                            if cache_data:
+                                field_names = [schema.fields[i].name for i in sorted(schema.fields.keys())]
+                                cache_analysis = analyzer.analyze_sample(cache_data, field_names)
+                                
+                                # Update schema metadata with cache analysis
+                                if not hasattr(schema.metadata, "duckdb_analysis"):
+                                    schema.metadata.duckdb_analysis = cache_analysis
+                                else:
+                                    schema.metadata.duckdb_analysis = cache_analysis
+                                
+                                # Display cache analysis
+                                console.print("[bold]DuckDB Analysis (from cache):[/bold]\n")
+                                for field_name, stats in cache_analysis.items():
+                                    if isinstance(stats, dict) and "error" not in stats:
+                                        console.print(f"  [cyan]{field_name}:[/cyan]")
+                                        if "dtype" in stats:
+                                            console.print(f"    Type: {stats['dtype']}")
+                                        if "null_percentage" in stats:
+                                            console.print(f"    Null %: {stats['null_percentage']:.2f}%")
+                                        if "unique_count" in stats:
+                                            console.print(f"    Unique: {stats['unique_count']} ({stats.get('cardinality', 0):.2%} cardinality)")
+                                        if "min_value" in stats and "max_value" in stats:
+                                            console.print(f"    Range: [{stats['min_value']} .. {stats['max_value']}]")
+                                        console.print()
+                        else:
+                            console.print("[yellow]⚠ DuckDB not available for cache analysis[/yellow]\n")
+                    except Exception as e:
+                        console.print(f"[yellow]⚠ Cache analysis failed: {e}[/yellow]\n")
+            else:
+                console.print("[yellow]⚠ Sync completed with timeout or partial results[/yellow]\n")
 
         # Display schema info
         info_table = Table(show_header=False, box=None)

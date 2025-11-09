@@ -802,6 +802,55 @@ class SyncDatabase:
 
             return result
 
+    def fetch_rows(
+        self, table_name: str, limit: int | None = None, offset: int | None = None
+    ) -> list[list[Any]]:
+        """
+        Fetch rows from cached table as list of lists (for DuckDB analysis).
+
+        Args:
+            table_name: Table to query
+            limit: Maximum number of rows to fetch
+            offset: Number of rows to skip
+
+        Returns:
+            List of rows as lists of values
+        """
+        with self._get_connection() as conn:
+            # Check if table exists
+            table_exists = conn.execute(
+                """
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name=?
+            """,
+                (table_name,),
+            ).fetchone()
+
+            if not table_exists:
+                raise TableNotFoundError(f"Table '{table_name}' not found in cache")
+
+            # Get all columns except sync metadata columns
+            cursor = conn.execute(f"PRAGMA table_info({table_name})")
+            columns = [
+                row["name"]
+                for row in cursor
+                if not row["name"].startswith("_")  # Exclude _synced_at, _sync_version, etc.
+            ]
+
+            # Build query
+            query = f"SELECT {', '.join(columns)} FROM {table_name}"
+            if limit:
+                query += f" LIMIT {limit}"
+            if offset:
+                query += f" OFFSET {offset}"
+
+            # Execute and fetch
+            cursor = conn.execute(query)
+            rows = cursor.fetchall()
+
+            # Convert to list of lists
+            return [list(row) for row in rows]
+
     def get_stats(self) -> dict[str, Any]:
         """Get global cache statistics."""
         with self._get_connection() as conn:
