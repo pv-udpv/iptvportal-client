@@ -346,6 +346,42 @@ iptvportal transpile "SELECT * FROM subscriber" --format yaml
 iptvportal transpile --file query.sql
 ```
 
+#### Schema Introspection Commands
+```bash
+# Introspect table structure with metadata and statistics
+iptvportal schema introspect tv_channel
+
+# Introspect with sync to local cache
+iptvportal schema introspect tv_channel --sync
+
+# Introspect, sync, and analyze from cache (more comprehensive)
+iptvportal schema introspect media --sync --analyze-from-cache
+
+# With custom field mappings and sync options
+iptvportal schema introspect tv_program \
+  --fields='0:channel_id,1:start,2:stop' \
+  --sync \
+  --sync-chunk=5000 \
+  --order-by-fields='id:asc'
+
+# Save introspection results to schema file
+iptvportal schema introspect tv_channel --sync --save
+
+# List all loaded schemas
+iptvportal schema list
+
+# Show detailed schema info
+iptvportal schema show tv_channel
+```
+
+**What Schema Introspection Provides:**
+- Automatic field detection (names and types)
+- Row counts, ID ranges, timestamp ranges
+- DuckDB statistical analysis (nulls, unique values, cardinality, min/max, etc.)
+- Smart sync configuration recommendations
+- Optional sync to local cache for offline access
+- Comprehensive analysis on synced data (not just samples)
+
 #### Sync Cache Commands
 ```bash
 # Initialize cache database
