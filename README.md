@@ -713,14 +713,14 @@ with IPTVPortalClient() as client:
 ```mermaid
 flowchart LR
   subgraph CLI["iptvportal CLI (Typer)"]
-    CMD["Commands:\n- auth\n- sql\n- jsonsql\n- transpile\n- config\n- sync"]
+    CMD["Services:\n- config\n- cache\n- schema\n- jsonsql (auth, sql, select/insert/update/delete, utils)\n- sync"]
   end
 
   subgraph Core["Core Library"]
     AUTH["auth.py\n(session mgmt)"]
     CLIENT["client.py / async_client.py\n(httpx JSON-RPC)"]
     TRANS["jsonsql/\n(SQL → JSONSQL)"]
-    SCHEMA["schema.py\n(mapping, validation)"]
+    SCHEMA["schema/\n(table schemas, introspection)"]
     SYNC["sync/\n(SQLite cache: database.py)"]
   end
 
@@ -747,11 +747,11 @@ sequenceDiagram
   participant U as User
   participant CLI as iptvportal (Typer)
   participant TRANS as SQLTranspiler
-  participant SCHEMA as schema.py
+  participant SCHEMA as schema/ (table.py)
   participant CLIENT as client.py (httpx)
   participant RPC as IPTVPortal JSON-RPC
 
-  U->>CLI: iptvportal sql -q "SELECT id, username FROM subscriber LIMIT 5"
+  U->>CLI: iptvportal jsonsql sql -q "SELECT id, username FROM subscriber LIMIT 5"
   CLI->>TRANS: transpile(SQL, auto_order_by_id=True)
   TRANS->>SCHEMA: resolve fields, mapping, types
   SCHEMA-->>TRANS: field positions, types, order_by="id"
