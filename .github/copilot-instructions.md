@@ -29,6 +29,12 @@ Short, project-specific rules to make AI agents productive and consistent here.
 - Bootstrap: `make dev` (creates venv and installs dev deps). Run: `make test`, `make test-cov`, `make lint`, `make type-check`, or `make ci`.
 - Quick CLI runs: `make cli ARGS="sql -q 'SELECT …' --dry-run"`.
 - User/system CLI install helpers: `make install-user` or `make install-system` (copies schema templates and creates default config).
+- **Container environments (GitHub Actions, Docker, etc.)**: If `uv` is unavailable or astral.sh cannot be reached, use `pip` instead:
+  ```bash
+  python3 -m pip install -e ".[dev]"
+  # or for production:
+  python3 -m pip install iptvportal-client
+  ```
 
 ## Where to implement changes
 - CLI: add/edit commands in `src/iptvportal/cli/commands/*.py` and wire in `cli/__main__.py`.

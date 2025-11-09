@@ -832,6 +832,9 @@ uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e ".[dev]"
 
+# For container environments (GitHub Actions, Docker) where uv is unavailable
+python3 -m pip install -e ".[dev]"
+
 # Run tests
 make test
 

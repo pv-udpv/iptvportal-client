@@ -37,6 +37,9 @@ Please be respectful and constructive in all interactions. We aim to maintain a 
 - Python 3.12 or higher
 - [uv](https://github.com/astral-sh/uv) (recommended) or pip
 
+> **Note for Container Environments (GitHub Actions, Docker, etc.):**
+> If `uv` cannot be installed or astral.sh is not accessible, use `pip` instead. This is common in restricted network environments.
+
 ### Initial Setup
 
 ```bash
@@ -46,7 +49,7 @@ make dev
 # Or manually with uv
 uv sync --all-extras
 
-# Or with pip
+# Or with pip (for containers/restricted environments)
 pip install -e ".[dev,cli,validation]"
 ```
 
