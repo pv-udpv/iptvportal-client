@@ -14,11 +14,26 @@ def test_cli_help():
     assert "IPTVPortal JSONSQL API Client CLI" in result.stdout
 
 
+def test_jsonsql_help():
+    """Test jsonsql command help."""
+    result = runner.invoke(app, ["jsonsql", "--help"])
+    assert result.exit_code == 0
+    assert "jsonsql" in result.stdout.lower()
+
+
 def test_auth_command_help():
-    """Test auth command help."""
-    result = runner.invoke(app, ["auth", "--help"])
+    """Test jsonsql auth command help."""
+    result = runner.invoke(app, ["jsonsql", "auth", "--help"])
     assert result.exit_code == 0
     assert "authentication" in result.stdout.lower()
+
+
+def test_auth_deprecated():
+    """Test that deprecated auth command shows helpful message."""
+    result = runner.invoke(app, ["auth"])
+    assert result.exit_code == 1
+    assert "Command moved" in result.stdout
+    assert "iptvportal jsonsql auth" in result.stdout
 
 
 def test_query_select_help():
@@ -50,22 +65,67 @@ def test_query_delete_help():
 
 
 def test_transpile_command_help():
-    """Test transpile command help."""
-    result = runner.invoke(app, ["transpile", "--help"])
+    """Test jsonsql transpile command help."""
+    result = runner.invoke(app, ["jsonsql", "transpile", "--help"])
     assert result.exit_code == 0
     assert "Transpile" in result.stdout
 
 
+def test_transpile_deprecated():
+    """Test that deprecated transpile command shows helpful message."""
+    result = runner.invoke(app, ["transpile", "--help"])
+    assert result.exit_code == 1
+    assert "Command moved" in result.stdout
+    assert "iptvportal jsonsql transpile" in result.stdout
+
+
+def test_sql_command_help():
+    """Test jsonsql sql command help."""
+    result = runner.invoke(app, ["jsonsql", "sql", "--help"])
+    assert result.exit_code == 0
+    assert "SQL" in result.stdout
+
+
+def test_sql_deprecated():
+    """Test that deprecated sql command shows helpful message."""
+    result = runner.invoke(app, ["sql"])
+    assert result.exit_code == 1
+    assert "Command moved" in result.stdout
+    assert "iptvportal jsonsql sql" in result.stdout
+
+
+def test_schema_command_help():
+    """Test jsonsql schema command help."""
+    result = runner.invoke(app, ["jsonsql", "schema", "--help"])
+    assert result.exit_code == 0
+    assert "schema" in result.stdout.lower()
+
+
+def test_schema_deprecated():
+    """Test that deprecated schema command shows helpful message."""
+    result = runner.invoke(app, ["schema"])
+    assert result.exit_code == 1
+    assert "Command moved" in result.stdout
+    assert "iptvportal jsonsql schema" in result.stdout
+
+
 def test_config_command_help():
-    """Test config command help."""
+    """Test config command help (should still work at top level)."""
     result = runner.invoke(app, ["config", "--help"])
     assert result.exit_code == 0
     assert "configuration" in result.stdout.lower()
 
 
+def test_sync_command_help():
+    """Test sync command help (should still work at top level)."""
+    result = runner.invoke(app, ["sync", "--help"])
+    assert result.exit_code == 0
+    assert "sync" in result.stdout.lower() or "cache" in result.stdout.lower()
+
+
 def test_transpile_simple_query():
     """Test transpiling a simple SQL query."""
-    result = runner.invoke(app, ["transpile", "SELECT * FROM subscriber"])
+    result = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber"])
     assert result.exit_code == 0
     assert "SQL Query" in result.stdout
     assert "Transpiled JSONSQL" in result.stdout
@@ -75,7 +135,7 @@ def test_transpile_simple_query():
 def test_transpile_with_where():
     """Test transpiling SQL with WHERE clause."""
     result = runner.invoke(
-        app, ["transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
+        app, ["jsonsql", "transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
     )
     assert result.exit_code == 0
     assert '"from": "subscriber"' in result.stdout
@@ -84,7 +144,7 @@ def test_transpile_with_where():
 
 def test_transpile_yaml_format():
     """Test transpiling with YAML output format."""
-    result = runner.invoke(app, ["transpile", "SELECT * FROM subscriber", "--format", "yaml"])
+    result = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
     assert result.exit_code == 0
     assert "from: subscriber" in result.stdout
 
@@ -112,8 +172,8 @@ def test_query_select_dry_run():
 
 
 def test_query_select_from_sql_dry_run():
-    """Test sql command with --query and dry-run."""
-    result = runner.invoke(app, ["sql", "--query", "SELECT * FROM subscriber LIMIT 5", "--dry-run"])
+    """Test jsonsql sql command with --query and dry-run."""
+    result = runner.invoke(app, ["jsonsql", "sql", "--query", "SELECT * FROM subscriber LIMIT 5", "--dry-run"])
     assert result.exit_code == 0
     assert "DRY RUN MODE" in result.stdout
     assert "SQL Input" in result.stdout
@@ -121,10 +181,11 @@ def test_query_select_from_sql_dry_run():
 
 
 def test_query_insert_dry_run():
-    """Test sql command with INSERT query and dry-run mode."""
+    """Test jsonsql sql command with INSERT query and dry-run mode."""
     result = runner.invoke(
         app,
         [
+            "jsonsql",
             "sql",
             "--query",
             "INSERT INTO package (name, paid) VALUES ('test', true) RETURNING id",
@@ -137,10 +198,11 @@ def test_query_insert_dry_run():
 
 
 def test_query_update_dry_run():
-    """Test sql command with UPDATE query and dry-run mode."""
+    """Test jsonsql sql command with UPDATE query and dry-run mode."""
     result = runner.invoke(
         app,
         [
+            "jsonsql",
             "sql",
             "--query",
             "UPDATE subscriber SET disabled = true WHERE username = 'test'",
@@ -153,9 +215,9 @@ def test_query_update_dry_run():
 
 
 def test_query_delete_dry_run():
-    """Test sql command with DELETE query and dry-run mode."""
+    """Test jsonsql sql command with DELETE query and dry-run mode."""
     result = runner.invoke(
-        app, ["sql", "--query", "DELETE FROM terminal WHERE id = 123", "--dry-run"]
+        app, ["jsonsql", "sql", "--query", "DELETE FROM terminal WHERE id = 123", "--dry-run"]
     )
     assert result.exit_code == 0
     assert "DRY RUN MODE" in result.stdout
@@ -163,28 +225,28 @@ def test_query_delete_dry_run():
 
 
 def test_query_select_missing_from():
-    """Test that jsonsql select requires --from when not using --from-sql."""
+    """Test that jsonsql select requires --from when not using --edit."""
     result = runner.invoke(app, ["jsonsql", "select", "--data", "id,username"])
     assert result.exit_code == 1
     assert "--from is required" in result.stdout
 
 
 def test_query_insert_missing_params():
-    """Test that jsonsql insert requires parameters when not using --from-sql."""
+    """Test that jsonsql insert requires parameters when not using --edit."""
     result = runner.invoke(app, ["jsonsql", "insert", "--into", "package"])
     assert result.exit_code == 1
     assert "required" in result.stdout.lower()
 
 
 def test_query_update_missing_params():
-    """Test that jsonsql update requires parameters when not using --from-sql."""
+    """Test that jsonsql update requires parameters when not using --edit."""
     result = runner.invoke(app, ["jsonsql", "update", "--table", "subscriber"])
     assert result.exit_code == 1
     assert "required" in result.stdout.lower()
 
 
 def test_query_delete_missing_from():
-    """Test that jsonsql delete requires --from when not using --from-sql."""
+    """Test that jsonsql delete requires --from when not using --edit."""
     result = runner.invoke(app, ["jsonsql", "delete", "--where", '{"eq": ["id", 123]}'])
     assert result.exit_code == 1
     assert "--from is required" in result.stdout
@@ -195,6 +257,7 @@ def test_sql_join_dry_run():
     result = runner.invoke(
         app,
         [
+            "jsonsql",
             "sql",
             "-q",
             "SELECT c.name AS channel, p.title AS program FROM tv_program p JOIN tv_channel c ON p.channel_id = c.id LIMIT 10",
@@ -213,6 +276,7 @@ def test_sql_join_with_show_request():
     result = runner.invoke(
         app,
         [
+            "jsonsql",
             "sql",
             "-q",
             "SELECT c.name AS channel, p.title AS program FROM tv_program p JOIN tv_channel c ON p.channel_id = c.id LIMIT 10",
@@ -231,6 +295,7 @@ def test_sql_multiple_joins_dry_run():
     result = runner.invoke(
         app,
         [
+            "jsonsql",
             "sql",
             "-q",
             """SELECT 

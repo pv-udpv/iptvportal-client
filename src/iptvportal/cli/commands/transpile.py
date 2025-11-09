@@ -19,9 +19,9 @@ def transpile_command(
     Transpile SQL query to JSONSQL format (without executing).
 
     Examples:
-        iptvportal transpile "SELECT * FROM subscriber"
-        iptvportal transpile "SELECT * FROM subscriber WHERE disabled = false" --format yaml
-        iptvportal transpile --file query.sql
+        iptvportal jsonsql transpile "SELECT * FROM subscriber"
+        iptvportal jsonsql transpile "SELECT * FROM subscriber WHERE disabled = false" --format yaml
+        iptvportal jsonsql transpile --file query.sql
     """
     try:
         # Read from file if specified
