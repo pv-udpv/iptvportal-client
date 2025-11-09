@@ -26,22 +26,26 @@ Settings in `config/schemas/*.settings.yaml` override main settings for specific
 
 ## CLI Commands
 
-### Inspect Code for Settings
+### Generate Configuration Files
 
-The `inspect` command scans your codebase for settings classes and generates configuration files:
+The `generate` command (formerly `inspect`) scans your codebase for settings classes and generates configuration files:
 
 ```bash
 # Generate config files from code
-iptvportal config inspect
+iptvportal config generate
 
 # Scan specific directory
-iptvportal config inspect --scope src/iptvportal/sync
+iptvportal config generate --scope src/iptvportal/sync
 
 # Generate single file
-iptvportal config inspect --strategy single
+iptvportal config generate --strategy single
 
 # Dry run to preview
-iptvportal config inspect --dry-run
+iptvportal config generate --dry-run
+
+# Generate example templates
+iptvportal config generate --template env
+iptvportal config generate --template yaml
 ```
 
 See [Config Inspect Documentation](config-inspect.md) for detailed usage.
@@ -50,38 +54,38 @@ See [Config Inspect Documentation](config-inspect.md) for detailed usage.
 
 ```bash
 # Show all settings as YAML (default)
-iptvportal config conf
+iptvportal config show
 
 # Show as JSON
-iptvportal config conf --format json
+iptvportal config show --format json
 
 # Show as tree view
-iptvportal config conf --format tree
+iptvportal config show --format tree
 ```
 
 ### Show Specific Configuration Section
 
 ```bash
 # Show core settings
-iptvportal config conf core
+iptvportal config show core
 
 # Show CLI settings
-iptvportal config conf cli
+iptvportal config show cli
 
 # Show sync settings
-iptvportal config conf sync
+iptvportal config show sync
 
 # Show schema-specific settings
-iptvportal config conf sync.subscriber
-iptvportal config conf sync.terminal
-iptvportal config conf sync.package
+iptvportal config show sync.subscriber
+iptvportal config show sync.terminal
+iptvportal config show sync.package
 ```
 
 ### Show Configuration Files
 
 ```bash
 # List all loaded configuration files
-iptvportal config conf --files
+iptvportal config show --files
 ```
 
 Output:
@@ -94,20 +98,27 @@ Configuration Files:
   4. /path/to/config/schemas/terminal.settings.yaml
 ```
 
-### Set Configuration at Runtime
+### Validate Configuration
 
 ```bash
-# Set timeout to 60 seconds (runtime only, not persisted)
-iptvportal config conf core.timeout --set 60.0
+# Validate configuration
+iptvportal config validate
 
-# Enable verbose mode
-iptvportal config conf cli.verbose --set true
-
-# Change max limit
-iptvportal config conf cli.max_limit --set 5000
+# Validate with verbose output
+iptvportal config validate --verbose
 ```
 
-**Note**: Runtime changes are **not persisted** to disk. To make permanent changes, edit the YAML files directly.
+### Get Individual Values
+
+Use the simpler `get` command for reading individual values:
+
+```bash
+# Get a configuration value
+iptvportal config get timeout
+iptvportal config get domain
+```
+
+Note: Use `config get` for simple value retrieval from IPTVPortalSettings and `config show` for viewing full sections from dynaconf configuration.
 
 ## Environment Variable Overrides
 
@@ -123,10 +134,10 @@ export IPTVPORTAL_CLI__VERBOSE=true
 # Override subscriber sync TTL
 export IPTVPORTAL_SYNC__SUBSCRIBER__TTL=900
 
-# Run with overrides
-iptvportal config conf core.timeout
-iptvportal config conf cli.verbose
-iptvportal config conf sync.subscriber.ttl
+# Check overridden values
+iptvportal config show core.timeout
+iptvportal config show cli.verbose
+iptvportal config show sync.subscriber.ttl
 ```
 
 **Note**: Use double underscores (`__`) to represent nested keys.
@@ -291,7 +302,7 @@ python test_conf_standalone.py
 
 Check that files exist:
 ```bash
-iptvportal config conf --files
+iptvportal config show --files
 ```
 
 ### Value not taking effect
