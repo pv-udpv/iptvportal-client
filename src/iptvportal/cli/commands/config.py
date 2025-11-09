@@ -18,46 +18,95 @@ config_app = typer.Typer(name="config", help="Manage configuration")
 
 
 @config_app.command(name="show")
-def show_command() -> None:
+def show_command(
+    path: str | None = typer.Argument(None, help="Configuration path (e.g., 'sync.subscriber')"),
+    format: str = typer.Option("yaml", "--format", "-f", help="Output format: yaml, json, tree"),
+    files: bool = typer.Option(False, "--files", help="Show configuration files being loaded"),
+) -> None:
     """
-    Show current configuration.
+    Show configuration settings.
+
+    Display all settings or a specific section in YAML, JSON, or tree format.
 
     Examples:
+        # Show all configuration as YAML (default)
         iptvportal config show
+
+        # Show specific section
+        iptvportal config show core
+        iptvportal config show sync.subscriber
+
+        # Show as JSON
+        iptvportal config show --format json
+
+        # Show as tree view
+        iptvportal config show --format tree
+
+        # Show loaded config files
+        iptvportal config show --files
     """
     try:
-        settings = IPTVPortalSettings()  # type: ignore[call-arg]
+        from iptvportal import project_conf
 
-        console.print("\n[bold cyan]IPTVPortal Configuration[/bold cyan]\n")
+        # Show config files if requested
+        if files:
+            console.print("\n[bold cyan]Configuration Files:[/bold cyan]\n")
+            config_files = project_conf.get_config_files()
+            for i, file_path in enumerate(config_files, 1):
+                console.print(f"  {i}. {file_path}")
+            console.print()
+            return
 
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("Setting", style="white")
-        table.add_column("Value", style="green")
+        # Get configuration values
+        if path:
+            # Show specific key
+            value = project_conf.get_value(path)
+            if value is None:
+                console.print(f"[yellow]Configuration key '{path}' not found[/yellow]")
+                return
 
-        table.add_row("Domain", settings.domain)
-        table.add_row("Username", settings.username)
-        table.add_row("Password", "***" if settings.password else "not set")
-        table.add_row("Auth URL", settings.auth_url)
-        table.add_row("API URL", settings.api_url)
-        table.add_row("Timeout", f"{settings.timeout}s")
-        table.add_row("Max Retries", str(settings.max_retries))
-        table.add_row("Retry Delay", f"{settings.retry_delay}s")
-        table.add_row("Verify SSL", str(settings.verify_ssl))
-        table.add_row("Session Cache", str(settings.session_cache))
-        table.add_row("Session TTL", f"{settings.session_ttl}s")
-        table.add_row("Log Level", settings.log_level)
-        table.add_row("Log Requests", str(settings.log_requests))
-        table.add_row("Log Responses", str(settings.log_responses))
+            console.print(f"\n[bold cyan]{path}:[/bold cyan]\n")
 
-        console.print(table)
+            if format == "json":
+                if isinstance(value, dict):
+                    output = json.dumps(value, indent=2)
+                    console.print(Syntax(output, "json", theme="monokai"))
+                else:
+                    console.print(f"  {value}")
+            elif format == "tree":
+                if isinstance(value, dict):
+                    _print_tree(path, value)
+                else:
+                    console.print(f"  {value}")
+            else:  # yaml
+                if isinstance(value, dict):
+                    output = yaml.dump(value, default_flow_style=False, sort_keys=False)
+                    console.print(Syntax(output, "yaml", theme="monokai"))
+                else:
+                    console.print(f"  {value}")
+        else:
+            # Show all configuration
+            all_settings = project_conf.list_settings()
+
+            console.print("\n[bold cyan]IPTVPortal Configuration[/bold cyan]\n")
+
+            if format == "json":
+                output = json.dumps(all_settings, indent=2)
+                console.print(Syntax(output, "json", theme="monokai"))
+            elif format == "tree":
+                _print_tree("settings", all_settings)
+            else:  # yaml
+                output = yaml.dump(all_settings, default_flow_style=False, sort_keys=False)
+                console.print(Syntax(output, "yaml", theme="monokai"))
+
         console.print()
-        console.print(
-            "[dim]Configuration is loaded from environment variables with IPTVPORTAL_ prefix[/dim]"
-        )
-        console.print("[dim]or from .env file in the current directory[/dim]\n")
 
+    except ImportError:
+        console.print("[bold red]Error:[/bold red] dynaconf not installed")
+        console.print("Install with: pip install dynaconf")
+        raise typer.Exit(1)
     except Exception as e:
-        console.print(f"[bold red]Error loading configuration:[/bold red] {e}")
+        console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
 
 
@@ -169,129 +218,6 @@ def get_command(
         raise typer.Exit(1)
 
 
-@config_app.command(name="conf")
-def conf_command(
-    key: str = typer.Argument(
-        None, help="Configuration key in dot notation (e.g., 'core.timeout', 'sync.subscriber')"
-    ),
-    set_value: str = typer.Option(None, "--set", help="Set configuration value at runtime"),
-    format: str = typer.Option("yaml", "--format", "-f", help="Output format: yaml, json, or tree"),
-    show_files: bool = typer.Option(False, "--files", help="Show configuration files being loaded"),
-) -> None:
-    """
-    Advanced configuration management using dynaconf.
-
-    Show, list, or set configuration values from the modular settings tree.
-
-    Examples:
-        # Show all configuration
-        iptvportal config conf
-
-        # Show specific section
-        iptvportal config conf core
-        iptvportal config conf sync.subscriber
-
-        # Show as JSON
-        iptvportal config conf --format json
-
-        # Show as tree view
-        iptvportal config conf --format tree
-
-        # Set value at runtime (not persisted)
-        iptvportal config conf core.timeout --set 60.0
-        iptvportal config conf cli.verbose --set true
-
-        # Show loaded config files
-        iptvportal config conf --files
-    """
-    try:
-        from iptvportal import project_conf
-
-        # Show config files if requested
-        if show_files:
-            console.print("\n[bold cyan]Configuration Files:[/bold cyan]\n")
-            files = project_conf.get_config_files()
-            for i, file_path in enumerate(files, 1):
-                console.print(f"  {i}. {file_path}")
-            console.print()
-            return
-
-        # Set value if requested
-        if set_value is not None:
-            if not key:
-                console.print("[bold red]Error:[/bold red] Key required when using --set")
-                raise typer.Exit(1)
-
-            # Parse value (handle boolean, numbers, strings)
-            parsed_value = set_value
-            if set_value.lower() in ("true", "false"):
-                parsed_value = set_value.lower() == "true"
-            elif set_value.isdigit():
-                parsed_value = int(set_value)
-            else:
-                try:
-                    parsed_value = float(set_value)
-                except ValueError:
-                    parsed_value = set_value
-
-            project_conf.set_value(key, parsed_value)
-            console.print(f"[green]✓ Set {key} = {parsed_value} (runtime only)[/green]")
-            console.print("[dim]Note: Changes are not persisted to disk[/dim]\n")
-            return
-
-        # Get configuration values
-        if key:
-            # Show specific key
-            value = project_conf.get_value(key)
-            if value is None:
-                console.print(f"[yellow]Configuration key '{key}' not found[/yellow]")
-                return
-
-            console.print(f"\n[bold cyan]{key}:[/bold cyan]\n")
-
-            if format == "json":
-                if isinstance(value, dict):
-                    output = json.dumps(value, indent=2)
-                    console.print(Syntax(output, "json", theme="monokai"))
-                else:
-                    console.print(f"  {value}")
-            elif format == "tree":
-                if isinstance(value, dict):
-                    _print_tree(key, value)
-                else:
-                    console.print(f"  {value}")
-            else:  # yaml
-                if isinstance(value, dict):
-                    output = yaml.dump(value, default_flow_style=False, sort_keys=False)
-                    console.print(Syntax(output, "yaml", theme="monokai"))
-                else:
-                    console.print(f"  {value}")
-        else:
-            # Show all configuration
-            all_settings = project_conf.list_settings()
-
-            console.print("\n[bold cyan]IPTVPortal Configuration (Dynaconf)[/bold cyan]\n")
-
-            if format == "json":
-                output = json.dumps(all_settings, indent=2)
-                console.print(Syntax(output, "json", theme="monokai"))
-            elif format == "tree":
-                _print_tree("settings", all_settings)
-            else:  # yaml
-                output = yaml.dump(all_settings, default_flow_style=False, sort_keys=False)
-                console.print(Syntax(output, "yaml", theme="monokai"))
-
-        console.print()
-
-    except ImportError:
-        console.print("[bold red]Error:[/bold red] dynaconf not installed")
-        console.print("Install with: pip install dynaconf")
-        raise typer.Exit(1)
-    except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        raise typer.Exit(1)
-
-
 def _print_tree(name: str, data: dict, tree: Tree | None = None) -> Tree:
     """Print configuration as a rich tree structure."""
     root = tree is None
@@ -315,8 +241,8 @@ def _print_tree(name: str, data: dict, tree: Tree | None = None) -> Tree:
     return tree
 
 
-@config_app.command(name="inspect")
-def inspect_command(
+@config_app.command(name="generate")
+def generate_command(
     scope: Annotated[
         str,
         typer.Option(
@@ -352,36 +278,109 @@ def inspect_command(
         str,
         typer.Option("--output", "-o", help="Output directory for generated configuration files"),
     ] = "config/generated",
+    template: Annotated[
+        str | None,
+        typer.Option("--template", help="Generate template: env, yaml (overrides code scanning)"),
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="Show what would be generated without creating files"),
     ] = False,
 ) -> None:
-    """Inspect code for settings classes and generate configuration files.
+    """Generate configuration files from code or templates.
 
     This command scans Python modules for Pydantic BaseSettings classes,
     dynaconf configurations, and other settings models, then generates
-    corresponding YAML configuration files.
+    corresponding YAML configuration files. Alternatively, use --template
+    to generate example configuration templates.
 
     Examples:
         # Scan src directory and generate one file per settings class
-        iptvportal config inspect
+        iptvportal config generate
 
         # Scan specific directory with custom output
-        iptvportal config inspect --scope src/iptvportal/sync --output config/sync
+        iptvportal config generate --scope src/iptvportal/sync --output config/sync
 
         # Generate single settings.yaml with all discovered settings
-        iptvportal config inspect --strategy single
+        iptvportal config generate --strategy single
 
         # Ignore test files and generate files per module
-        iptvportal config inspect --ignore "test_*" --ignore "*_test.py" --strategy per-module
+        iptvportal config generate --ignore "test_*" --ignore "*_test.py" --strategy per-module
 
         # Attach discovered settings to a specific context
-        iptvportal config inspect --settings-context sync.advanced
+        iptvportal config generate --settings-context sync.advanced
+
+        # Generate example .env template
+        iptvportal config generate --template env
+
+        # Generate example YAML template
+        iptvportal config generate --template yaml
 
         # Dry run to see what would be generated
-        iptvportal config inspect --dry-run
+        iptvportal config generate --dry-run
     """
+    # Handle template generation
+    if template:
+        console.print(f"\n[bold cyan]Generating {template.upper()} Template[/bold cyan]\n")
+
+        if template == "env":
+            env_template = """# IPTVPortal Configuration
+IPTVPORTAL_DOMAIN=operator
+IPTVPORTAL_USERNAME=admin
+IPTVPORTAL_PASSWORD=your_password_here
+
+# Optional settings
+IPTVPORTAL_TIMEOUT=30.0
+IPTVPORTAL_MAX_RETRIES=3
+IPTVPORTAL_VERIFY_SSL=true
+IPTVPORTAL_SESSION_CACHE=~/.iptvportal/session-cache
+IPTVPORTAL_SESSION_TTL=3600
+IPTVPORTAL_LOG_LEVEL=INFO
+"""
+            if dry_run:
+                console.print("[bold yellow]Dry run - no files will be created[/bold yellow]\n")
+                console.print(env_template)
+            else:
+                output_path = Path(output) if output != "config/generated" else Path(".env.example")
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(env_template)
+                console.print(f"[green]✓ Template written to {output_path}[/green]\n")
+            return
+
+        if template == "yaml":
+            yaml_template = """# IPTVPortal Configuration Example
+core:
+  timeout: 30.0
+  max_retries: 3
+  verify_ssl: true
+  session_ttl: 3600
+
+cli:
+  default_format: table
+  max_limit: 10000
+  enable_guardrails: true
+
+sync:
+  default_sync_strategy: full
+  default_chunk_size: 1000
+  max_concurrent_syncs: 3
+"""
+            if dry_run:
+                console.print("[bold yellow]Dry run - no files will be created[/bold yellow]\n")
+                console.print(yaml_template)
+            else:
+                output_path = (
+                    Path(output) if output != "config/generated" else Path("config/example.yaml")
+                )
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(yaml_template)
+                console.print(f"[green]✓ Template written to {output_path}[/green]\n")
+            return
+        console.print(f"[bold red]Error:[/bold red] Unknown template type: {template}")
+        console.print("[dim]Supported templates: env, yaml[/dim]")
+        raise typer.Exit(1)
+
+    # Original code scanning functionality
     try:
         from iptvportal.cli.introspection import (
             discover_settings_classes,
@@ -486,7 +485,7 @@ def inspect_command(
             console.print()
             console.print("[dim]Review the generated files and adjust as needed.[/dim]")
             console.print(
-                "[dim]Use 'iptvportal config conf --files' to see loaded configuration files.[/dim]\n"
+                "[dim]Use 'iptvportal config show --files' to see loaded configuration files.[/dim]\n"
             )
 
     except ImportError as e:
@@ -497,4 +496,176 @@ def inspect_command(
         import traceback
 
         console.print(traceback.format_exc())
+        raise typer.Exit(1)
+
+
+@config_app.command(name="validate")
+def validate_command(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed validation info"),
+) -> None:
+    """
+    Validate current configuration.
+
+    Check that all required settings are present, types are correct,
+    and file paths exist where applicable.
+
+    Examples:
+        # Validate configuration
+        iptvportal config validate
+
+        # Validate with verbose output
+        iptvportal config validate --verbose
+    """
+    try:
+        from iptvportal import project_conf
+
+        console.print("\n[bold cyan]Configuration Validation[/bold cyan]\n")
+
+        errors = []
+        warnings = []
+        success_count = 0
+
+        # Check required core settings
+        required_checks = [
+            ("core.timeout", float, "Core timeout setting"),
+            ("core.max_retries", int, "Core max retries setting"),
+            ("core.session_ttl", int, "Session TTL setting"),
+        ]
+
+        for key, expected_type, description in required_checks:
+            value = project_conf.get_value(key)
+            if value is None:
+                errors.append(f"{description} '{key}' is not set")
+            elif not isinstance(value, expected_type):
+                try:
+                    # Try to convert to expected type
+                    _ = expected_type(value)
+                    if verbose:
+                        console.print(
+                            f"[yellow]•[/yellow] {key}: {value} (type: {type(value).__name__}) "
+                            f"- convertible to {expected_type.__name__}"
+                        )
+                    success_count += 1
+                except (ValueError, TypeError):
+                    errors.append(
+                        f"{description} '{key}' has wrong type: "
+                        f"expected {expected_type.__name__}, got {type(value).__name__}"
+                    )
+            else:
+                if verbose:
+                    console.print(f"[green]✓[/green] {key}: {value}")
+                success_count += 1
+
+        # Check CLI settings if present
+        cli_checks = [
+            ("cli.default_format", str, "CLI default format"),
+            ("cli.max_limit", int, "CLI max limit"),
+            ("cli.enable_guardrails", bool, "CLI guardrails"),
+        ]
+
+        for key, expected_type, description in cli_checks:
+            value = project_conf.get_value(key)
+            if value is not None:
+                if not isinstance(value, expected_type):
+                    try:
+                        _ = expected_type(value)
+                        if verbose:
+                            console.print(
+                                f"[yellow]•[/yellow] {key}: {value} - convertible to {expected_type.__name__}"
+                            )
+                        success_count += 1
+                    except (ValueError, TypeError):
+                        warnings.append(
+                            f"{description} '{key}' has wrong type: "
+                            f"expected {expected_type.__name__}, got {type(value).__name__}"
+                        )
+                else:
+                    if verbose:
+                        console.print(f"[green]✓[/green] {key}: {value}")
+                    success_count += 1
+
+        # Check sync settings if present
+        sync_checks = [
+            ("sync.default_sync_strategy", str, "Sync default strategy"),
+            ("sync.default_chunk_size", int, "Sync default chunk size"),
+            ("sync.max_concurrent_syncs", int, "Sync max concurrent"),
+        ]
+
+        for key, expected_type, description in sync_checks:
+            value = project_conf.get_value(key)
+            if value is not None:
+                if not isinstance(value, expected_type):
+                    try:
+                        _ = expected_type(value)
+                        if verbose:
+                            console.print(
+                                f"[yellow]•[/yellow] {key}: {value} - convertible to {expected_type.__name__}"
+                            )
+                        success_count += 1
+                    except (ValueError, TypeError):
+                        warnings.append(
+                            f"{description} '{key}' has wrong type: "
+                            f"expected {expected_type.__name__}, got {type(value).__name__}"
+                        )
+                else:
+                    if verbose:
+                        console.print(f"[green]✓[/green] {key}: {value}")
+                    success_count += 1
+
+        # Check for config files
+        config_files = project_conf.get_config_files()
+        if verbose:
+            console.print("\n[bold cyan]Configuration Files:[/bold cyan]")
+            for file_path in config_files:
+                if Path(file_path).exists():
+                    console.print(f"[green]✓[/green] {file_path}")
+                else:
+                    console.print(f"[red]✗[/red] {file_path} (not found)")
+                    warnings.append(f"Configuration file not found: {file_path}")
+
+        # Print summary
+        console.print()
+        if errors:
+            console.print("[bold red]Validation Errors:[/bold red]")
+            for error in errors:
+                console.print(f"  [red]✗[/red] {error}")
+            console.print()
+
+        if warnings:
+            console.print("[bold yellow]Validation Warnings:[/bold yellow]")
+            for warning in warnings:
+                console.print(f"  [yellow]![/yellow] {warning}")
+            console.print()
+
+        if errors:
+            console.print(f"[bold red]✗ Validation failed with {len(errors)} error(s)[/bold red]")
+            if warnings:
+                console.print(f"[yellow]  and {len(warnings)} warning(s)[/yellow]")
+            console.print()
+            raise typer.Exit(1)
+        if warnings:
+            console.print(
+                f"[yellow]⚠ Validation completed with {len(warnings)} warning(s)[/yellow]"
+            )
+            console.print(f"[green]  {success_count} check(s) passed[/green]")
+            console.print()
+            raise typer.Exit(0)
+        console.print(
+            f"[green]✓ Validation successful! All {success_count} check(s) passed.[/green]"
+        )
+        console.print()
+        raise typer.Exit(0)
+
+    except typer.Exit:
+        raise
+    except ImportError:
+        console.print("[bold red]Error:[/bold red] dynaconf not installed")
+        console.print("Install with: pip install dynaconf")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        if verbose:
+            import traceback
+
+            console.print(traceback.format_exc())
         raise typer.Exit(1)
