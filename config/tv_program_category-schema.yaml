@@ -1,0 +1,12 @@
+schemas:
+  tv_program_category:
+    total_fields: 2
+    fields:
+      '0':
+        name: id
+        type: integer
+        description: Auto-generated field
+      '1':
+        name: Field_1
+        type: integer
+        description: Auto-generated field

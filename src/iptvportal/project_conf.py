@@ -1,26 +1,29 @@
-"""Project configuration (backward compatibility).
+# ruff: noqa: I001
+"""Backward-compatible project configuration module.
 
-This module provides backward compatibility for code importing from iptvportal.project_conf.
+This module re-exports the public configuration API implemented in
+``iptvportal.config.project`` to preserve imports used in legacy code
+and tests (e.g. ``from iptvportal.project_conf import get_conf`` or
+``from iptvportal import project_conf``).
 """
 
-# Re-export everything from the new location
+from __future__ import annotations
+
 from iptvportal.config.project import (
     get_conf,
-    get_config_files,
-    get_value,
-    list_settings,
     reload_conf,
+    get_value,
     set_value,
+    list_settings,
+    get_config_files,
+    settings,
 )
-
-# Re-export the settings instance
-settings = get_conf()
 
 __all__ = [
     "get_conf",
+    "reload_conf",
     "get_value",
     "set_value",
-    "reload_conf",
     "list_settings",
     "get_config_files",
     "settings",

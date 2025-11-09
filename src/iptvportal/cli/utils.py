@@ -189,11 +189,15 @@ def execute_query(
                 schema = TableSchema.auto_generate(table_name, sample_row)
 
                 if debug_logger:
-                    debug_logger.log("generated_schema", {
-                        "table": table_name,
-                        "total_fields": schema.total_fields,
-                        "fields": list(schema.fields.keys())
-                    }, "Generated Schema")
+                    debug_logger.log(
+                        "generated_schema",
+                        {
+                            "table": table_name,
+                            "total_fields": schema.total_fields,
+                            "fields": list(schema.fields.keys()),
+                        },
+                        "Generated Schema",
+                    )
 
                 # Register for future use
                 client.schema_registry.register(schema)

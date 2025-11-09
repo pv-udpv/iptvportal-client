@@ -60,7 +60,7 @@ class ORMGenerator:
         # Docstring
         if schema.metadata and schema.metadata.row_count:
             lines.append('    """')
-            if schema.sync_config and hasattr(schema.sync_config, 'description'):
+            if schema.sync_config and hasattr(schema.sync_config, "description"):
                 lines.append(f"    {schema.sync_config.description}")
                 lines.append("")
             lines.append(f"    Table: {table_name}")

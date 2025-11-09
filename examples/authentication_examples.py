@@ -9,7 +9,6 @@ This file demonstrates various authentication scenarios and patterns.
 
 import asyncio
 import os
-from pathlib import Path
 
 from iptvportal import AsyncIPTVPortalClient, IPTVPortalClient
 from iptvportal.config import IPTVPortalSettings
@@ -53,7 +52,7 @@ def example_2_explicit_config():
     )
 
     try:
-        with IPTVPortalClient(settings=settings) as client:
+        with IPTVPortalClient(settings=settings):
             print("✓ Authentication successful!")
             print(f"Domain: {settings.domain}")
             print(f"Auth URL: {settings.auth_url}")
@@ -96,9 +95,7 @@ def example_4_manual_connection():
         print(f"Session ID: {client._session_id}")
 
         # Execute operations
-        result = client.execute(
-            {"method": "select", "params": {"from": "subscriber", "limit": 1}}
-        )
+        result = client.execute({"method": "select", "params": {"from": "subscriber", "limit": 1}})
         print(f"Query executed: {len(result)} rows")
 
     except AuthenticationError as e:
@@ -122,24 +119,24 @@ def example_5_error_handling():
     )
 
     try:
-        with IPTVPortalClient(settings=settings) as client:
+        with IPTVPortalClient(settings=settings):
             print("Connected successfully")
 
     except AuthenticationError as e:
-        print(f"✗ Authentication Error:")
+        print("✗ Authentication Error:")
         print(f"  Message: {e.message}")
         print(f"  Details: {e.details}")
 
     except ConnectionError as e:
-        print(f"✗ Connection Error:")
+        print("✗ Connection Error:")
         print(f"  Message: {e.message}")
 
     except TimeoutError as e:
-        print(f"✗ Timeout Error:")
+        print("✗ Timeout Error:")
         print(f"  Message: {e.message}")
 
     except Exception as e:
-        print(f"✗ Unexpected Error:")
+        print("✗ Unexpected Error:")
         print(f"  Type: {type(e).__name__}")
         print(f"  Message: {e}")
 
@@ -246,15 +243,11 @@ def example_9_multiple_accounts():
         # Use both accounts independently
         with IPTVPortalClient(settings=settings1) as client1:
             print(f"✓ Account 1 authenticated: {settings1.username}")
-            result1 = client1.execute(
-                {"method": "select", "params": {"from": "subscriber", "limit": 1}}
-            )
+            client1.execute({"method": "select", "params": {"from": "subscriber", "limit": 1}})
 
         with IPTVPortalClient(settings=settings2) as client2:
             print(f"✓ Account 2 authenticated: {settings2.username}")
-            result2 = client2.execute(
-                {"method": "select", "params": {"from": "subscriber", "limit": 1}}
-            )
+            client2.execute({"method": "select", "params": {"from": "subscriber", "limit": 1}})
 
         print("✓ Both accounts worked successfully")
 
@@ -276,7 +269,7 @@ def example_10_custom_retry_logic():
     )
 
     try:
-        with IPTVPortalClient(settings=settings) as client:
+        with IPTVPortalClient(settings=settings):
             print("✓ Connected with custom retry settings")
             print(f"  Timeout: {settings.timeout}s")
             print(f"  Max retries: {settings.max_retries}")

@@ -116,8 +116,7 @@ IPTVPORTAL_LOG_RESPONSES=false
 ### Python API - Synchronous
 
 ```python
-from iptvportal import IPTVPortalClient
-from iptvportal.config import IPTVPortalSettings
+from iptvportal import IPTVPortalClient, IPTVPortalSettings
 
 # Option 1: Auto-load from environment variables
 with IPTVPortalClient() as client:
@@ -150,7 +149,7 @@ with IPTVPortalClient(settings=settings) as client:
 
 ### Python API - Asynchronous
 
-```python
+from iptvportal import IPTVPortalClient, IPTVPortalSettings
 import asyncio
 from iptvportal import AsyncIPTVPortalClient
 
@@ -174,8 +173,8 @@ asyncio.run(main())
 
 For advanced use cases where you need manual control:
 
-```python
-from iptvportal import IPTVPortalClient
+from iptvportal.core.auth import AuthManager
+from iptvportal import IPTVPortalSettings
 
 client = IPTVPortalClient()
 
@@ -192,8 +191,7 @@ finally:
 
 ### CLI Usage
 
-```bash
-# Test authentication
+from iptvportal import IPTVPortalClient, IPTVPortalSettings
 iptvportal auth
 
 # Output shows:
@@ -224,7 +222,7 @@ The authentication system includes intelligent session caching to minimize authe
 ### Cache Configuration
 
 ```python
-from iptvportal.config import IPTVPortalSettings
+from iptvportal import IPTVPortalSettings
 
 settings = IPTVPortalSettings(
     domain="your_domain",
@@ -443,8 +441,8 @@ IPTVPORTAL_LOG_LEVEL=INFO
 For advanced scenarios, you can create custom authentication logic:
 
 ```python
-from iptvportal.auth import AuthManager
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.core.auth import AuthManager
+from iptvportal import IPTVPortalSettings
 import httpx
 
 settings = IPTVPortalSettings(
@@ -472,8 +470,7 @@ with httpx.Client() as http_client:
 Managing multiple accounts:
 
 ```python
-from iptvportal.config import IPTVPortalSettings
-from iptvportal import IPTVPortalClient
+from iptvportal import IPTVPortalClient, IPTVPortalSettings
 
 # Account 1
 settings1 = IPTVPortalSettings(

@@ -32,7 +32,9 @@ class RemoteFieldValidator:
             client: Асинхронный клиент для выполнения запросов
         """
         if not HAS_PANDAS:
-            raise ImportError("pandas is required for RemoteFieldValidator. Install with: pip install pandas")
+            raise ImportError(
+                "pandas is required for RemoteFieldValidator. Install with: pip install pandas"
+            )
         self.client = client
 
     async def validate_field_mapping(
@@ -89,13 +91,15 @@ class RemoteFieldValidator:
                 raise ValueError(f"Empty result from table '{table_name}'")
 
             # Извлечь данные по позиции из SELECT *
-            local_values = [row[local_position] if len(row) > local_position else None for row in result_all]
+            local_values = [
+                row[local_position] if len(row) > local_position else None for row in result_all
+            ]
 
             # Извлечь данные из SELECT remote_column
             remote_values = [row[0] if row else None for row in result_remote]
 
             # Создать pandas Series для анализа
-            local_series = pd.Series(local_values, name=f"field_{local_position}")
+            pd.Series(local_values, name=f"field_{local_position}")
             remote_series = pd.Series(remote_values, name=remote_column_name)
 
             # Расчёт match ratio
@@ -144,7 +148,9 @@ class RemoteFieldValidator:
             }
 
         except Exception as e:
-            raise ValueError(f"Failed to validate field mapping for '{remote_column_name}': {e}") from e
+            raise ValueError(
+                f"Failed to validate field mapping for '{remote_column_name}': {e}"
+            ) from e
 
     def infer_field_type_from_dtype(self, dtype_str: str) -> str:
         """

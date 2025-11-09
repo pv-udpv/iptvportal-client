@@ -722,7 +722,9 @@ def validate_mapping_command(
                 column_name = col_name.strip()
                 field_mappings[position] = column_name
 
-            console.print(f"[dim]Validating {len(field_mappings)} field mapping(s) with sample size {sample_size}...[/dim]\n")
+            console.print(
+                f"[dim]Validating {len(field_mappings)} field mapping(s) with sample size {sample_size}...[/dim]\n"
+            )
 
         except ValueError as e:
             console.print(f"[red]Error parsing mappings: {e}[/red]")
@@ -802,7 +804,9 @@ def validate_mapping_command(
         if all_passed:
             console.print("[bold green]✓ All validations passed (match ratio ≥ 95%)[/bold green]\n")
         else:
-            console.print("[bold yellow]⚠ Some validations failed (match ratio < 95%)[/bold yellow]\n")
+            console.print(
+                "[bold yellow]⚠ Some validations failed (match ratio < 95%)[/bold yellow]\n"
+            )
 
         # Save results if requested
         if save or output:
@@ -875,8 +879,12 @@ def validate_mapping_command(
 def generate_models_command(
     schema_file: str = typer.Argument(..., help="Schema file to generate models from"),
     output_dir: str = typer.Option("models", "--output", "-o", help="Output directory for models"),
-    format: str = typer.Option("sqlmodel", "--format", "-f", help="Model format (sqlmodel/pydantic)"),
-    relationships: bool = typer.Option(True, "--relationships/--no-relationships", help="Include relationships"),
+    format: str = typer.Option(
+        "sqlmodel", "--format", "-f", help="Model format (sqlmodel/pydantic)"
+    ),
+    relationships: bool = typer.Option(
+        True, "--relationships/--no-relationships", help="Include relationships"
+    ),
 ) -> None:
     """
     Generate ORM models (SQLModel/Pydantic) from schema files.

@@ -1,8 +1,6 @@
 """Tests for QueryService."""
 
-from unittest.mock import MagicMock, Mock
-
-import pytest
+from unittest.mock import MagicMock
 
 from iptvportal.models.requests import JSONSQLQueryInput, SQLQueryInput
 from iptvportal.service.query import QueryService
@@ -16,9 +14,9 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         assert service.client is mock_client
         assert service.transpiler is not None
 
@@ -26,9 +24,9 @@ class TestQueryService:
         """Test QueryService accepts custom transpiler."""
         mock_client = MagicMock()
         mock_transpiler = MagicMock()
-        
+
         service = QueryService(mock_client, mock_transpiler)
-        
+
         assert service.client is mock_client
         assert service.transpiler is mock_transpiler
 
@@ -37,27 +35,24 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         # Mock transpiler
         service.transpiler = MagicMock()
         service.transpiler.transpile.return_value = {
             "data": ["id", "username"],
             "from": "subscriber",
-            "limit": 5
+            "limit": 5,
         }
-        
-        input_data = SQLQueryInput(
-            sql="SELECT id, username FROM subscriber LIMIT 5",
-            dry_run=True
-        )
-        
+
+        input_data = SQLQueryInput(sql="SELECT id, username FROM subscriber LIMIT 5", dry_run=True)
+
         result = service.execute_sql(input_data)
-        
+
         # Should not call client.execute in dry run
         mock_client.execute.assert_not_called()
-        
+
         # Result should contain metadata
         assert result.sql == input_data.sql
         assert result.jsonsql is not None
@@ -70,34 +65,33 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         # Mock execute to return data
         mock_data = [{"id": 1}, {"id": 2}]
         mock_client.execute.return_value = mock_data
-        
+
         # Mock schema mapping method
         mock_client._map_result_with_schema = MagicMock(return_value=mock_data)
-        
+
         service = QueryService(mock_client)
-        
+
         # Mock transpiler
         service.transpiler = MagicMock()
         service.transpiler.transpile.return_value = {
             "data": ["id", "username"],
             "from": "subscriber",
-            "limit": 5
+            "limit": 5,
         }
-        
+
         input_data = SQLQueryInput(
-            sql="SELECT id, username FROM subscriber LIMIT 5",
-            use_schema_mapping=True
+            sql="SELECT id, username FROM subscriber LIMIT 5", use_schema_mapping=True
         )
-        
+
         result = service.execute_sql(input_data)
-        
+
         # Should call client.execute
         mock_client.execute.assert_called_once()
-        
+
         # Result should contain data
         assert result.data == mock_data
         assert result.method == "select"
@@ -110,23 +104,18 @@ class TestQueryService:
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
         mock_client.execute.return_value = [{"id": 1}, {"id": 2}]
-        
+
         service = QueryService(mock_client)
-        
+
         input_data = JSONSQLQueryInput(
-            method="select",
-            params={
-                "data": ["id", "username"],
-                "from": "subscriber",
-                "limit": 5
-            }
+            method="select", params={"data": ["id", "username"], "from": "subscriber", "limit": 5}
         )
-        
+
         result = service.execute_jsonsql(input_data)
-        
+
         # Should call client.execute
         mock_client.execute.assert_called_once()
-        
+
         # Result should contain data
         assert result.data == [{"id": 1}, {"id": 2}]
         assert result.method == "select"
@@ -138,9 +127,9 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         jsonsql = {"data": ["id"], "from": "subscriber"}
         assert service._infer_method(jsonsql) == "select"
 
@@ -149,9 +138,9 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         jsonsql = {"insert_data": {"username": "test"}, "into": "subscriber"}
         assert service._infer_method(jsonsql) == "insert"
 
@@ -160,9 +149,9 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         jsonsql = {"from": "subscriber"}
         assert service._extract_table(jsonsql, "select") == "subscriber"
 
@@ -171,9 +160,9 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         jsonsql = {"into": "subscriber"}
         assert service._extract_table(jsonsql, "insert") == "subscriber"
 
@@ -182,12 +171,12 @@ class TestQueryService:
         mock_client = MagicMock()
         mock_client.schema_registry = MagicMock()
         mock_client.settings.auto_order_by_id = True
-        
+
         service = QueryService(mock_client)
-        
+
         params = {"data": ["id"], "from": "subscriber"}
         request = service._build_request("select", params)
-        
+
         assert request["jsonrpc"] == "2.0"
         assert request["method"] == "select"
         assert request["params"] == params

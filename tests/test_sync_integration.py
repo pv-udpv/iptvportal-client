@@ -13,9 +13,8 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import SecretStr
 
-from iptvportal.core.async_client import AsyncIPTVPortalClient
 from iptvportal.config.settings import IPTVPortalSettings
-from iptvportal.schema.introspector import SchemaIntrospector
+from iptvportal.core.async_client import AsyncIPTVPortalClient
 from iptvportal.schema import (
     FieldDefinition,
     FieldType,
@@ -24,6 +23,7 @@ from iptvportal.schema import (
     TableMetadata,
     TableSchema,
 )
+from iptvportal.schema.introspector import SchemaIntrospector
 from iptvportal.sync.database import SyncDatabase
 from iptvportal.sync.manager import SyncManager
 

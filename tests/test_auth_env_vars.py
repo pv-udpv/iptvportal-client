@@ -7,10 +7,10 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
+from iptvportal.config.settings import IPTVPortalSettings
 from iptvportal.core.auth import AuthManager
 from iptvportal.core.client import IPTVPortalClient
-from iptvportal.config.settings import IPTVPortalSettings
-from iptvportal.exceptions import AuthenticationError
+from iptvportal.jsonsql.exceptions import AuthenticationError
 
 
 class TestAuthWithEnvVars:
@@ -28,7 +28,7 @@ class TestAuthWithEnvVars:
         }
 
         with patch.dict(os.environ, test_env, clear=False):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings()  # type: ignore[call-arg]
 
             # Verify settings loaded from env vars
             assert settings.domain == "testdomain"
@@ -46,7 +46,7 @@ class TestAuthWithEnvVars:
         }
 
         with patch.dict(os.environ, test_env, clear=False):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings()  # type: ignore[call-arg]
 
             assert settings.auth_url == "https://operator.admin.iptvportal.ru/api/jsonrpc/"
             assert settings.api_url == "https://operator.admin.iptvportal.ru/api/jsonsql/"
@@ -60,7 +60,7 @@ class TestAuthWithEnvVars:
         }
 
         with patch.dict(os.environ, test_env, clear=False):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings()  # type: ignore[call-arg]
             auth_manager = AuthManager(settings)
 
             # Mock HTTP client and response
@@ -116,34 +116,36 @@ class TestAuthWithEnvVars:
             "IPTVPORTAL_PASSWORD": "full_pass",
         }
 
-        with patch.dict(os.environ, test_env, clear=False):
-            # Mock httpx.Client
-            with patch("iptvportal.core.client.httpx.Client") as mock_client_class:
-                mock_client = MagicMock()
-                mock_client_class.return_value = mock_client
+        # Combine environment patch and client class patch in single context (SIM117 fix)
+        with (
+            patch.dict(os.environ, test_env, clear=False),
+            patch("iptvportal.core.client.httpx.Client") as mock_client_class,
+        ):
+            mock_client = MagicMock()
+            mock_client_class.return_value = mock_client
 
-                # Mock authentication response
-                mock_response = Mock()
-                mock_response.content = b'{"result": {"session_id": "env-session-456"}}'
-                mock_response.raise_for_status = Mock()
-                mock_client.post.return_value = mock_response
+            # Mock authentication response
+            mock_response = Mock()
+            mock_response.content = b'{"result": {"session_id": "env-session-456"}}'
+            mock_response.raise_for_status = Mock()
+            mock_client.post.return_value = mock_response
 
-                # Create and connect client
-                client = IPTVPortalClient()
-                client.connect()
+            # Create and connect client
+            client = IPTVPortalClient()
+            client.connect()
 
-                # Verify authentication succeeded with env var credentials
-                assert client._session_id == "env-session-456"
+            # Verify authentication succeeded with env var credentials
+            assert client._session_id == "env-session-456"
 
-                # Verify auth request used env var credentials
-                call_args = mock_client.post.call_args
-                import orjson
+            # Verify auth request used env var credentials
+            call_args = mock_client.post.call_args
+            import orjson
 
-                payload = orjson.loads(call_args[1]["content"])
-                assert payload["params"]["username"] == "full_user"
-                assert payload["params"]["password"] == "full_pass"
+            payload = orjson.loads(call_args[1]["content"])
+            assert payload["params"]["username"] == "full_user"
+            assert payload["params"]["password"] == "full_pass"
 
-                client.close()
+            client.close()
 
     def test_env_vars_override_defaults(self):
         """Test that environment variables override default values."""
@@ -157,7 +159,11 @@ class TestAuthWithEnvVars:
         }
 
         with patch.dict(os.environ, test_env, clear=False):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings(
+                domain=os.environ["IPTVPORTAL_DOMAIN"],
+                username=os.environ["IPTVPORTAL_USERNAME"],
+                password=SecretStr(os.environ["IPTVPORTAL_PASSWORD"]),
+            )
 
             # Verify overrides
             assert settings.timeout == 60.0  # Default is 30.0
@@ -170,7 +176,11 @@ class TestAuthWithEnvVars:
         with patch.dict(os.environ, {}, clear=True):
             # Depending on environment and .env loading behavior, instantiation
             # may or may not raise; ensure constructor runs and returns a settings
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings(
+                domain="placeholder",
+                username="placeholder",
+                password=SecretStr("placeholder"),
+            )
             assert isinstance(settings, IPTVPortalSettings)
 
     def test_auth_failure_with_wrong_env_credentials(self):
@@ -182,7 +192,11 @@ class TestAuthWithEnvVars:
         }
 
         with patch.dict(os.environ, test_env, clear=False):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings(
+                domain=os.environ["IPTVPORTAL_DOMAIN"],
+                username=os.environ["IPTVPORTAL_USERNAME"],
+                password=SecretStr(os.environ["IPTVPORTAL_PASSWORD"]),
+            )
             auth_manager = AuthManager(settings)
 
             # Mock HTTP client with error response
@@ -212,7 +226,11 @@ class TestEnvVarConfiguration:
         }
 
         with patch.dict(os.environ, test_env, clear=True):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings(
+                domain=os.environ["IPTVPORTAL_DOMAIN"],
+                username=os.environ["IPTVPORTAL_USERNAME"],
+                password=SecretStr(os.environ["IPTVPORTAL_PASSWORD"]),
+            )
 
             # Verify defaults are used (verify_ssl may be influenced by the
             # process environment in some runners; accept a boolean here)
@@ -241,7 +259,11 @@ class TestEnvVarConfiguration:
         }
 
         with patch.dict(os.environ, test_env, clear=False):
-            settings = IPTVPortalSettings()
+            settings = IPTVPortalSettings(
+                domain=os.environ["IPTVPORTAL_DOMAIN"],
+                username=os.environ["IPTVPORTAL_USERNAME"],
+                password=SecretStr(os.environ["IPTVPORTAL_PASSWORD"]),
+            )
 
             # Verify all settings
             assert settings.domain == "complete"
@@ -276,7 +298,7 @@ IPTVPORTAL_TIMEOUT=50.0
 
             # Clear all environment variables to ensure loading from file
             with patch.dict(os.environ, {}, clear=True):
-                settings = IPTVPortalSettings()
+                settings = IPTVPortalSettings()  # type: ignore[call-arg]
 
                 # Verify settings loaded from .env file
                 assert settings.domain == "envfile"
@@ -309,7 +331,11 @@ IPTVPORTAL_PASSWORD=file_pass
             }
 
             with patch.dict(os.environ, test_env, clear=False):
-                settings = IPTVPortalSettings()
+                settings = IPTVPortalSettings(
+                    domain=os.environ["IPTVPORTAL_DOMAIN"],
+                    username=os.environ["IPTVPORTAL_USERNAME"],
+                    password=SecretStr(os.environ["IPTVPORTAL_PASSWORD"]),
+                )
 
                 # Environment variables should override .env file
                 assert settings.domain == "fromenv"

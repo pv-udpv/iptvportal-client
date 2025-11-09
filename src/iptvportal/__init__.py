@@ -1,5 +1,6 @@
 """Modern Python client for IPTVPortal JSONSQL API."""
 
+from iptvportal import project_conf  # backward compatibility import
 from iptvportal.config.settings import IPTVPortalSettings
 from iptvportal.core.async_client import AsyncIPTVPortalClient
 from iptvportal.core.client import IPTVPortalClient
@@ -42,4 +43,6 @@ __all__ = [
     "APIError",
     "TimeoutError",
     "ConnectionError",
+    # Legacy project configuration module
+    "project_conf",
 ]

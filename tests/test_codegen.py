@@ -1,17 +1,13 @@
 """Tests for ORM model generation from schemas."""
 
-from pathlib import Path
-
 import pytest
 
-from iptvportal.schema.codegen import ORMGenerator
 from iptvportal.schema import (
-    FieldDefinition,
     FieldType,
     SchemaBuilder,
     SchemaRegistry,
-    TableSchema,
 )
+from iptvportal.schema.codegen import ORMGenerator
 
 
 @pytest.fixture
@@ -211,7 +207,9 @@ class TestORMGenerator:
         """Test generating all models in registry."""
         generator = ORMGenerator(registry)
 
-        results = generator.generate_all_models(output_format="sqlmodel", include_relationships=False)
+        results = generator.generate_all_models(
+            output_format="sqlmodel", include_relationships=False
+        )
 
         assert len(results) == 1
         assert "subscriber" in results
@@ -282,7 +280,7 @@ class TestORMGenerator:
         generator = ORMGenerator(registry)
 
         output_dir = tmp_path / "models"
-        results = generator.generate_all_models(
+        generator.generate_all_models(
             output_format="sqlmodel", output_dir=output_dir, include_relationships=False
         )
 

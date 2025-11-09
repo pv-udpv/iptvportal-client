@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from iptvportal.core.async_client import AsyncIPTVPortalClient
-from iptvportal.schema.introspector import SchemaIntrospector
 from iptvportal.schema import FieldDefinition, FieldType, TableMetadata
+from iptvportal.schema.introspector import SchemaIntrospector
 
 
 class TestSchemaIntrospector:

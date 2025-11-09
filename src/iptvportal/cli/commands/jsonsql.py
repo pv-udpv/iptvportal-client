@@ -176,7 +176,11 @@ def select_command(
             # Execute query with optional schema mapping
             debug_logger.log("executing", "Executing SELECT query...", "Execution")
             result: Any = execute_query(
-                "select", params, config_file, use_schema_mapping=map_schema, debug_logger=debug_logger
+                "select",
+                params,
+                config_file,
+                use_schema_mapping=map_schema,
+                debug_logger=debug_logger,
             )
             debug_logger.log("result", result, "Query Result")
 
