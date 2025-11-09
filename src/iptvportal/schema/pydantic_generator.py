@@ -284,11 +284,15 @@ class PydanticModelGenerator:
 
         # 4. Check for datetime fields (need proper handling)
         for node in model_class.body:
-            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-                if node.annotation and self._has_datetime_type(node.annotation):
-                    report["suggestions"].append(
-                        f"Field '{node.target.id}' uses datetime - ensure timezone awareness"
-                    )
+            if (
+                isinstance(node, ast.AnnAssign)
+                and isinstance(node.target, ast.Name)
+                and node.annotation
+                and self._has_datetime_type(node.annotation)
+            ):
+                report["suggestions"].append(
+                    f"Field '{node.target.id}' uses datetime - ensure timezone awareness"
+                )
 
         return report
 
@@ -370,7 +374,7 @@ class PydanticModelGenerator:
             docstring_lines.append(f"        {field_name}: {description}")
 
         # Example section
-        if include_examples:
+        if include_examples and schema.fields:
             docstring_lines.append("")
             docstring_lines.append("    Example:")
             docstring_lines.append(f"        >>> model = {class_name}(")
@@ -476,9 +480,12 @@ class PydanticModelGenerator:
         needs_validator = False
 
         # String trimming and empty check
-        if python_type == "str" and field_def.constraints:
-            if not field_def.constraints.get("nullable", True):
-                needs_validator = True
+        if (
+            python_type == "str"
+            and field_def.constraints
+            and not field_def.constraints.get("nullable", True)
+        ):
+            needs_validator = True
 
         if not needs_validator:
             return []
@@ -513,7 +520,7 @@ class PydanticModelGenerator:
 
     def _generate_model_config(self) -> list[str]:
         """Generate model configuration."""
-        lines = [
+        return [
             "",
             "    model_config = ConfigDict(",
             "        from_attributes=True,",
@@ -521,7 +528,6 @@ class PydanticModelGenerator:
             "        validate_assignment=True,",
             "    )",
         ]
-        return lines
 
     def _field_type_to_python_type(self, field_type: FieldType) -> str:
         """Map FieldType to Python type string."""
@@ -647,7 +653,7 @@ def schema_validator(model_code: str, strict: bool = True) -> dict[str, Any]:
         Validation report
     """
     # Create a dummy registry for validation
-    registry = SchemaRegistry()
+    registry = SchemaRegistry()  # type: ignore[no-untyped-call]
     generator = PydanticModelGenerator(registry)
     return generator.validate_model(model_code, strict)
 
@@ -662,6 +668,6 @@ def integration_checker(model_code: str, table_name: str) -> dict[str, Any]:
     Returns:
         Integration check report
     """
-    registry = SchemaRegistry()
+    registry = SchemaRegistry()  # type: ignore[no-untyped-call]
     generator = PydanticModelGenerator(registry)
     return generator.check_integration(model_code, table_name)
