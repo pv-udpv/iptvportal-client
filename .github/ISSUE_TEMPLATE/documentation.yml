@@ -1,0 +1,68 @@
+name: Documentation Issue
+description: Report issues with documentation or suggest improvements
+title: "[Docs]: "
+labels: ["documentation", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve our documentation! Report issues or suggest enhancements below.
+        
+  - type: textarea
+    id: issue
+    attributes:
+      label: Documentation Issue
+      description: Describe the issue with the documentation
+      placeholder: The documentation for the `iptvportal sql` command doesn't explain...
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      options:
+        - Missing information
+        - Incorrect information
+        - Outdated information
+        - Unclear explanation
+        - Missing examples
+        - Typo or formatting
+        - Other
+    validations:
+      required: true
+      
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation that needs improvement?
+      placeholder: "docs/cli.md, lines 45-50"
+    validations:
+      required: true
+      
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Documentation
+      description: Quote the current documentation (if applicable)
+      render: markdown
+    validations:
+      required: false
+      
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested Improvement
+      description: How should the documentation be improved?
+      placeholder: Should add an example showing...
+    validations:
+      required: true
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the documentation issue
+    validations:
+      required: false

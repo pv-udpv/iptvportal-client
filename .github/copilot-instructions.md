@@ -51,3 +51,51 @@ Short, project-specific rules to make AI agents productive and consistent here.
 - Native JSONSQL: `iptvportal jsonsql select --from subscriber --data id,username --limit 5 --show-request`.
 
 When in doubt, mirror existing patterns and update docs/tests in the same commit.
+
+## Security considerations
+- Never commit credentials, API keys, or session tokens
+- Ensure sensitive files (`.env`, `cli-config.yaml`, session cache) have proper permissions (600/700)
+- Use environment variables for secrets, not hardcoded values
+- When adding new dependencies, check for known vulnerabilities
+- Validate all user input, especially in CLI commands
+- Use parameterized queries; never construct raw SQL from user input
+
+## Common pitfalls to avoid
+- Don't break the auto ORDER BY id behavior in transpiler (see tests)
+- Don't change COUNT function argument structure without updating all related tests
+- Don't forget to handle both sync and async client paths when changing client behavior
+- Don't modify working code unless fixing a bug or implementing a feature
+- Don't add new CLI commands without updating both `README.md` and `docs/cli.md`
+- Don't change JSONSQL output format without checking schema mapping logic
+
+## File organization
+```
+src/iptvportal/
+├── __init__.py              # Main exports
+├── auth.py                  # Session management
+├── client.py                # Sync HTTP client
+├── async_client.py          # Async HTTP client
+├── exceptions.py            # Error types
+├── schema.py                # Table schemas
+├── cache.py                 # SQLite cache
+├── cli/
+│   ├── __main__.py         # CLI entry point
+│   └── commands/           # Individual command modules
+├── query/                   # Query builder (Field, Q, etc.)
+├── transpiler/             # SQL→JSONSQL conversion
+└── sync/                    # Sync strategies and database
+```
+
+## Type checking
+- All public APIs must have full type hints
+- Use `from __future__ import annotations` for forward references
+- Prefer `httpx.Response` over `Any` for HTTP responses
+- Use `typing.Protocol` for duck-typed interfaces
+- Run `make type-check` before committing
+
+## Error handling patterns
+- Raise `IPTVPortalException` subclasses (see `exceptions.py`) for domain errors
+- Use `httpx` exceptions for network errors; wrap them if needed
+- CLI commands should catch and display errors user-friendly (no tracebacks unless `--debug`)
+- Include context in error messages (what failed, why, how to fix)
+- Log errors at appropriate levels (debug/info/warning/error)
