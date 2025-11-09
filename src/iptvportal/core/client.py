@@ -1,5 +1,6 @@
 """Synchronous IPTVPortal client with context manager and resource support."""
 
+from pathlib import Path
 from typing import Any, TypeVar
 
 import httpx
@@ -45,23 +46,54 @@ class IPTVPortalClient:
             self._load_schemas()
 
     def _load_schemas(self) -> None:
-        """Load schemas from configuration file."""
+        """Load schemas from configuration file or directory."""
         if not self.settings.schema_file:
             return
 
-        # Load schemas based on format
-        if self.settings.schema_format.lower() == "yaml":
-            loaded_registry = SchemaLoader.from_yaml(self.settings.schema_file)
-        elif self.settings.schema_format.lower() == "json":
-            loaded_registry = SchemaLoader.from_json(self.settings.schema_file)
-        else:
-            raise ValueError(f"Unsupported schema format: {self.settings.schema_format}")
-
-        # Copy schemas to our registry
-        for table_name in loaded_registry.list_tables():
-            schema = loaded_registry.get(table_name)
-            if schema:
-                self.schema_registry.register(schema)
+        schema_path = Path(self.settings.schema_file)
+        
+        # If it's a directory, load all schema files in it
+        if schema_path.is_dir():
+            self._load_schemas_from_directory(schema_path)
+        # If it's a file, load single file
+        elif schema_path.is_file():
+            self._load_schema_file(schema_path)
+        # If path doesn't exist, check if parent is config directory with multiple schema files
+        elif not schema_path.exists():
+            # Try loading from config directory if it exists
+            config_dir = schema_path.parent if schema_path.parent.name == "config" else schema_path.parent / "config"
+            if config_dir.exists() and config_dir.is_dir():
+                self._load_schemas_from_directory(config_dir)
+    
+    def _load_schema_file(self, file_path: Path) -> None:
+        """Load schemas from a single file."""
+        try:
+            # Load schemas based on format
+            if file_path.suffix in [".yaml", ".yml"]:
+                loaded_registry = SchemaLoader.from_yaml(str(file_path))
+            elif file_path.suffix == ".json":
+                loaded_registry = SchemaLoader.from_json(str(file_path))
+            else:
+                return
+            
+            # Copy schemas to our registry
+            for table_name in loaded_registry.list_tables():
+                schema = loaded_registry.get(table_name)
+                if schema:
+                    self.schema_registry.register(schema)
+        except Exception:
+            # Silently skip files that can't be loaded as schemas
+            pass
+    
+    def _load_schemas_from_directory(self, directory: Path) -> None:
+        """Load all schema files from a directory."""
+        # Look for files ending with -schema.yaml, -schema.yml, or -schema.json
+        schema_patterns = ["*-schema.yaml", "*-schema.yml", "*-schema.json", "schemas.yaml", "schemas.yml", "schemas.json"]
+        
+        for pattern in schema_patterns:
+            for schema_file in directory.glob(pattern):
+                if schema_file.is_file():
+                    self._load_schema_file(schema_file)
 
     def _get_transpiler(self) -> SQLTranspiler:
         """Get or create SQL transpiler with schema registry."""
