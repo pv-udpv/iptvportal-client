@@ -52,6 +52,10 @@ validation = [
 codegen = [
     "sqlmodel>=0.0.14",
 ]
+analysis = [
+    "duckdb>=1.0.0",
+    "pandas>=2.0.0",
+]
 
 [project.scripts]
 iptvportal = "iptvportal.cli.__main__:main"
