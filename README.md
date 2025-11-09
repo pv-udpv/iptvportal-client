@@ -102,8 +102,7 @@ See [docs/configuration.md](docs/configuration.md) for detailed documentation.
 ### Sync Client
 
 ```python
-from iptvportal import IPTVPortalClient
-from iptvportal.jsonsql import Field
+from iptvportal import IPTVPortalClient, Field
 
 with IPTVPortalClient() as client:
     # Using Query Builder
@@ -130,8 +129,7 @@ with IPTVPortalClient() as client:
 
 ```python
 import asyncio
-from iptvportal import AsyncIPTVPortalClient
-from iptvportal.jsonsql import Q
+from iptvportal import AsyncIPTVPortalClient, Q
 
 async def main():
     async with AsyncIPTVPortalClient() as client:
@@ -441,7 +439,7 @@ Convert PostgreSQL queries to JSONSQL format using the built-in transpiler:
 ### Python API
 
 ```python
-from iptvportal.jsonsql import SQLTranspiler
+from iptvportal import SQLTranspiler
 
 transpiler = SQLTranspiler(dialect='postgres')
 
@@ -485,7 +483,7 @@ Three ways to build queries:
 ### 1. Classic Query Builder
 
 ```python
-from iptvportal.jsonsql import QueryBuilder, Q
+from iptvportal import QueryBuilder, Q
 
 qb = QueryBuilder()
 query = qb.select(
@@ -502,7 +500,7 @@ query = qb.select(
 ### 2. Field API (SQLAlchemy-style)
 
 ```python
-from iptvportal.jsonsql import Field, QueryBuilder
+from iptvportal import Field, QueryBuilder
 
 username = Field("username")
 age = Field("age")
@@ -523,7 +521,7 @@ query = qb.select(
 ### 3. Q Objects (Django-style)
 
 ```python
-from iptvportal.jsonsql import Q, QueryBuilder
+from iptvportal import Q, QueryBuilder
 
 qb = QueryBuilder()
 query = qb.select(
@@ -833,6 +831,9 @@ make dev
 uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e ".[dev]"
+
+# For container environments (GitHub Actions, Docker) where uv is unavailable
+python3 -m pip install -e ".[dev]"
 
 # Run tests
 make test

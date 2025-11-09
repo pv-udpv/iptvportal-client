@@ -22,6 +22,7 @@
     │   └── utils.py  # CLI utilities and helpers.
     ├── config
     │   ├── __init__.py  # Configuration management.
+    │   ├── logging.py  # Logging configuration integrated with Dynaconf for IPTVPortal (config package).
     │   ├── project.py  # Project configuration loader using dynaconf.
     │   └── settings.py  # Configuration management with Pydantic Settings.
     ├── core
@@ -34,7 +35,7 @@
     │   ├── __init__.py  # SQL to JSONSQL transpiler module.
     │   ├── __main__.py  # CLI interface for SQL to JSONSQL transpiler.
     │   ├── builder.py  # Query builder with Python DSL and operators.
-    │   ├── exceptions.py  # Transpiler-specific exceptions.
+    │   ├── exceptions.py  # Exceptions used in the JSONSQL module.
     │   ├── functions.py  # Function mappings for SQL to JSONSQL conversion.
     │   ├── operators.py  # Operator mappings for SQL to JSONSQL conversion.
     │   └── transpiler.py  # Main SQL to JSONSQL transpiler.
@@ -45,6 +46,7 @@
     ├── schema
     │   ├── __init__.py  # Schema system for table field definitions and SELECT * expansion.
     │   ├── codegen.py  # ORM model generation from YAML schemas.
+    │   ├── duckdb_analyzer.py  # DuckDB-based statistical analysis for schema introspection.
     │   ├── introspector.py  # Schema introspection from remote tables with automatic metadata gathering.
     │   └── table.py  # Schema system for table field definitions and SELECT * expansion.
     ├── service
@@ -56,13 +58,8 @@
     │   ├── exceptions.py  # Exceptions for sync system.
     │   └── manager.py  # Sync manager for orchestrating data synchronization operations.
     ├── __init__.py  # Modern Python client for IPTVPortal JSONSQL API.
-    ├── async_client.py  # Async client module (backward compatibility).
-    ├── auth.py  # Auth module (backward compatibility).
-    ├── cache.py  # Cache module (backward compatibility).
-    ├── client.py  # Client module (backward compatibility).
-    ├── config.py  # Config module (backward compatibility).
-    ├── exceptions.py  # Exception hierarchy for IPTVPortal client.
-    ├── introspector.py  # Introspector module (backward compatibility).
-    ├── project_conf.py  # Project configuration (backward compatibility).
+    ├── exceptions.py  # Core exception hierarchy for IPTVPortal client.
+    ├── logging_setup.py  # Logging configuration integrated with Dynaconf for IPTVPortal.
+    ├── project_conf.py  # Backward-compatible project configuration module.
     ├── py.typed
     └── validation.py  # Data-driven validation of remote field mappings using pandas.

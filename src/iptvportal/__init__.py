@@ -13,7 +13,7 @@ from iptvportal.exceptions import (
     IPTVPortalError,
     TimeoutError,
 )
-from iptvportal.jsonsql import QueryBuilder, SQLTranspiler
+from iptvportal.jsonsql import Field, Q, QueryBuilder, SQLTranspiler
 from iptvportal.models import QueryResult, SQLQueryInput
 from iptvportal.schema import SchemaRegistry, TableSchema
 from iptvportal.service import QueryService
@@ -46,6 +46,8 @@ __all__ = [
     # JSONSQL
     "QueryBuilder",
     "SQLTranspiler",
+    "Field",
+    "Q",
     # Exceptions
     "IPTVPortalError",
     "AuthenticationError",
