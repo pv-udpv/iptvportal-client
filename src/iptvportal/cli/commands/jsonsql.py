@@ -230,6 +230,23 @@ def insert_command(
     ),
     output_format: str = typer.Option("json", "--format", help="Output format: json, yaml"),
     config_file: str | None = typer.Option(None, "--config", help="Config file path"),
+    # Debug options
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug mode with detailed step-by-step logging",
+    ),
+    debug_format: str = typer.Option(
+        "text",
+        "--debug-format",
+        help="Debug output format: text, json, yaml",
+    ),
+    debug_file: str | None = typer.Option(
+        None,
+        "--debug-file",
+        help="Save debug logs to file",
+    ),
 ) -> None:
     """
     Execute INSERT query.
@@ -240,7 +257,19 @@ def insert_command(
 
         # Editor mode
         iptvportal jsonsql insert --edit
+
+        # Debug mode
+        iptvportal jsonsql insert --into package --columns "name,paid" --values '[["movie", true]]' --debug
     """
+    from iptvportal.cli.debug import DebugLogger
+
+    # Initialize debug logger
+    debug_logger = DebugLogger(
+        enabled=debug,
+        format_type=debug_format,
+        output_file=debug_file,
+    )
+
     try:
         if edit:
             # Editor mode
@@ -261,6 +290,7 @@ def insert_command(
 
             jsonsql_str = open_jsonsql_editor(template)
             params = json.loads(jsonsql_str)
+            debug_logger.log("jsonsql_input", params, "JSONSQL Input (from editor)")
         else:
             # Native mode
             if not into or not columns or not values:
@@ -278,10 +308,14 @@ def insert_command(
             if returning:
                 params["returning"] = returning
 
+            debug_logger.log("jsonsql_params", params, "JSONSQL Parameters (from CLI)")
+
         if dry_run:
             display_dry_run(params, "insert", sql=None, format_type=output_format)
         else:
-            result = execute_query("insert", params, config_file)
+            debug_logger.log("executing", "Executing INSERT query...", "Execution")
+            result = execute_query("insert", params, config_file, debug_logger=debug_logger)
+            debug_logger.log("result", result, "Query Result")
 
             if show_request:
                 display_request_and_result(
@@ -290,11 +324,26 @@ def insert_command(
             else:
                 display_result(result, output_format)
 
+        # Save debug logs to file if specified
+        debug_logger.save_to_file()
+
     except IPTVPortalError as e:
-        console.print(f"[bold red]Query failed:[/bold red] {e}")
+        debug_logger.exception(e, "IPTVPortal error occurred")
+        if debug:
+            console.print(f"\n[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
     except Exception as e:
-        console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+        debug_logger.exception(e, "Unexpected error occurred")
+        if debug:
+            console.print(f"\n[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
 
 
@@ -316,6 +365,23 @@ def update_command(
     ),
     output_format: str = typer.Option("json", "--format", help="Output format: json, yaml"),
     config_file: str | None = typer.Option(None, "--config", help="Config file path"),
+    # Debug options
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug mode with detailed step-by-step logging",
+    ),
+    debug_format: str = typer.Option(
+        "text",
+        "--debug-format",
+        help="Debug output format: text, json, yaml",
+    ),
+    debug_file: str | None = typer.Option(
+        None,
+        "--debug-file",
+        help="Save debug logs to file",
+    ),
 ) -> None:
     """
     Execute UPDATE query.
@@ -326,7 +392,19 @@ def update_command(
 
         # Editor mode
         iptvportal jsonsql update --edit
+
+        # Debug mode
+        iptvportal jsonsql update --table subscriber --set '{"disabled": true}' --where '{"eq": ["username", "test"]}' --debug
     """
+    from iptvportal.cli.debug import DebugLogger
+
+    # Initialize debug logger
+    debug_logger = DebugLogger(
+        enabled=debug,
+        format_type=debug_format,
+        output_file=debug_file,
+    )
+
     try:
         if edit:
             # Editor mode
@@ -342,6 +420,7 @@ def update_command(
 
             jsonsql_str = open_jsonsql_editor(template)
             params = json.loads(jsonsql_str)
+            debug_logger.log("jsonsql_input", params, "JSONSQL Input (from editor)")
         else:
             # Native mode
             if not table or not set_:
@@ -361,10 +440,14 @@ def update_command(
             if returning:
                 params["returning"] = returning
 
+            debug_logger.log("jsonsql_params", params, "JSONSQL Parameters (from CLI)")
+
         if dry_run:
             display_dry_run(params, "update", sql=None, format_type=output_format)
         else:
-            result = execute_query("update", params, config_file)
+            debug_logger.log("executing", "Executing UPDATE query...", "Execution")
+            result = execute_query("update", params, config_file, debug_logger=debug_logger)
+            debug_logger.log("result", result, "Query Result")
 
             if show_request:
                 display_request_and_result(
@@ -373,11 +456,26 @@ def update_command(
             else:
                 display_result(result, output_format)
 
+        # Save debug logs to file if specified
+        debug_logger.save_to_file()
+
     except IPTVPortalError as e:
-        console.print(f"[bold red]Query failed:[/bold red] {e}")
+        debug_logger.exception(e, "IPTVPortal error occurred")
+        if debug:
+            console.print(f"\n[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
     except Exception as e:
-        console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+        debug_logger.exception(e, "Unexpected error occurred")
+        if debug:
+            console.print(f"\n[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
 
 
@@ -398,6 +496,23 @@ def delete_command(
     ),
     output_format: str = typer.Option("json", "--format", help="Output format: json, yaml"),
     config_file: str | None = typer.Option(None, "--config", help="Config file path"),
+    # Debug options
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug mode with detailed step-by-step logging",
+    ),
+    debug_format: str = typer.Option(
+        "text",
+        "--debug-format",
+        help="Debug output format: text, json, yaml",
+    ),
+    debug_file: str | None = typer.Option(
+        None,
+        "--debug-file",
+        help="Save debug logs to file",
+    ),
 ) -> None:
     """
     Execute DELETE query.
@@ -408,7 +523,19 @@ def delete_command(
 
         # Editor mode
         iptvportal jsonsql delete --edit
+
+        # Debug mode
+        iptvportal jsonsql delete --from terminal --where '{"eq": ["id", 123]}' --debug
     """
+    from iptvportal.cli.debug import DebugLogger
+
+    # Initialize debug logger
+    debug_logger = DebugLogger(
+        enabled=debug,
+        format_type=debug_format,
+        output_file=debug_file,
+    )
+
     try:
         if edit:
             # Editor mode
@@ -421,6 +548,7 @@ def delete_command(
 
             jsonsql_str = open_jsonsql_editor(template)
             params = json.loads(jsonsql_str)
+            debug_logger.log("jsonsql_input", params, "JSONSQL Input (from editor)")
         else:
             # Native mode
             if not from_:
@@ -435,10 +563,14 @@ def delete_command(
             if returning:
                 params["returning"] = returning
 
+            debug_logger.log("jsonsql_params", params, "JSONSQL Parameters (from CLI)")
+
         if dry_run:
             display_dry_run(params, "delete", sql=None, format_type=output_format)
         else:
-            result = execute_query("delete", params, config_file)
+            debug_logger.log("executing", "Executing DELETE query...", "Execution")
+            result = execute_query("delete", params, config_file, debug_logger=debug_logger)
+            debug_logger.log("result", result, "Query Result")
 
             if show_request:
                 display_request_and_result(
@@ -447,9 +579,24 @@ def delete_command(
             else:
                 display_result(result, output_format)
 
+        # Save debug logs to file if specified
+        debug_logger.save_to_file()
+
     except IPTVPortalError as e:
-        console.print(f"[bold red]Query failed:[/bold red] {e}")
+        debug_logger.exception(e, "IPTVPortal error occurred")
+        if debug:
+            console.print(f"\n[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Query failed:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
     except Exception as e:
-        console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+        debug_logger.exception(e, "Unexpected error occurred")
+        if debug:
+            console.print(f"\n[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]See debug output above for details[/yellow]")
+        else:
+            console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+            console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
