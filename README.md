@@ -917,7 +917,18 @@ We welcome contributions! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) 
 - Setting up your development environment
 - Code style and testing requirements
 - Submitting pull requests
-- Working with GitHub Copilot
+- Working with GitHub Copilot and specialized agents
+
+### GitHub Copilot Agents
+
+This project uses specialized GitHub Copilot agents to automate development workflows:
+
+- **7 specialized agents** for different tasks (API integration, testing, CLI, documentation, etc.)
+- **Orchestrator agent** coordinates complex features across multiple agents
+- **Automated scaffolding** for resource managers, CLI commands, and tests
+- **Quality enforcement** through built-in validation and checks
+
+See [.github/agents/README.md](.github/agents/README.md) for complete documentation on using agents to accelerate development while maintaining code quality.
 
 ### Security
 

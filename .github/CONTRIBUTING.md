@@ -259,6 +259,40 @@ The repository includes `.github/copilot-instructions.md` with project-specific 
 - Follow the **Makefile** commands for common tasks
 - **Always update docs and tests** in the same commit as code changes
 
+### GitHub Copilot Agents
+
+The project uses specialized GitHub Copilot agents to streamline development workflows. These agents automate common tasks and ensure consistency:
+
+#### Available Agents
+
+Located in `.github/agents/`, each agent has specific expertise:
+
+1. **Orchestrator Agent** - Coordinates complex tasks and manages workflow
+2. **API Integration Agent** - Implements API endpoints and models
+3. **Query Builder Agent** - Extends query DSL and operators
+4. **Testing Agent** - Generates tests and ensures coverage
+5. **Documentation Agent** - Maintains docs and CHANGELOG
+6. **CLI Agent** - Implements CLI commands with rich formatting
+7. **Resource Manager Agent** - Scaffolds resource managers with CRUD
+
+**See [.github/agents/README.md](.github/agents/README.md) for complete documentation.**
+
+#### When to Use Agents
+
+- **Simple tasks**: Work directly with code
+- **Medium complexity**: Use 1-2 specialized agents
+- **Complex features**: Let the Orchestrator coordinate multiple agents
+
+#### Agent Workflow Example
+
+For adding a new resource manager:
+1. Orchestrator breaks down the task
+2. API Integration Agent creates models
+3. Resource Manager Agent implements CRUD
+4. CLI Agent adds commands
+5. Testing Agent generates tests
+6. Documentation Agent updates docs
+
 ### Copilot-Friendly Issues
 
 When creating issues that might be assigned to Copilot:
@@ -268,6 +302,7 @@ When creating issues that might be assigned to Copilot:
 - Provide examples of expected behavior
 - Link to relevant documentation
 - Specify which tests should be updated
+- Tag with appropriate agent if applicable (e.g., `agent:cli`, `agent:testing`)
 
 ### Documentation Sync Rule
 
