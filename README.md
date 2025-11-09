@@ -521,37 +521,108 @@ with IPTVPortalClient() as client:
 
 ## Architecture
 
+The package follows a **layered architecture** with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────┐
+│   CLI / API (Interface Layer)           │  ← Thin presentation layer
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│   Services (Business Logic)             │  ← QueryService, AuthService, etc.
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│   Core (Infrastructure)                 │  ← Client, HTTP, Cache, Schema
+└─────────────────────────────────────────┘
+```
+
+### Package Structure
+
 ```
 iptvportal-client/
 ├── src/iptvportal/
-│   ├── config.py          # Pydantic Settings
+│   ├── core/              # Infrastructure layer
+│   │   ├── client.py          # Sync IPTVPortal client
+│   │   ├── async_client.py    # Async IPTVPortal client
+│   │   ├── auth.py            # Auth managers (sync/async)
+│   │   └── cache.py           # Query result cache
+│   ├── config/            # Configuration management
+│   │   ├── settings.py        # Pydantic Settings
+│   │   └── project.py         # Dynaconf configuration
+│   ├── schema/            # Schema system
+│   │   ├── table.py           # TableSchema, FieldDefinition
+│   │   ├── registry.py        # SchemaRegistry, SchemaLoader
+│   │   ├── introspector.py    # Schema introspection
+│   │   └── codegen.py         # ORM model generation
+│   ├── jsonsql/           # JSONSQL transpiler & query builder
+│   │   ├── transpiler.py      # SQL → JSONSQL transpiler
+│   │   ├── builder.py         # Query builder DSL
+│   │   ├── operators.py       # Operator mappings
+│   │   └── functions.py       # Function handlers
+│   ├── models/            # Data Transfer Objects (DTOs)
+│   │   ├── requests.py        # Input validation models
+│   │   └── responses.py       # Output models with metadata
+│   ├── service/           # Business logic layer
+│   │   └── query.py           # QueryService (orchestration)
+│   ├── sync/              # SQLite sync system
+│   │   ├── database.py        # SQLite cache database
+│   │   ├── manager.py         # Sync orchestration
+│   │   └── exceptions.py      # Sync-specific exceptions
+│   ├── cli/               # Command-line interface
+│   │   ├── __main__.py        # CLI application entry
+│   │   └── commands/          # CLI command modules
 │   ├── exceptions.py      # Exception hierarchy
-│   ├── auth.py            # Auth managers (sync/async)
-│   ├── client.py          # Sync client
-│   ├── async_client.py    # Async client
-│   ├── sync/
-│   │   ├── __init__.py    # Sync module exports
-│   │   ├── database.py    # SQLite cache database layer
-│   │   ├── manager.py     # Sync orchestration and strategies
-│   │   └── exceptions.py  # Sync-specific exceptions
-│   ├── query/
-│   │   ├── builder.py     # Query builder
-│   │   ├── field.py       # Field API
-│   │   └── q_objects.py   # Q Objects
-│   ├── transpiler/
-│   │   ├── transpiler.py  # SQL to JSONSQL transpiler
-│   │   ├── operators.py   # Operator mappings
-│   │   ├── functions.py   # Function handlers
-│   │   └── __main__.py    # CLI interface
-│   ├── schema.py          # Table schema management
-│   └── cli/
-│       ├── __main__.py    # CLI application
-│       └── commands/
-│           ├── sync.py    # Sync cache management commands
-│           └── ...        # Other CLI commands
+│   └── validation.py      # Pandas-based validation
 └── docs/
     ├── cli.md             # Comprehensive CLI guide
     └── jsonsql.md         # JSONSQL specification
+```
+
+### Using the Service Layer (New API)
+
+```python
+from iptvportal import (
+    IPTVPortalClient,
+    IPTVPortalSettings,
+    QueryService,
+    SQLQueryInput,
+)
+
+# Setup
+settings = IPTVPortalSettings()
+client = IPTVPortalClient(settings)
+service = QueryService(client)
+
+with client:
+    # Execute SQL with full orchestration
+    query_input = SQLQueryInput(
+        sql="SELECT * FROM subscriber LIMIT 10",
+        use_schema_mapping=True,
+        use_cache=True,
+    )
+    result = service.execute_sql(query_input)
+    
+    print(f"Rows: {result.row_count}")
+    print(f"Time: {result.execution_time_ms:.2f}ms")
+    print(f"Data: {result.data}")
+```
+
+See `examples/service_layer_example.py` for more details.
+
+### Direct Client API (Still Supported)
+
+```python
+from iptvportal import IPTVPortalClient
+
+with IPTVPortalClient() as client:
+    # Using Query Builder
+    query = client.query.select(
+        data=["id", "username"],
+        from_="subscriber",
+        limit=10
+    )
+    result = client.execute(query)
 ```
 
 ## Architecture diagrams and flows
