@@ -65,7 +65,7 @@ class RemoteFieldValidator:
                 "remote_column": str,  # Имя remote колонки
             }
         """
-        from .transpiler import SQLTranspiler
+        from .jsonsql import SQLTranspiler
 
         transpiler = SQLTranspiler()
 

@@ -900,7 +900,7 @@ def generate_models_command(
         console.print(f"\n[cyan]Generating {format} models from: {schema_file}[/cyan]\n")
 
         # Generate models
-        from iptvportal.codegen import ORMGenerator
+        from iptvportal.schema.codegen import ORMGenerator
 
         results = ORMGenerator.load_and_generate(
             schema_path=schema_file,

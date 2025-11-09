@@ -405,7 +405,7 @@ Convert PostgreSQL queries to JSONSQL format using the built-in transpiler:
 ### Python API
 
 ```python
-from iptvportal.transpiler import SQLTranspiler
+from iptvportal.jsonsql import SQLTranspiler
 
 transpiler = SQLTranspiler(dialect='postgres')
 
@@ -638,7 +638,7 @@ flowchart LR
   subgraph Core["Core Library"]
     AUTH["auth.py\n(session mgmt)"]
     CLIENT["client.py / async_client.py\n(httpx JSON-RPC)"]
-    TRANS["transpiler/\n(SQL → JSONSQL)"]
+    TRANS["jsonsql/\n(SQL → JSONSQL)"]
     SCHEMA["schema.py\n(mapping, validation)"]
     SYNC["sync/\n(SQLite cache: database.py)"]
   end

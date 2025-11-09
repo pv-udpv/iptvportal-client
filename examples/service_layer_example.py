@@ -125,31 +125,16 @@ def traditional_api_example():
         print(f"Result: {result}")
 
 
-# Comparison: Old vs New API
-def api_comparison():
-    """Compare old client-based API vs new service-based API."""
+# Service Layer API Example
+def service_layer_example():
+    """Example using the new service-based API."""
     
     settings = IPTVPortalSettings()
     client = IPTVPortalClient(settings)
     
     with client:
-        # OLD WAY: Direct client usage (still works!)
-        print("OLD API (still supported):")
-        print("-" * 40)
-        from iptvportal.jsonsql import SQLTranspiler
-        
-        transpiler = SQLTranspiler()
-        jsonsql = transpiler.transpile("SELECT * FROM subscriber LIMIT 5")
-        result = client.execute({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "select",
-            "params": jsonsql
-        })
-        print(f"Rows: {len(result)}")
-        
-        # NEW WAY: Service layer (recommended!)
-        print("\nNEW API (recommended):")
+        # Service layer (recommended!)
+        print("Service-based API:")
         print("-" * 40)
         service = QueryService(client)
         
@@ -176,6 +161,6 @@ if __name__ == "__main__":
     # Uncomment to run:
     # main()
     # traditional_api_example()
-    # api_comparison()
+    # service_layer_example()
     
     print("Examples defined. Uncomment function calls to run.")
