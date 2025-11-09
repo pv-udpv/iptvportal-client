@@ -44,6 +44,19 @@ iptvportal jsonsql sql -q "SELECT * FROM media LIMIT 5" --no-map-schema
 # Native JSONSQL
 iptvportal jsonsql select --from media --limit 5
 iptvportal jsonsql select --from media --limit 5 --no-map-schema
+
+# Schema management
+iptvportal schema list
+iptvportal schema show media
+iptvportal schema introspect subscriber
+
+# Cache management
+iptvportal cache status
+iptvportal cache clear
+
+# Utilities
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
+iptvportal jsonsql utils validate '{"from": "subscriber", "data": ["*"]}'
 ```
 ### Configuration
 
@@ -78,13 +91,13 @@ The client automatically loads configuration from environment variables - no cod
 View configuration:
 ```bash
 # Show all settings
-iptvportal config conf
+iptvportal config show
 
 # Show specific section
-iptvportal config conf sync.subscriber
+iptvportal config show sync.subscriber
 
 # Show as JSON
-iptvportal config conf --format json
+iptvportal config show --format json
 ```
 
 The configuration is organized hierarchically:
@@ -154,7 +167,7 @@ asyncio.run(main())
 
 ## CLI Usage
 
-The package includes a powerful CLI with two subapps for working with IPTVPortal API:
+The package includes a powerful service-oriented CLI with auto-discovery of service modules:
 
 ```bash
 # Install with CLI support
@@ -176,6 +189,15 @@ iptvportal jsonsql select --edit  # Editor mode
 
 # Transpile SQL to JSONSQL (without execution)
 iptvportal jsonsql transpile "SELECT * FROM subscriber"
+# View available services
+iptvportal --help
+
+# Service structure:
+# - config: Global configuration management
+# - cache: Query result cache management
+# - schema: Table schema management
+# - jsonsql: API operations (auth, SQL, JSONSQL, utilities)
+# - sync: SQLite sync cache management
 ```
 
 ### CLI Commands
@@ -332,7 +354,7 @@ iptvportal jsonsql delete \
   --returning id
 ```
 
-#### Transpile Command
+#### Transpile and Utility Commands
 ```bash
 # Transpile SQL to JSONSQL
 iptvportal jsonsql transpile "SELECT id, name FROM subscriber WHERE disabled = false"
@@ -342,6 +364,19 @@ iptvportal jsonsql transpile "SELECT * FROM subscriber" --format yaml
 
 # From file
 iptvportal jsonsql transpile --file query.sql
+iptvportal jsonsql utils transpile "SELECT id, name FROM subscriber WHERE disabled = false"
+
+# Output as YAML
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber" --format yaml
+
+# From file
+iptvportal jsonsql utils transpile --file query.sql
+
+# Validate JSONSQL syntax
+iptvportal jsonsql utils validate '{"from": "subscriber", "data": ["*"]}'
+
+# Pretty-print JSONSQL
+iptvportal jsonsql utils format '{"from":"subscriber","data":["*"]}'
 ```
 
 #### Schema Management Commands
@@ -403,31 +438,60 @@ iptvportal sync vacuum --analyze
 
 #### Configuration Commands
 ```bash
-# Show current configuration
+# Global configuration management
 iptvportal config show
-
-# Initialize configuration interactively
 iptvportal config init
-
-# Set specific values
 iptvportal config set domain operator
-iptvportal config set timeout 60
-
-# Get specific value
 iptvportal config get domain
+
+# Advanced configuration (dynaconf integration)
+iptvportal config conf                    # Show all settings
+iptvportal config conf sync.subscriber    # Show specific section
+iptvportal config conf --format json      # Output as JSON
+
+# Service-specific configuration
+iptvportal cache config show              # Cache settings
+iptvportal cache config get ttl           # Get cache TTL
+iptvportal schema config show             # Schema settings
+iptvportal jsonsql config show            # API settings
 ```
+
+#### Service-Oriented CLI Architecture
+
+The CLI uses a service-oriented architecture with auto-discovery:
+
+**Available Services:**
+- **config**: Global configuration management
+- **cache**: Query result cache management (status, clear, config)
+- **schema**: Table schema management (list, show, introspect, config)
+- **jsonsql**: API operations (auth, sql, select/insert/update/delete, utils, config)
+- **sync**: SQLite sync cache management (init, register, run, status)
+
+**Hierarchical Configuration:**
+Each service has its own `config` subcommand for service-specific settings:
+```bash
+iptvportal cache config show      # Cache-specific config
+iptvportal schema config show     # Schema-specific config
+iptvportal jsonsql config show    # JSONSQL/API config
+```
+
+Configuration precedence (highest to lowest):
+1. Runtime flags: `--timeout 60`
+2. Service config: `iptvportal cache config set timeout 60`
+3. Global config: `iptvportal config set timeout 30`
+4. Defaults from settings.yaml
 
 #### Output Formats
 ```bash
 # Table format (default for SELECT)
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5"
 
 # JSON format
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" --format json
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f json
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --format json
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" -f json
 
 # YAML format
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5" -f yaml
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" -f yaml
 ```
 
 ## SQL to JSONSQL Transpiler

@@ -1,4 +1,4 @@
-"""Main CLI entry point."""
+"""Main CLI entry point with auto-discovery."""
 
 import contextlib
 
@@ -9,6 +9,7 @@ from iptvportal.cli.commands.cache import cache_app
 from iptvportal.cli.commands.config import config_app
 from iptvportal.cli.commands.jsonsql import jsonsql_app
 from iptvportal.cli.commands.sync import app as sync_app
+from iptvportal.cli.discovery import discover_cli_modules
 
 console = Console()
 
@@ -21,6 +22,14 @@ app = typer.Typer(
 # Register infrastructure commands (top-level)
 app.add_typer(config_app, name="config")
 app.add_typer(cache_app, name="cache")
+# Auto-discover and register all service CLI modules
+discovered = discover_cli_modules("iptvportal", verbose=False)
+for service_name, service_app in discovered.items():
+    app.add_typer(service_app, name=service_name)
+
+# Keep sync subapp from old structure for backwards compatibility
+from iptvportal.cli.commands.sync import app as sync_app
+
 app.add_typer(sync_app, name="sync")
 
 # Register API operations under jsonsql hierarchy

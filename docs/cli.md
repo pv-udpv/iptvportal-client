@@ -19,6 +19,8 @@ The IPTVPortal CLI organizes commands into two main categories:
 - `iptvportal cache` - Cache utilities
 
 All commands that interact with the IPTVPortal API are grouped under the `jsonsql` namespace for logical organization.
+> **Note**: The CLI now uses a service-oriented architecture with auto-discovery.  
+> See [CLI Architecture](cli-architecture.md) for details on the service design.
 
 ## Installation
 
@@ -51,6 +53,18 @@ iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --no-map-schema  # 
 iptvportal jsonsql select --from subscriber --limit 5                # mapped
 iptvportal jsonsql select --from subscriber --limit 5 --no-map-schema # disable mapping
 ```
+
+## Service Structure
+
+The CLI is organized into services, each handling a specific domain:
+
+- **config**: Global configuration management
+- **cache**: Query result cache management
+- **schema**: Table schema management
+- **jsonsql**: API operations (auth, SQL, JSONSQL, utilities)
+- **sync**: SQLite sync cache management
+
+Each service has its own commands and optional `config` subcommand for service-specific settings.
 
 ## Configuration
 
@@ -92,6 +106,24 @@ iptvportal config get domain
 iptvportal config get timeout
 ```
 
+### Service-Specific Configuration
+
+Each service can have its own configuration:
+
+```bash
+# Cache configuration
+iptvportal cache config show
+iptvportal cache config get ttl
+
+# Schema configuration
+iptvportal schema config show
+iptvportal schema config get file
+
+# JSONSQL/API configuration
+iptvportal jsonsql config show
+iptvportal jsonsql config get timeout
+```
+
 ## Authentication
 
 ### Check Authentication Status
@@ -114,12 +146,12 @@ iptvportal jsonsql auth --renew
 
 ## Query Commands
 
-The CLI provides two separate subapps for queries:
+The CLI provides SQL and JSONSQL query capabilities under the `jsonsql` service:
 
-1. **`iptvportal sql`** - Execute SQL queries (auto-transpiled to JSONSQL)
-2. **`iptvportal jsonsql`** - Execute native JSONSQL queries with subcommands
+1. **`iptvportal jsonsql sql`** - Execute SQL queries (auto-transpiled to JSONSQL)
+2. **`iptvportal jsonsql select/insert/update/delete`** - Execute native JSONSQL queries
 
-### SQL Subapp
+### SQL Subcommand
 
 Execute SQL queries that are automatically transpiled to JSONSQL.
 
@@ -445,6 +477,13 @@ iptvportal jsonsql transpile "SELECT id, username FROM subscriber WHERE disabled
 
 # Complex query with JOIN
 iptvportal jsonsql transpile "
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
+
+# With WHERE clause
+iptvportal jsonsql utils transpile "SELECT id, username FROM subscriber WHERE disabled = false"
+
+# Complex query with JOIN
+iptvportal jsonsql utils transpile "
   SELECT s.username, t.mac_addr 
   FROM subscriber s 
   JOIN terminal t ON s.id = t.subscriber_id 
@@ -460,6 +499,10 @@ iptvportal jsonsql transpile "SELECT * FROM subscriber"
 
 # YAML format
 iptvportal jsonsql transpile "SELECT * FROM subscriber" --format yaml
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
+
+# YAML format
+iptvportal jsonsql utils transpile "SELECT * FROM subscriber" --format yaml
 ```
 
 ### From File
@@ -470,6 +513,10 @@ iptvportal jsonsql transpile --file query.sql
 
 # With specific format
 iptvportal jsonsql transpile --file query.sql --format yaml
+iptvportal jsonsql utils transpile --file query.sql
+
+# With specific format
+iptvportal jsonsql utils transpile --file query.sql --format yaml
 ```
 
 ## Output Formats
@@ -1002,6 +1049,7 @@ iptvportal jsonsql sql --edit
 # Or break into steps with dry-run
 iptvportal jsonsql sql -q "YOUR_COMPLEX_QUERY" --dry-run
 iptvportal jsonsql transpile "YOUR_COMPLEX_QUERY"  # Check JSONSQL
+iptvportal jsonsql utils transpile "YOUR_COMPLEX_QUERY"  # Check JSONSQL
 iptvportal jsonsql sql -q "YOUR_COMPLEX_QUERY"      # Execute
 ```
 
@@ -1045,6 +1093,7 @@ iptvportal jsonsql sql -q "YOUR_QUERY" --dry-run
 
 # Or transpile separately
 iptvportal jsonsql transpile "YOUR_QUERY"
+iptvportal jsonsql utils transpile "YOUR_QUERY"
 ```
 
 ### Connection Timeout
@@ -1098,6 +1147,7 @@ iptvportal config get <key>         # Get value
 # Authentication
 iptvportal jsonsql auth                     # Check status
 iptvportal jsonsql auth --renew            # Force re-auth
+iptvportal auth --renew            # Force re-auth
 
 # SQL Queries
 iptvportal jsonsql sql -q "SELECT ..."                    # Execute SQL
@@ -1117,6 +1167,9 @@ iptvportal jsonsql delete --from table --where ...    # Delete
 iptvportal jsonsql transpile "SELECT ..."              # SQL to JSONSQL
 iptvportal jsonsql transpile --file query.sql         # From file
 iptvportal jsonsql transpile "SELECT ..." -f yaml     # YAML output
+iptvportal jsonsql utils transpile "SELECT ..."              # SQL to JSONSQL
+iptvportal jsonsql utils transpile --file query.sql         # From file
+iptvportal jsonsql utils transpile "SELECT ..." -f yaml     # YAML output
 
 # Schema Management
 iptvportal jsonsql schema introspect tv_channel                    # Analyze table

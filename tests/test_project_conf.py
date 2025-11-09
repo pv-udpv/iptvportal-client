@@ -247,16 +247,48 @@ class TestConfigOverlay:
 class TestCLIConfigCommand:
     """Test CLI config commands (integration-style tests)."""
 
-    def test_conf_command_imports(self):
-        """Test that conf command can import required modules."""
-        from iptvportal.cli.commands.config import conf_command
+    def test_show_command_imports(self):
+        """Test that show command can import required modules."""
+        from iptvportal.cli.commands.config import show_command
 
-        assert conf_command is not None
+        assert show_command is not None
 
-    def test_config_app_has_conf_command(self):
-        """Test that config_app has the new conf command."""
+    def test_config_app_has_show_command(self):
+        """Test that config_app has the show command."""
         from iptvportal.cli.commands.config import config_app
 
-        # Check that conf command is registered
+        # Check that show command is registered
         command_names = [cmd.name for cmd in config_app.registered_commands]
-        assert "conf" in command_names
+        assert "show" in command_names
+
+    def test_config_app_no_conf_command(self):
+        """Test that config_app does not have the deprecated conf command."""
+        from iptvportal.cli.commands.config import config_app
+
+        # Check that conf command is NOT registered
+        command_names = [cmd.name for cmd in config_app.registered_commands]
+        assert "conf" not in command_names
+
+    def test_config_app_has_generate_command(self):
+        """Test that config_app has the generate command (renamed from inspect)."""
+        from iptvportal.cli.commands.config import config_app
+
+        # Check that generate command is registered
+        command_names = [cmd.name for cmd in config_app.registered_commands]
+        assert "generate" in command_names
+
+    def test_config_app_no_inspect_command(self):
+        """Test that config_app does not have the old inspect command."""
+        from iptvportal.cli.commands.config import config_app
+
+        # Check that inspect command is NOT registered
+        command_names = [cmd.name for cmd in config_app.registered_commands]
+        assert "inspect" not in command_names
+
+    def test_config_app_has_validate_command(self):
+        """Test that config_app has the new validate command."""
+        from iptvportal.cli.commands.config import config_app
+
+        # Check that validate command is registered
+        command_names = [cmd.name for cmd in config_app.registered_commands]
+        assert "validate" in command_names
