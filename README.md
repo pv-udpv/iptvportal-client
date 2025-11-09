@@ -103,7 +103,7 @@ See [docs/configuration.md](docs/configuration.md) for detailed documentation.
 
 ```python
 from iptvportal import IPTVPortalClient
-from iptvportal.query import Field
+from iptvportal.jsonsql import Field
 
 with IPTVPortalClient() as client:
     # Using Query Builder
@@ -131,7 +131,7 @@ with IPTVPortalClient() as client:
 ```python
 import asyncio
 from iptvportal import AsyncIPTVPortalClient
-from iptvportal.query import Q
+from iptvportal.jsonsql import Q
 
 async def main():
     async with AsyncIPTVPortalClient() as client:
@@ -449,7 +449,7 @@ Three ways to build queries:
 ### 1. Classic Query Builder
 
 ```python
-from iptvportal.query import QueryBuilder, Q
+from iptvportal.jsonsql import QueryBuilder, Q
 
 qb = QueryBuilder()
 query = qb.select(
@@ -466,7 +466,7 @@ query = qb.select(
 ### 2. Field API (SQLAlchemy-style)
 
 ```python
-from iptvportal.query import Field, QueryBuilder
+from iptvportal.jsonsql import Field, QueryBuilder
 
 username = Field("username")
 age = Field("age")
@@ -487,7 +487,7 @@ query = qb.select(
 ### 3. Q Objects (Django-style)
 
 ```python
-from iptvportal.query import Q, QueryBuilder
+from iptvportal.jsonsql import Q, QueryBuilder
 
 qb = QueryBuilder()
 query = qb.select(
