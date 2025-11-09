@@ -1,3 +1,7 @@
+# PROJECT STRUCTURE 
+> AUTOGEN ON COMMIT, VIA PRECOMMIT HOOKS
+
+```sh
 /home/runner/work/iptvportal-client/iptvportal-client/src/iptvportal/
 └── iptvportal
     ├── cli
@@ -63,3 +67,4 @@
     ├── project_conf.py  # Backward-compatible project configuration module.
     ├── py.typed
     └── validation.py  # Data-driven validation of remote field mappings using pandas.
+```
