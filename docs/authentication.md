@@ -74,10 +74,10 @@ Using the CLI:
 
 ```bash
 # Check authentication status
-iptvportal auth
+iptvportal jsonsql auth
 
 # Force re-authentication (clear cache and get new session)
-iptvportal auth --renew
+iptvportal jsonsql auth --renew
 ```
 
 ## Configuration Options
@@ -192,7 +192,7 @@ finally:
 ### CLI Usage
 
 from iptvportal import IPTVPortalClient, IPTVPortalSettings
-iptvportal auth
+iptvportal jsonsql auth
 
 # Output shows:
 # - Domain and username
@@ -201,10 +201,10 @@ iptvportal auth
 # - Connection status
 
 # Force re-authentication (ignores cached session)
-iptvportal auth --renew
+iptvportal jsonsql auth --renew
 
 # Use authentication with queries
-iptvportal sql -q "SELECT * FROM subscriber LIMIT 5"
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5"
 iptvportal jsonsql select --from subscriber --limit 5
 ```
 
@@ -355,7 +355,7 @@ export IPTVPORTAL_USERNAME=new_username
 export IPTVPORTAL_PASSWORD=new_password
 
 # Force re-authentication
-iptvportal auth --renew
+iptvportal jsonsql auth --renew
 ```
 
 ### 4. Use Read-Only Accounts When Possible
@@ -396,7 +396,7 @@ IPTVPORTAL_LOG_LEVEL=INFO
 
 3. Try authenticating via CLI:
    ```bash
-   iptvportal auth
+   iptvportal jsonsql auth
    ```
 
 ### Issue: "Connection failed" or "Request timeout"
