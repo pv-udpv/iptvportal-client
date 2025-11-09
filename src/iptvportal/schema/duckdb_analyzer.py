@@ -70,7 +70,7 @@ class DuckDBAnalyzer:
             conn = self.duckdb.connect(":memory:")
 
             # Convert sample data to DataFrame first, then to DuckDB table
-            df = pd.DataFrame(sample_data, columns=field_names)
+            df = pd.DataFrame(sample_data, columns=field_names)  # noqa: F841 - DuckDB accesses df by name
             conn.execute("CREATE TABLE sample_data AS SELECT * FROM df")
 
             # Perform analysis
@@ -159,7 +159,7 @@ class DuckDBAnalyzer:
             
             conn = self.duckdb.connect(":memory:")
             # Create DataFrame with default column names
-            df = pd.DataFrame(sample_data)
+            df = pd.DataFrame(sample_data)  # noqa: F841 - DuckDB accesses df by name
             conn.execute("CREATE TABLE sample AS SELECT * FROM df")
             describe = conn.execute("DESCRIBE sample").fetchall()
             conn.close()
