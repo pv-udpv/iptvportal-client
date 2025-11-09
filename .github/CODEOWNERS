@@ -1,0 +1,44 @@
+# CODEOWNERS file for iptvportal-client
+# This file defines individuals or teams responsible for code in the repository.
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @pv-udpv
+
+# CLI and commands
+/src/iptvportal/cli/ @pv-udpv
+
+# Core client and API interaction
+/src/iptvportal/client.py @pv-udpv
+/src/iptvportal/async_client.py @pv-udpv
+/src/iptvportal/auth.py @pv-udpv
+
+# Transpiler (SQL to JSONSQL)
+/src/iptvportal/transpiler/ @pv-udpv
+
+# Sync and cache system
+/src/iptvportal/sync/ @pv-udpv
+/src/iptvportal/cache.py @pv-udpv
+
+# Schema definitions
+/src/iptvportal/schema.py @pv-udpv
+/config/schemas/ @pv-udpv
+
+# Configuration and settings
+/config/ @pv-udpv
+/src/iptvportal/settings.py @pv-udpv
+
+# Tests
+/tests/ @pv-udpv
+
+# Documentation
+/docs/ @pv-udpv
+*.md @pv-udpv
+
+# GitHub configuration and workflows
+/.github/ @pv-udpv
+
+# Build and dependency management
+/pyproject.toml @pv-udpv
+/uv.lock @pv-udpv
+/Makefile @pv-udpv
