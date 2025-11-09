@@ -78,13 +78,13 @@ The client automatically loads configuration from environment variables - no cod
 View configuration:
 ```bash
 # Show all settings
-iptvportal config conf
+iptvportal config show
 
 # Show specific section
-iptvportal config conf sync.subscriber
+iptvportal config show sync.subscriber
 
 # Show as JSON
-iptvportal config conf --format json
+iptvportal config show --format json
 ```
 
 The configuration is organized hierarchically:

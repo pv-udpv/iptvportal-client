@@ -1,13 +1,13 @@
-# Config Inspect Command
+# Configuration Generation (`config generate`)
 
 ## Overview
 
-The `iptvportal config inspect` command is a code introspection tool that scans Python modules for settings classes (Pydantic BaseSettings, dynaconf configurations) and generates corresponding YAML configuration files.
+The `iptvportal config generate` command (formerly `inspect`) is a code introspection tool that scans Python modules for settings classes (Pydantic BaseSettings, dynaconf configurations) and generates corresponding YAML configuration files. It can also generate example configuration templates.
 
 ## Usage
 
 ```bash
-iptvportal config inspect [OPTIONS]
+iptvportal config generate [OPTIONS]
 ```
 
 ## Options
@@ -20,6 +20,7 @@ iptvportal config inspect [OPTIONS]
   - `per-module`: Generate one file per Python module
   - `file-per-module`: Generate one file per settings class
 - `--output TEXT, -o TEXT`: Output directory for generated configuration files (default: `config/generated`)
+- `--template TEXT`: Generate template: env, yaml (overrides code scanning)
 - `--dry-run`: Show what would be generated without creating files
 
 ## Examples
@@ -29,7 +30,7 @@ iptvportal config inspect [OPTIONS]
 Scan the `src` directory and generate one file per settings class:
 
 ```bash
-iptvportal config inspect
+iptvportal config generate
 ```
 
 Output:
@@ -60,7 +61,7 @@ Found 2 settings class(es):
 Scan a specific module directory:
 
 ```bash
-iptvportal config inspect --scope src/iptvportal/sync --output config/sync
+iptvportal config generate --scope src/iptvportal/sync --output config/sync
 ```
 
 ### Generate Single File
@@ -68,7 +69,7 @@ iptvportal config inspect --scope src/iptvportal/sync --output config/sync
 Generate a single settings.yaml with all discovered settings:
 
 ```bash
-iptvportal config inspect --strategy single --output config
+iptvportal config generate --strategy single --output config
 ```
 
 ### Ignore Test Files
@@ -76,7 +77,7 @@ iptvportal config inspect --strategy single --output config
 Explicitly ignore test files and specific patterns:
 
 ```bash
-iptvportal config inspect --ignore "test_*" --ignore "*_test.py" --ignore "conftest.py"
+iptvportal config generate --ignore "test_*" --ignore "*_test.py" --ignore "conftest.py"
 ```
 
 ### Settings Context
@@ -84,7 +85,7 @@ iptvportal config inspect --ignore "test_*" --ignore "*_test.py" --ignore "conft
 Attach discovered settings to a specific path in the settings tree:
 
 ```bash
-iptvportal config inspect --settings-context sync.advanced
+iptvportal config generate --settings-context sync.advanced
 ```
 
 This will nest all generated settings under `sync.advanced` in the YAML:
@@ -102,7 +103,7 @@ sync:
 Preview what would be generated without creating files:
 
 ```bash
-iptvportal config inspect --dry-run
+iptvportal config generate --dry-run
 ```
 
 Output:
@@ -135,7 +136,7 @@ Would generate:
 One YAML file per settings class:
 
 ```bash
-iptvportal config inspect --strategy file-per-module
+iptvportal config generate --strategy file-per-module
 ```
 
 Output:
@@ -150,7 +151,7 @@ config/generated/
 One YAML file per Python module (all classes from the same module in one file):
 
 ```bash
-iptvportal config inspect --strategy per-module
+iptvportal config generate --strategy per-module
 ```
 
 Output:
@@ -164,7 +165,7 @@ config/generated/
 One settings.yaml with all discovered settings:
 
 ```bash
-iptvportal config inspect --strategy single
+iptvportal config generate --strategy single
 ```
 
 Output:
@@ -213,7 +214,7 @@ log_responses: false
 Generate configuration files from existing settings classes:
 
 ```bash
-iptvportal config inspect --output config/schemas
+iptvportal config generate --output config/schemas
 ```
 
 ### 2. Documentation
@@ -221,7 +222,7 @@ iptvportal config inspect --output config/schemas
 Generate YAML examples for documentation:
 
 ```bash
-iptvportal config inspect --strategy single --dry-run > docs/config-reference.txt
+iptvportal config generate --strategy single --dry-run > docs/config-reference.txt
 ```
 
 ### 3. Migration
@@ -229,7 +230,7 @@ iptvportal config inspect --strategy single --dry-run > docs/config-reference.tx
 Generate configuration files when migrating from hardcoded settings to file-based config:
 
 ```bash
-iptvportal config inspect --scope src/old_module --output config/migrated
+iptvportal config generate --scope src/old_module --output config/migrated
 ```
 
 ### 4. Module-Specific Config
@@ -237,7 +238,7 @@ iptvportal config inspect --scope src/old_module --output config/migrated
 Generate configuration for a specific module:
 
 ```bash
-iptvportal config inspect --scope src/iptvportal/sync --settings-context sync
+iptvportal config generate --scope src/iptvportal/sync --settings-context sync
 ```
 
 ## Tips
@@ -257,7 +258,7 @@ Generated files can be used with the dynaconf-based configuration system:
 
 1. Generate configuration files:
    ```bash
-   iptvportal config inspect --output config/schemas
+   iptvportal config generate --output config/schemas
    ```
 
 2. Review and adjust the generated files
@@ -272,8 +273,34 @@ Generated files can be used with the dynaconf-based configuration system:
 
 4. View loaded configuration:
    ```bash
-   iptvportal config conf --files
+   iptvportal config show --files
    ```
+
+## Template Generation
+
+Generate example configuration templates without code scanning:
+
+### Generate .env Template
+
+```bash
+# Generate .env example in current directory
+iptvportal config generate --template env
+
+# Custom output location
+iptvportal config generate --template env --output .env.production
+```
+
+### Generate YAML Template
+
+```bash
+# Generate YAML example
+iptvportal config generate --template yaml
+
+# Custom output location
+iptvportal config generate --template yaml --output config/custom.yaml
+```
+
+These templates provide starting points for configuration without needing to scan code.
 
 ## Troubleshooting
 
@@ -296,6 +323,6 @@ If generated YAML has issues:
 
 ## See Also
 
-- `iptvportal config conf` - View current configuration
-- `iptvportal config show` - Show legacy configuration
+- `iptvportal config show` - View current configuration
+- `iptvportal config validate` - Validate configuration
 - [Configuration Documentation](configuration.md)
