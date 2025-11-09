@@ -1,4 +1,19 @@
-"""Transpiler-specific exceptions."""
+# ruff: noqa: I001
+"""Exceptions used in the JSONSQL module.
+
+Includes transpiler-specific errors and re-exports selected core
+exceptions for backwards compatibility in tests and examples.
+"""
+
+from iptvportal.exceptions import AuthenticationError  # re-export for compat
+
+
+__all__ = [
+    "AuthenticationError",
+    "TranspilerError",
+    "UnsupportedFeatureError",
+    "ParseError",
+]
 
 
 class TranspilerError(Exception):

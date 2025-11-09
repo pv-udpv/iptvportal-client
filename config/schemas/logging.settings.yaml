@@ -1,0 +1,49 @@
+logging:
+  # Root level configuration
+  level: INFO                    # Default log level
+  json: false                    # Use JSON formatting for file output if enabled
+  library_level: WARNING         # default level for third-party libraries
+
+  # Console output
+  handlers:
+    console:
+      enabled: true
+      level: INFO
+      colorize: true
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    # File output (disabled by default)
+    file:
+      enabled: false
+      path: "logs/iptvportal.log"
+      level: DEBUG
+      max_bytes: 52428800          # 50MB
+      backup_count: 5
+      json_format: false
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
+
+  # Per-module logger configuration (dot notation recommended)
+  loggers:
+    "iptvportal":
+      level: INFO
+      propagate: false
+
+    "iptvportal.client":
+      level: INFO
+      propagate: true
+
+    "iptvportal.query.builder":
+      level: DEBUG
+      propagate: true
+
+    "iptvportal.transport.http":
+      level: WARNING
+      propagate: true
+
+    "httpx":
+      level: WARNING
+      propagate: false
+
+    "sqlglot":
+      level: ERROR
+      propagate: false

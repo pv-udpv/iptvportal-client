@@ -155,7 +155,11 @@ def sql_main(
 
             # Execute query with optional schema mapping
             query_result = execute_query(
-                method, result, config_file, use_schema_mapping=map_schema, debug_logger=debug_logger
+                method,
+                result,
+                config_file,
+                use_schema_mapping=map_schema,
+                debug_logger=debug_logger,
             )
 
             debug_logger.log("result", query_result, "Query Result")

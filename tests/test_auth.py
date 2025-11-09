@@ -8,8 +8,8 @@ import orjson
 import pytest
 from pydantic import SecretStr
 
-from iptvportal.core.auth import AsyncAuthManager, AuthManager
 from iptvportal.config.settings import IPTVPortalSettings
+from iptvportal.core.auth import AsyncAuthManager, AuthManager
 from iptvportal.exceptions import AuthenticationError
 
 
@@ -231,7 +231,6 @@ class TestAsyncAuthManager:
         mock_client.post = Mock(return_value=mock_response)
 
         # Mock async context
-        import asyncio
 
         async def mock_post(*args, **kwargs):
             return mock_response

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class QueryResult(BaseModel):
     """Query execution result.
-    
+
     Attributes:
         data: Query result data (list of dicts or single dict)
         sql: Original SQL query (if transpiled)
@@ -17,7 +17,7 @@ class QueryResult(BaseModel):
         execution_time_ms: Execution time in milliseconds
         row_count: Number of rows in result
     """
-    
+
     data: list[dict[str, Any]] | dict[str, Any]
     sql: str | None = None
     jsonsql: dict | None = None
@@ -25,7 +25,7 @@ class QueryResult(BaseModel):
     table: str | None = None
     execution_time_ms: float | None = None
     row_count: int = Field(default=0, ge=0)
-    
+
     def model_post_init(self, __context: Any) -> None:
         """Calculate row count after initialization."""
         if isinstance(self.data, list):
@@ -38,14 +38,14 @@ class QueryResult(BaseModel):
 
 class ExecutionMetadata(BaseModel):
     """Metadata about query execution.
-    
+
     Attributes:
         cached: Whether result came from cache
         cache_key: Cache key used (if cached)
         request_id: JSON-RPC request ID
         timestamp: Execution timestamp
     """
-    
+
     cached: bool = False
     cache_key: str | None = None
     request_id: int | None = None

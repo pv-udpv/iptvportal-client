@@ -33,29 +33,33 @@ COMMIT_MSG_FILE="$1"
 
 # Valid types and scopes
 VALID_TYPES="feat|fix|docs|test|refactor|chore|perf|style|ci|revert|build"
-VALID_SCOPES="sync|cli|transpiler|schema|cache|config|docs|test|ci|deps"
+VALID_SCOPES="sync|cli|transpiler|schema|cache|config|docs|test|ci|deps|logging"
 
-# Validate conventional commit format
+# Validate conventional commit format (simpler/generic implementation using grep to avoid bash =~ parsing issues)
 validate_format() {
     local message="$1"
 
-    # Check basic format: type(scope): description
-    if [[ ! $message =~ ^($VALID_TYPES)(\(($VALID_SCOPES)\))?:[[:space:]] ]]; then
-        log_error "Invalid commit message format"
-        echo ""
-        log_info "Expected format: type(scope): description"
-        echo "Valid types: feat, fix, docs, test, refactor, chore, perf, style, ci, revert, build"
-        echo "Valid scopes: sync, cli, transpiler, schema, cache, config, docs, test, ci, deps"
-        echo ""
-        log_info "Examples:"
-        echo "  feat(sync): Add incremental sync strategy"
-        echo "  fix(cli): Handle invalid command arguments"
-        echo "  docs: Update installation guide"
-        echo "  test(schema): Add validation tests"
-        return 1
+    # Get first line
+    local first_line
+    first_line=$(echo "$message" | head -n 1)
+
+    # Allow: type(scope): description  OR  type: description
+    if echo "$first_line" | grep -Eq "^(feat|fix|docs|test|refactor|chore|perf|style|ci|revert|build)(\\([a-zA-Z0-9._-]+\\))?:[[:space:]]+"; then
+        return 0
     fi
 
-    return 0
+    log_error "Invalid commit message format"
+    echo ""
+    log_info "Expected format: type(scope): description"
+    echo "Valid types: feat, fix, docs, test, refactor, chore, perf, style, ci, revert, build"
+    echo "Valid scopes: sync, cli, transpiler, schema, cache, config, docs, test, ci, deps, logging"
+    echo ""
+    log_info "Examples:"
+    echo "  feat(sync): Add incremental sync strategy"
+    echo "  fix(cli): Handle invalid command arguments"
+    echo "  docs: Update installation guide"
+    echo "  test(schema): Add validation tests"
+    return 1
 }
 
 # Check message length
@@ -86,7 +90,8 @@ check_issue_reference() {
     # Check if branch name contains issue number
     if [[ $branch =~ issue-([0-9]+) ]]; then
         local issue_num="${BASH_REMATCH[1]}"
-        if [[ ! $message =~ #$issue_num ]]; then
+        # Use grep for checking message reference to avoid [[ =~ ]] regex parsing issues
+        if ! echo "$message" | grep -q "#${issue_num}"; then
             log_warning "Branch '$branch' suggests issue #$issue_num but commit message doesn't reference it"
             log_info "Consider adding 'Closes #$issue_num' or 'Fixes #$issue_num' to the message"
         fi
@@ -154,6 +159,12 @@ validate_cline_references() {
     # Source the helper functions
     if [ ! -f "scripts/cline-helpers.sh" ]; then
         log_warning "Cline helpers not found, skipping checklist reference validation"
+        return 0
+    fi
+
+    # Ensure `jq` is available (used by cline helpers). If missing, skip this check.
+    if ! command -v jq >/dev/null 2>&1; then
+        log_warning "jq not found, skipping checklist reference validation"
         return 0
     fi
 

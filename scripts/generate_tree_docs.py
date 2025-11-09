@@ -8,7 +8,6 @@ annotating Python files with their module docstrings or first significant commen
 import argparse
 import ast
 from pathlib import Path
-from typing import List, Tuple
 
 
 def extract_description(file_path: Path) -> str:
@@ -20,7 +19,7 @@ def extract_description(file_path: Path) -> str:
     3. Empty string if nothing found
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # Try to parse as Python and get module docstring
@@ -29,17 +28,16 @@ def extract_description(file_path: Path) -> str:
             docstring = ast.get_docstring(tree)
             if docstring:
                 # Return first line of docstring, stripped
-                first_line = docstring.split('\n')[0].strip()
-                return first_line
+                return docstring.split("\n")[0].strip()
         except SyntaxError:
             pass
 
         # Fallback: look for first comment
-        for line in content.split('\n'):
+        for line in content.split("\n"):
             stripped = line.strip()
-            if stripped.startswith('#'):
-                comment = stripped.lstrip('#').strip()
-                if comment and not comment.startswith('!'):  # Skip shebang
+            if stripped.startswith("#"):
+                comment = stripped.lstrip("#").strip()
+                if comment and not comment.startswith("!"):  # Skip shebang
                     return comment
             elif stripped and not stripped.startswith('"""') and not stripped.startswith("'''"):
                 # If we hit code before finding a comment, stop
@@ -51,30 +49,30 @@ def extract_description(file_path: Path) -> str:
     return ""
 
 
-def should_include_path(path: Path, exclude_patterns: List[str]) -> bool:
+def should_include_path(path: Path, exclude_patterns: list[str]) -> bool:
     """Check if path should be included in the tree."""
     # Common excludes - these are matched as exact directory names
     common_excludes = [
-        '__pycache__',
-        '.git',
-        '.venv',
-        'venv',
-        '.pytest_cache',
-        '.mypy_cache',
-        '.ruff_cache',
-        'dist',
-        'build',
-        '.env',
-        'uv.lock',
+        "__pycache__",
+        ".git",
+        ".venv",
+        "venv",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        "dist",
+        "build",
+        ".env",
+        "uv.lock",
     ]
-    
+
     # Special patterns that can appear as part of a name
     substring_excludes = [
-        '.egg-info',
+        ".egg-info",
     ]
-    
+
     all_excludes = common_excludes + exclude_patterns
-    
+
     # Check path parts for exact matches
     parts = path.parts
     for part in parts:
@@ -85,7 +83,7 @@ def should_include_path(path: Path, exclude_patterns: List[str]) -> bool:
         for pattern in substring_excludes:
             if pattern in part:
                 return False
-    
+
     return True
 
 
@@ -93,11 +91,11 @@ def generate_tree(
     root_path: Path,
     prefix: str = "",
     is_last: bool = True,
-    exclude_patterns: List[str] = None,
+    exclude_patterns: list[str] = None,
     max_depth: int = None,
     current_depth: int = 0,
     annotate_files: bool = True,
-) -> List[str]:
+) -> list[str]:
     """Generate tree structure recursively.
 
     Args:
@@ -116,21 +114,21 @@ def generate_tree(
         exclude_patterns = []
 
     lines = []
-    
+
     if not should_include_path(root_path, exclude_patterns):
         return lines
 
     # Add current item
     connector = "└── " if is_last else "├── "
     name = root_path.name
-    
+
     # Add description for Python files
     description = ""
-    if annotate_files and root_path.is_file() and root_path.suffix == '.py':
+    if annotate_files and root_path.is_file() and root_path.suffix == ".py":
         desc = extract_description(root_path)
         if desc:
             description = f"  # {desc}"
-    
+
     lines.append(f"{prefix}{connector}{name}{description}")
 
     # If it's a file or we've reached max depth, stop here
@@ -142,11 +140,11 @@ def generate_tree(
         try:
             children = sorted(
                 [p for p in root_path.iterdir() if should_include_path(p, exclude_patterns)],
-                key=lambda p: (not p.is_dir(), p.name)  # Directories first
+                key=lambda p: (not p.is_dir(), p.name),  # Directories first
             )
-            
+
             for i, child in enumerate(children):
-                is_last_child = (i == len(children) - 1)
+                is_last_child = i == len(children) - 1
                 extension = "    " if is_last else "│   "
                 child_lines = generate_tree(
                     child,
@@ -166,43 +164,31 @@ def generate_tree(
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Generate annotated tree structure of the project"
-    )
+    parser = argparse.ArgumentParser(description="Generate annotated tree structure of the project")
     parser.add_argument(
-        'path',
-        nargs='?',
-        default='.',
-        help='Root path to generate tree from (default: current directory)'
+        "path",
+        nargs="?",
+        default=".",
+        help="Root path to generate tree from (default: current directory)",
     )
+    parser.add_argument("--max-depth", type=int, default=None, help="Maximum depth to traverse")
     parser.add_argument(
-        '--max-depth',
-        type=int,
-        default=None,
-        help='Maximum depth to traverse'
-    )
-    parser.add_argument(
-        '--exclude',
-        action='append',
+        "--exclude",
+        action="append",
         default=[],
-        help='Additional patterns to exclude (can be used multiple times)'
+        help="Additional patterns to exclude (can be used multiple times)",
     )
     parser.add_argument(
-        '--no-annotations',
-        action='store_true',
-        help='Disable file annotations (just show tree structure)'
+        "--no-annotations",
+        action="store_true",
+        help="Disable file annotations (just show tree structure)",
     )
-    parser.add_argument(
-        '--output',
-        type=str,
-        default=None,
-        help='Output file (default: stdout)'
-    )
+    parser.add_argument("--output", type=str, default=None, help="Output file (default: stdout)")
 
     args = parser.parse_args()
 
     root = Path(args.path).resolve()
-    
+
     if not root.exists():
         print(f"Error: Path {root} does not exist")
         return 1
@@ -218,8 +204,8 @@ def main():
     lines.extend(tree_lines)
 
     # Output
-    output_text = '\n'.join(lines)
-    
+    output_text = "\n".join(lines)
+
     if args.output:
         output_path = Path(args.output)
         output_path.write_text(output_text)
@@ -230,5 +216,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

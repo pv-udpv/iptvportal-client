@@ -1,14 +1,37 @@
-"""Debug logging utilities for CLI."""
+"""Debug logging utilities for CLI.
+
+Includes helper `_sanitize_data` that masks secrets (pydantic SecretStr) in
+nested data structures for safe debug output and file persistence.
+"""
 
 import json
 from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import SecretStr
 from rich.console import Console
 from rich.syntax import Syntax
 
 console = Console()
+
+
+def _sanitize_data(data: Any) -> Any:
+    """Recursively sanitize data for debug output.
+
+    Masks pydantic SecretStr values while preserving structure of dicts,
+    lists, tuples, and primitive types.
+    """
+    if isinstance(data, SecretStr):  # direct secret
+        return "***MASKED***"
+    if isinstance(data, dict):
+        return {k: _sanitize_data(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_sanitize_data(v) for v in data]
+    if isinstance(data, tuple):
+        return tuple(_sanitize_data(v) for v in data)
+    # Primitive or unhandled type – return as-is
+    return data
 
 
 class DebugLogger:
@@ -48,7 +71,7 @@ class DebugLogger:
         # Store for potential file output
         self._logs.append({"step": step, "data": data, "title": title})
 
-        # Display based on format
+        # Display sanitized representation based on selected format
         if self.format_type == "text":
             self._display_text(step, data, title)
         elif self.format_type == "json":
@@ -60,25 +83,26 @@ class DebugLogger:
         """Display debug info in human-readable text format."""
         display_title = title or step.replace("_", " ").title()
         console.print(f"\n[bold cyan][DEBUG] {display_title}[/bold cyan]")
+        sanitized = _sanitize_data(data)
 
-        if isinstance(data, str):
+        if isinstance(sanitized, str):
             # For strings, determine if it's SQL, JSON, etc.
             if step in ("sql_input", "sql"):
-                syntax = Syntax(data, "sql", theme="monokai", line_numbers=False)
+                syntax = Syntax(sanitized, "sql", theme="monokai", line_numbers=False)
                 console.print(syntax)
             else:
-                console.print(data)
-        elif isinstance(data, (dict, list)):
+                console.print(sanitized)
+        elif isinstance(sanitized, (dict, list)):
             # For structured data, show as formatted JSON
-            json_str = json.dumps(data, indent=2, ensure_ascii=False)
+            json_str = json.dumps(sanitized, indent=2, ensure_ascii=False)
             syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False)
             console.print(syntax)
         else:
-            console.print(str(data))
+            console.print(str(sanitized))
 
     def _display_json(self, step: str, data: Any, title: str | None = None) -> None:
         """Display debug info in JSON format."""
-        log_entry = {"step": step, "data": data}
+        log_entry = {"step": step, "data": _sanitize_data(data)}
         if title:
             log_entry["title"] = title
         json_str = json.dumps(log_entry, indent=2, ensure_ascii=False)
@@ -86,7 +110,7 @@ class DebugLogger:
 
     def _display_yaml(self, step: str, data: Any, title: str | None = None) -> None:
         """Display debug info in YAML format."""
-        log_entry = {"step": step, "data": data}
+        log_entry = {"step": step, "data": _sanitize_data(data)}
         if title:
             log_entry["title"] = title
         yaml_str = yaml.dump(log_entry, allow_unicode=True, default_flow_style=False)
@@ -102,17 +126,20 @@ class DebugLogger:
 
         with open(output_path, "w", encoding="utf-8") as f:
             if self.format_type == "json":
-                json.dump(self._logs, f, indent=2, ensure_ascii=False)
+                sanitized = [{**log, "data": _sanitize_data(log["data"])} for log in self._logs]
+                json.dump(sanitized, f, indent=2, ensure_ascii=False)
             elif self.format_type == "yaml":
-                yaml.dump(self._logs, f, allow_unicode=True, default_flow_style=False)
+                sanitized = [{**log, "data": _sanitize_data(log["data"])} for log in self._logs]
+                yaml.dump(sanitized, f, allow_unicode=True, default_flow_style=False)
             else:
                 # Text format
                 for log in self._logs:
                     f.write(f"\n=== {log.get('title', log['step'])} ===\n")
-                    if isinstance(log["data"], (dict, list)):
-                        f.write(json.dumps(log["data"], indent=2, ensure_ascii=False))
+                    data_to_write = _sanitize_data(log["data"])
+                    if isinstance(data_to_write, (dict, list)):
+                        f.write(json.dumps(data_to_write, indent=2, ensure_ascii=False))
                     else:
-                        f.write(str(log["data"]))
+                        f.write(str(data_to_write))
                     f.write("\n")
 
         console.print(f"\n[green]Debug logs saved to: {output_path}[/green]")

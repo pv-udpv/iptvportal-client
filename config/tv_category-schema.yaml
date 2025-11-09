@@ -1,0 +1,16 @@
+schemas:
+  tv_category:
+    total_fields: 3
+    fields:
+      '0':
+        name: id
+        type: integer
+        description: Auto-generated field
+      '1':
+        name: Field_1
+        type: string
+        description: Auto-generated field
+      '2':
+        name: url
+        type: string
+        description: Auto-generated field

@@ -1,5 +1,8 @@
 """Modern Python client for IPTVPortal JSONSQL API."""
 
+from contextlib import suppress
+
+from iptvportal import project_conf  # backward compatibility import
 from iptvportal.config.settings import IPTVPortalSettings
 from iptvportal.core.async_client import AsyncIPTVPortalClient
 from iptvportal.core.client import IPTVPortalClient
@@ -14,6 +17,13 @@ from iptvportal.jsonsql import QueryBuilder, SQLTranspiler
 from iptvportal.models import QueryResult, SQLQueryInput
 from iptvportal.schema import SchemaRegistry, TableSchema
 from iptvportal.service import QueryService
+
+# Auto-initialize logging from config on package import (best-effort)
+with suppress(Exception):
+    from iptvportal.config import setup_logging
+
+    with suppress(Exception):
+        setup_logging()
 
 __version__ = "0.1.0"
 
@@ -42,4 +52,6 @@ __all__ = [
     "APIError",
     "TimeoutError",
     "ConnectionError",
+    # Legacy project configuration module
+    "project_conf",
 ]
