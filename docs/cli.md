@@ -715,6 +715,18 @@ iptvportal schema introspect tv_channel --no-duckdb-analysis
 
 # Custom sample size for analysis
 iptvportal schema introspect media --sample-size 5000
+
+# NEW: Introspect and sync to local cache
+iptvportal schema introspect tv_channel --sync
+
+# NEW: Introspect, sync with custom chunk size and analyze from cache
+iptvportal schema introspect tv_program --fields='0:channel_id,1:start,2:stop' --sync --sync-chunk=5000
+
+# NEW: Sync with ordering and analyze synced data
+iptvportal schema introspect media --sync --order-by-fields='id:asc' --analyze-from-cache
+
+# NEW: Sync with timeout (0 = no timeout)
+iptvportal schema introspect tv_channel --sync --sync-run-timeout=300
 ```
 
 ### What Gets Analyzed
@@ -744,6 +756,17 @@ iptvportal schema introspect media --sample-size 5000
 - WHERE clauses for soft deletes and flag fields
 - Incremental sync settings for large tables
 - Cache strategies and TTL recommendations
+
+**NEW: Sync Integration** (with `--sync` flag):
+- Automatically syncs table to local SQLite cache after introspection
+- Uses introspected schema and auto-generated sync configuration
+- Supports custom sync options:
+  - `--sync-chunk`: Override auto-generated chunk size
+  - `--order-by-fields`: Specify ordering (e.g., 'id:asc')
+  - `--sync-run-timeout`: Set timeout in seconds (0 = no timeout)
+  - `--analyze-from-cache`: Run DuckDB analysis on synced cache data for comprehensive statistics
+- Progress reporting during sync
+- Can analyze more than sample data when using `--analyze-from-cache`
 
 ### Example Output
 
@@ -806,6 +829,57 @@ Chunk Size:       5,000
 Cache Strategy:   full
 Auto Sync:        Yes
 Cache TTL:        1800s
+```
+
+### Example Output with Sync
+
+```bash
+$ iptvportal schema introspect tv_channel --sync --analyze-from-cache
+
+Introspecting table: tv_channel
+Gathering metadata (row count, ID ranges, timestamps)...
+Performing DuckDB analysis (sample size: 1000)...
+✓ Introspection complete
+
+Table:            tv_channel
+Field Count:      8
+Row Count:        1,234
+Max ID:           1234
+Min ID:           1
+
+Syncing table tv_channel to local cache...
+
+Progress: 1/1 chunks, 1,234 rows, 2.3s elapsed
+
+✓ Sync complete!
+  Rows fetched: 1,234
+  Rows inserted: 1,234
+  Chunks processed: 1
+  Duration: 2.45s
+
+Performing DuckDB analysis on synced cache data...
+
+DuckDB Analysis (from cache):
+
+  id:
+    Type: BIGINT
+    Null %: 0.00%
+    Unique: 1234 (100.00% cardinality)
+    Range: [1 .. 1234]
+
+  name:
+    Type: VARCHAR
+    Null %: 0.00%
+    Unique: 1234 (100.00% cardinality)
+    Length: [3 .. 45]
+    Avg Length: 18.23
+
+  enabled:
+    Type: BOOLEAN
+    Unique: 2 (0.16% cardinality)
+    Top Values:
+      • true: 1150
+      • false: 84
 ```
 
 ### Other Schema Commands
