@@ -15,8 +15,14 @@ python scripts/generate_tree_docs.py src/iptvportal --max-depth 3
 # Generate full tree (no depth limit)
 python scripts/generate_tree_docs.py src/iptvportal
 
-# Save to file
+# Save to file (with markdown formatting by default)
 python scripts/generate_tree_docs.py src/iptvportal --max-depth 3 --output PROJECT_STRUCTURE.md
+
+# Save to file without markdown formatting
+python scripts/generate_tree_docs.py src/iptvportal --output tree.txt --no-markdown
+
+# Custom markdown title
+python scripts/generate_tree_docs.py src/iptvportal --output tree.md --title "My Project Structure"
 
 # Exclude additional patterns
 python scripts/generate_tree_docs.py . --exclude examples --exclude tests --exclude docs
@@ -40,15 +46,24 @@ make docs-tree-file
 
 ### Features
 
-- Automatically extracts module docstrings from Python files
-- Falls back to first comment line if no docstring is found
-- Excludes common build artifacts and cache directories
-- Supports custom depth limits
-- Can save output to file or print to stdout
+- **Docstring Extraction**: Automatically extracts module docstrings from Python files
+- **Fallback Comments**: Falls back to first comment line if no docstring is found
+- **Gitignore Integration**: Reads and respects .gitignore patterns for exclusions
+- **Markdown Formatting**: When saving to file, automatically adds:
+  - Header (# PROJECT STRUCTURE)
+  - Timestamp with auto-generation note
+  - Code block formatting (```sh)
+- **Customization Options**:
+  - `--no-markdown`: Disable markdown formatting for plain output
+  - `--title`: Custom title for markdown header
+  - `--max-depth`: Limit tree depth
+  - `--exclude`: Additional patterns to exclude
+  - `--no-annotations`: Disable docstring annotations
 - Maintains proper tree structure with UTF-8 box drawing characters
 
 ### Example Output
 
+**Stdout (plain format):**
 ```
 iptvportal-client/
 └── src/iptvportal/
@@ -65,20 +80,47 @@ iptvportal-client/
     └── ...
 ```
 
+**File output (with markdown formatting):**
+```markdown
+# PROJECT STRUCTURE
+> Auto-generated on 2025-11-09 05:27:17 UTC
+
+\`\`\`sh
+/home/user/project/src/iptvportal/
+└── iptvportal/
+    ├── config.py          # Configuration management with Pydantic Settings.
+    ├── exceptions.py      # Exception hierarchy for IPTVPortal client.
+    └── ...
+\`\`\`
+```
+
 ### Implementation Details
 
 The script:
 1. Uses Python's `ast` module to parse files and extract docstrings
 2. Falls back to parsing comment lines if docstring extraction fails
-3. Filters out common development artifacts (caches, build dirs, etc.)
-4. Generates tree structure with proper UTF-8 box drawing characters
-5. Only annotates Python (.py) files with their descriptions
+3. **Reads .gitignore file** from repository root and respects its patterns
+4. Supports additional exclusion patterns via `--exclude` flag
+5. Generates tree structure with proper UTF-8 box drawing characters
+6. Only annotates Python (.py) files with their descriptions
+7. **Automatically formats with markdown** when saving to file (unless `--no-markdown` is used)
 
-### Default Exclusions
+### Exclusion System
 
-- `__pycache__`
+The script uses a two-tier exclusion system:
+1. **Gitignore patterns**: Automatically parsed from `.gitignore` in the repository root
+2. **Additional excludes**: Specified via `--exclude` flag (can be used multiple times)
+
+Always excluded:
+- `.git` directory (hardcoded for safety)
+
+### Default Exclusions (from .gitignore)
+
+The script respects all patterns in your `.gitignore` file, which typically includes:
+- `__pycache__/` and `*.pyc`
 - `.git`, `.venv`, `venv`
 - `.pytest_cache`, `.mypy_cache`, `.ruff_cache`
-- `dist`, `build`
-- `.env`, `uv.lock`
-- Files/directories containing `.egg-info`
+- `dist/`, `build/`
+- `*.egg-info/`
+- IDE directories (`.vscode/`, `.idea/`)
+- And any other patterns you've defined
