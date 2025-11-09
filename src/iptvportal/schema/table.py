@@ -680,6 +680,10 @@ class SchemaLoader:
     def _parse_config(config: dict[str, Any]) -> SchemaRegistry:
         """Парсинг конфигурации схем."""
         registry = SchemaRegistry()
+        
+        # Handle None or empty config
+        if not config:
+            return registry
 
         schemas_config = config.get("schemas", {})
 

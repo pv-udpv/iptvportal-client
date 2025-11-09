@@ -16,19 +16,94 @@ console = Console()
 
 def load_config(config_file: str | None = None) -> IPTVPortalSettings:
     """
-    Load configuration from file or environment.
+    Load configuration from file or environment using Dynaconf.
 
     Args:
-        config_file: Optional path to config file
+        config_file: Optional path to config file (currently unused, uses Dynaconf auto-discovery)
 
     Returns:
-        IPTVPortalSettings instance
+        IPTVPortalSettings instance populated from Dynaconf configuration
     """
-    if config_file:
-        # TODO: Load from YAML file when needed
-        pass
-
-    return IPTVPortalSettings()
+    from pathlib import Path
+    from iptvportal.config.project import get_conf
+    
+    # Get Dynaconf configuration
+    conf = get_conf()
+    
+    # Map Dynaconf settings to IPTVPortalSettings
+    # Priority: explicit values from config > environment variables > defaults
+    settings_kwargs = {}
+    
+    # Core connection parameters - try top-level first, then core.* namespace
+    settings_kwargs["domain"] = conf.get("domain") or conf.get("core.domain", "")
+    settings_kwargs["username"] = conf.get("username") or conf.get("core.username", "")
+    settings_kwargs["password"] = conf.get("password") or conf.get("core.password", "")
+    
+    # HTTP settings
+    settings_kwargs["timeout"] = float(conf.get("timeout") or conf.get("core.timeout", 30.0))
+    settings_kwargs["max_retries"] = int(conf.get("max_retries") or conf.get("core.max_retries", 3))
+    settings_kwargs["retry_delay"] = float(conf.get("core.retry_delay", 1.0))
+    settings_kwargs["verify_ssl"] = bool(conf.get("verify_ssl") if conf.get("verify_ssl") is not None else conf.get("core.verify_ssl", True))
+    
+    # Session management
+    settings_kwargs["session_cache"] = bool(conf.get("core.session_cache", True))
+    settings_kwargs["session_ttl"] = int(conf.get("core.session_ttl", 3600))
+    
+    # Logging
+    settings_kwargs["log_level"] = conf.get("core.log_level", "INFO")
+    settings_kwargs["log_requests"] = bool(conf.get("core.log_requests", False))
+    settings_kwargs["log_responses"] = bool(conf.get("core.log_responses", False))
+    
+    # Schema configuration - from adapters namespace
+    # Resolve schema_file path relative to current working directory
+    schema_file = conf.get("adapters.schema_file")
+    if schema_file:
+        schema_path = Path(schema_file)
+        # If relative path, resolve from current working directory
+        if not schema_path.is_absolute():
+            schema_path = Path.cwd() / schema_path
+        # Only set if the file exists, otherwise leave as None to avoid errors
+        if schema_path.exists():
+            settings_kwargs["schema_file"] = str(schema_path)
+        else:
+            # Try as-is (maybe it's relative to execution context)
+            settings_kwargs["schema_file"] = schema_file
+    else:
+        settings_kwargs["schema_file"] = None
+    
+    settings_kwargs["schema_format"] = conf.get("adapters.schema_format", "yaml")
+    settings_kwargs["auto_load_schemas"] = bool(conf.get("adapters.auto_load_schemas", True))
+    
+    # Query caching - from adapters namespace
+    settings_kwargs["enable_query_cache"] = bool(conf.get("adapters.enable_query_cache", True))
+    settings_kwargs["cache_ttl"] = int(conf.get("adapters.cache_ttl", 300))
+    settings_kwargs["cache_max_size"] = int(conf.get("adapters.cache_max_size", 1000))
+    
+    # Query optimization
+    settings_kwargs["auto_order_by_id"] = bool(conf.get("adapters.auto_order_by_id") if conf.get("adapters.auto_order_by_id") is not None else conf.get("cli.auto_order_by_id", True))
+    
+    # SQLite cache settings - from sync namespace
+    settings_kwargs["cache_db_path"] = conf.get("sync.cache_db_path", "~/.iptvportal/cache.db")
+    settings_kwargs["enable_persistent_cache"] = bool(conf.get("sync.enable_persistent_cache", True))
+    settings_kwargs["cache_db_journal_mode"] = conf.get("sync.cache_db_journal_mode", "WAL")
+    settings_kwargs["cache_db_page_size"] = int(conf.get("sync.cache_db_page_size", 4096))
+    settings_kwargs["cache_db_cache_size"] = int(conf.get("sync.cache_db_cache_size", -64000))
+    
+    # Sync behavior
+    settings_kwargs["default_sync_strategy"] = conf.get("sync.default_sync_strategy", "full")
+    settings_kwargs["default_sync_ttl"] = int(conf.get("sync.default_sync_ttl", 3600))
+    settings_kwargs["default_chunk_size"] = int(conf.get("sync.default_chunk_size", 1000))
+    settings_kwargs["auto_sync_on_startup"] = bool(conf.get("sync.auto_sync_on_startup", False))
+    settings_kwargs["auto_sync_stale_tables"] = bool(conf.get("sync.auto_sync_stale_tables", True))
+    settings_kwargs["max_concurrent_syncs"] = int(conf.get("sync.max_concurrent_syncs", 3))
+    
+    # Maintenance
+    settings_kwargs["auto_vacuum_enabled"] = bool(conf.get("sync.auto_vacuum_enabled", True))
+    settings_kwargs["vacuum_threshold_mb"] = int(conf.get("sync.vacuum_threshold_mb", 100))
+    settings_kwargs["auto_analyze_enabled"] = bool(conf.get("sync.auto_analyze_enabled", True))
+    settings_kwargs["analyze_interval_hours"] = int(conf.get("sync.analyze_interval_hours", 24))
+    
+    return IPTVPortalSettings(**settings_kwargs)
 
 
 def parse_json_param(param: str | None) -> Any:
