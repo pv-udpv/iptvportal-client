@@ -712,25 +712,40 @@ See [scripts/README.md](scripts/README.md) for more details.
 
 ## Development
 
+### Quick Start
+
 ```bash
 # Clone repository
 git clone https://github.com/pv-udpv/iptvportal-client.git
 cd iptvportal-client
 
-# Install with uv
+# Install with uv (recommended)
+make dev
+
+# Or manually
 uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e ".[dev]"
 
 # Run tests
-pytest
+make test
 
-# Type checking
-mypy src/iptvportal
-
-# Linting
-ruff check src/iptvportal
+# Run all checks
+make ci
 ```
+
+### Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for detailed guidelines on:
+
+- Setting up your development environment
+- Code style and testing requirements
+- Submitting pull requests
+- Working with GitHub Copilot
+
+### Security
+
+For security vulnerabilities, please see our [Security Policy](.github/SECURITY.md) for responsible disclosure guidelines.
 
 ### GitHub Copilot Instructions
 
