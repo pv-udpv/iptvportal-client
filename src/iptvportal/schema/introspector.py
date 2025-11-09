@@ -42,6 +42,8 @@ class SchemaIntrospector:
         table_name: str,
         gather_metadata: bool = True,
         field_name_overrides: dict[int, str] | None = None,
+        sample_size: int = 1000,
+        perform_duckdb_analysis: bool = True,
     ) -> TableSchema:
         """
         Интроспекция таблицы с автоматической генерацией схемы.
@@ -50,6 +52,8 @@ class SchemaIntrospector:
             table_name: Имя таблицы для анализа
             gather_metadata: Собирать ли метаданные (row_count, max_id, etc.)
             field_name_overrides: Ручное переопределение имён полей {position: name}
+            sample_size: Размер выборки для DuckDB анализа
+            perform_duckdb_analysis: Выполнять ли DuckDB статистический анализ
 
         Returns:
             TableSchema с автоматически определённой структурой и метаданными
@@ -103,10 +107,21 @@ class SchemaIntrospector:
         if gather_metadata:
             metadata = await self._gather_metadata(table_name, fields)
 
-        # 4. Сгенерировать умную конфигурацию синхронизации
+        # 4. Выполнить DuckDB анализ (если включено)
+        duckdb_analysis = None
+        if perform_duckdb_analysis:
+            duckdb_analysis = await self._perform_duckdb_analysis(
+                table_name, fields, sample_size
+            )
+
+        # 5. Сгенерировать умную конфигурацию синхронизации
         sync_config = self._generate_sync_config(
             table_name=table_name, metadata=metadata, fields=fields
         )
+
+        # Store DuckDB analysis in metadata if available
+        if metadata and duckdb_analysis and not hasattr(metadata, "duckdb_analysis"):
+            metadata.duckdb_analysis = duckdb_analysis
 
         return TableSchema(
             table_name=table_name,
@@ -184,6 +199,49 @@ class SchemaIntrospector:
                 print(f"Warning: Could not get range for {ts_field.name}: {e}")
 
         return metadata
+
+    async def _perform_duckdb_analysis(
+        self, table_name: str, fields: dict[int, FieldDefinition], sample_size: int
+    ) -> dict[str, Any] | None:
+        """
+        Выполнить DuckDB статистический анализ на выборке данных.
+
+        Args:
+            table_name: Имя таблицы
+            fields: Определения полей
+            sample_size: Размер выборки
+
+        Returns:
+            Словарь с результатами анализа или None при ошибке
+        """
+        try:
+            from iptvportal.schema.duckdb_analyzer import DuckDBAnalyzer
+
+            analyzer = DuckDBAnalyzer()
+
+            if not analyzer.available:
+                print("Warning: DuckDB not available. Install with: pip install iptvportal-client[analysis]")
+                return None
+
+            # Получить выборку данных
+            sql = f"SELECT * FROM {table_name} LIMIT {sample_size}"
+            jsonsql = self.transpiler.transpile(sql)
+            sample_query = {"jsonrpc": "2.0", "id": 999, "method": "select", "params": jsonsql}
+
+            sample_data = await self.client.execute(sample_query)
+
+            if not sample_data or len(sample_data) == 0:
+                return None
+
+            # Извлечь имена полей
+            field_names = [fields[i].name for i in sorted(fields.keys())]
+
+            # Выполнить анализ
+            return analyzer.analyze_sample(sample_data, field_names)
+
+        except Exception as e:
+            print(f"Warning: DuckDB analysis failed: {e}")
+            return None
 
     def _generate_sync_config(
         self, table_name: str, metadata: TableMetadata | None, fields: dict[int, FieldDefinition]
@@ -365,7 +423,7 @@ class SchemaIntrospector:
         return f"Field_{position}"
 
     async def introspect_all_tables(
-        self, table_names: list[str], gather_metadata: bool = True
+        self, table_names: list[str], gather_metadata: bool = True, perform_duckdb_analysis: bool = True
     ) -> dict[str, TableSchema]:
         """
         Интроспекция нескольких таблиц параллельно.
@@ -373,11 +431,15 @@ class SchemaIntrospector:
         Args:
             table_names: Список имён таблиц
             gather_metadata: Собирать ли метаданные
+            perform_duckdb_analysis: Выполнять ли DuckDB анализ
 
         Returns:
             Словарь {table_name: TableSchema}
         """
-        tasks = [self.introspect_table(table_name, gather_metadata) for table_name in table_names]
+        tasks = [
+            self.introspect_table(table_name, gather_metadata, perform_duckdb_analysis=perform_duckdb_analysis) 
+            for table_name in table_names
+        ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 

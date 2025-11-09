@@ -682,6 +682,160 @@ iptvportal jsonsql delete -e
 - Edit the JSONSQL object
 - Save and exit to execute
 
+## Schema Management
+
+The `schema` command provides powerful introspection and analysis tools for understanding your database structure.
+
+### Introspect Table Structure
+
+Automatically analyze a table's structure with comprehensive metadata:
+
+```bash
+# Simple table introspection (using positional argument)
+iptvportal schema introspect tv_channel
+
+# Using --table option (equivalent)
+iptvportal schema introspect --table tv_channel
+
+# SQL-based introspection
+iptvportal schema introspect --from-sql="SELECT * FROM tv_channel"
+
+# With manual field mappings
+iptvportal schema introspect --table media --fields="0:id,1:name,2:url,3:duration"
+
+# Save schema to file
+iptvportal schema introspect tv_channel --save
+iptvportal schema introspect media --save --output schemas/media-schema.yaml
+
+# Skip metadata gathering (faster)
+iptvportal schema introspect tv_channel --no-metadata
+
+# Skip DuckDB analysis
+iptvportal schema introspect tv_channel --no-duckdb-analysis
+
+# Custom sample size for analysis
+iptvportal schema introspect media --sample-size 5000
+```
+
+### What Gets Analyzed
+
+**Automatic Field Detection:**
+- Field names inferred from data patterns (email, URL, UUID, phone, etc.)
+- Field types (integer, string, boolean, float, datetime, json)
+- Position mapping for query results
+
+**Metadata Collection:**
+- **Row Count**: Total number of rows in the table
+- **Field Count**: Number of columns in the schema
+- **ID Ranges**: MIN(id) and MAX(id) for primary keys
+- **Timestamp Ranges**: MIN/MAX for datetime fields
+
+**DuckDB Statistical Analysis** (optional, requires `pip install iptvportal-client[analysis]`):
+- **Data Types**: Precise type inference
+- **Null Percentage**: How many values are NULL
+- **Unique Counts**: Number of distinct values per column
+- **Cardinality**: Uniqueness ratio (0-1)
+- **Numeric Stats**: Min, Max, Average for numeric columns
+- **String Stats**: Min/Max/Average length for text columns
+- **Top Values**: Most common values for low-cardinality columns
+
+**Smart Sync Configuration:**
+- Recommended chunk sizes based on table size
+- WHERE clauses for soft deletes and flag fields
+- Incremental sync settings for large tables
+- Cache strategies and TTL recommendations
+
+### Example Output
+
+```bash
+$ iptvportal schema introspect tv_channel
+
+Introspecting table: tv_channel
+Gathering metadata (row count, ID ranges, timestamps)...
+Performing DuckDB analysis (sample size: 1000)...
+✓ Introspection complete
+
+Table:            tv_channel
+Field Count:      8
+Row Count:        1,234
+Max ID:           1234
+Min ID:           1
+Analyzed At:      2025-11-09T02:43:55
+
+Detected Fields:
+
+Pos  Name          Type     Description
+---  ------------  -------  ------------------
+0    id            integer  Auto-detected field
+1    name          string   Auto-detected field
+2    url           string   Auto-detected field
+3    epg_id        string   Auto-detected field
+4    enabled       boolean  Auto-detected field
+5    created_at    datetime Auto-detected field
+6    updated_at    datetime Auto-detected field
+7    logo_url      string   Auto-detected field
+
+DuckDB Statistical Analysis:
+
+  id:
+    Type: BIGINT
+    Null %: 0.00%
+    Unique: 1234 (100.00% cardinality)
+    Range: [1 .. 1234]
+    Average: 617.50
+
+  name:
+    Type: VARCHAR
+    Null %: 0.00%
+    Unique: 1234 (100.00% cardinality)
+    Length: [3 .. 45]
+    Avg Length: 18.23
+
+  enabled:
+    Type: BOOLEAN
+    Null %: 0.00%
+    Unique: 2 (0.16% cardinality)
+    Top Values:
+      • true: 1150
+      • false: 84
+
+Auto-generated Sync Guardrails:
+
+Sync Limit:       2,468
+Chunk Size:       5,000
+Cache Strategy:   full
+Auto Sync:        Yes
+Cache TTL:        1800s
+```
+
+### Other Schema Commands
+
+```bash
+# List all loaded schemas
+iptvportal schema list
+
+# Show detailed schema info
+iptvportal schema show tv_channel
+
+# Generate schema from SQL query
+iptvportal schema from-sql -q "SELECT * FROM media LIMIT 10"
+
+# Validate field mappings
+iptvportal schema validate-mapping subscriber -m "0:id,1:username,2:email"
+
+# Export schema to file
+iptvportal schema export tv_channel -o schemas/tv-channel.yaml
+
+# Import schemas from file
+iptvportal schema import schemas.yaml
+
+# Validate schema file
+iptvportal schema validate schemas.yaml
+
+# Generate ORM models
+iptvportal schema generate-models schemas.yaml --format sqlmodel
+```
+
 ## Common Use Cases
 
 ### 1. Check Active Subscribers
@@ -837,6 +991,8 @@ which vim nano emacs code
 9. **Test with LIMIT** before running large queries
 10. **Use transpile command** to learn JSONSQL format
 11. **Disable auto schema mapping** with `--no-map-schema` for debugging raw field positions
+12. **Run schema introspect before syncing** to get optimal sync configuration
+13. **Install DuckDB for detailed analysis**: `pip install iptvportal-client[analysis]`
 
 ## Command Cheat Sheet
 
@@ -869,6 +1025,14 @@ iptvportal jsonsql delete --from table --where ...    # Delete
 iptvportal transpile "SELECT ..."              # SQL to JSONSQL
 iptvportal transpile --file query.sql         # From file
 iptvportal transpile "SELECT ..." -f yaml     # YAML output
+
+# Schema Management
+iptvportal schema introspect tv_channel                    # Analyze table
+iptvportal schema introspect --table media                 # Alt syntax
+iptvportal schema introspect --from-sql="SELECT * FROM t"  # SQL-based
+iptvportal schema list                                     # List schemas
+iptvportal schema show table_name                          # Show details
+iptvportal schema from-sql -q "SELECT ..." --save          # Generate & save
 ```
 
 ## Integration with Scripts

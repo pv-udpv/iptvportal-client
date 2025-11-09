@@ -506,32 +506,89 @@ def validate_command(file_path: str = typer.Argument(..., help="Schema file to v
 
 @schema_app.command(name="introspect")
 def introspect_command(
-    table_name: str = typer.Argument(..., help="Table name to introspect"),
+    table_name: str | None = typer.Argument(None, help="Table name to introspect"),
+    table: str | None = typer.Option(None, "--table", help="Table name (alternative to positional argument)"),
+    from_sql: str | None = typer.Option(None, "--from-sql", help="SQL query to introspect (e.g., 'SELECT * FROM table')"),
+    fields: str | None = typer.Option(None, "--fields", help="Manual field mappings (e.g., '0:id,1:name,2:email')"),
+    sample_size: int = typer.Option(1000, "--sample-size", help="Sample size for DuckDB analysis"),
     no_metadata: bool = typer.Option(False, "--no-metadata", help="Skip metadata gathering"),
+    no_duckdb_analysis: bool = typer.Option(False, "--no-duckdb-analysis", help="Skip DuckDB statistical analysis"),
     save: bool = typer.Option(False, "--save", "-s", help="Save generated schema to file"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
     config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
-    Introspect remote table structure with automatic metadata gathering.
+    Introspect remote table structure with automatic metadata gathering and DuckDB analysis.
 
     This command automatically:
     - Determines field names and types from sample data
     - Counts total rows (COUNT(*))
     - Gets MAX(id) and MIN(id)
     - Analyzes timestamp field ranges
+    - Performs DuckDB statistical analysis (min, max, nulls, unique values, cardinality)
     - Generates smart sync guardrails based on table size
 
     Examples:
         iptvportal schema introspect tv_channel
+        iptvportal schema introspect --table=tv_channel
+        iptvportal schema introspect --from-sql="SELECT * FROM tv_channel"
         iptvportal schema introspect subscriber --save
         iptvportal schema introspect media --no-metadata -o schemas.yaml
+        iptvportal schema introspect --table=media --sample-size=5000
     """
     try:
         settings = load_config(config_file)
 
-        console.print(f"\n[cyan]Introspecting table: {table_name}[/cyan]")
+        # Determine the table name from different input methods
+        resolved_table_name = table_name or table
+        
+        if from_sql:
+            # Extract table name from SQL query
+            query_upper = from_sql.upper()
+            if "FROM" not in query_upper:
+                console.print("[red]Error: Could not extract table name from SQL query[/red]")
+                console.print("[dim]Query must contain FROM clause[/dim]")
+                raise typer.Exit(1)
+            
+            parts = query_upper.split("FROM")[1].split()
+            if not parts:
+                console.print("[red]Error: Could not extract table name[/red]")
+                raise typer.Exit(1)
+            
+            resolved_table_name = parts[0].strip().lower()
+            resolved_table_name = resolved_table_name.split()[0].strip(";,")
+        
+        if not resolved_table_name:
+            console.print("[red]Error: Table name is required[/red]")
+            console.print("[dim]Use either positional argument, --table option, or --from-sql[/dim]")
+            raise typer.Exit(1)
+
+        console.print(f"\n[cyan]Introspecting table: {resolved_table_name}[/cyan]")
+
+        # Parse manual field mappings if provided
+        field_overrides = {}
+        if fields:
+            try:
+                for mapping in fields.split(","):
+                    mapping = mapping.strip()
+                    if ":" not in mapping:
+                        console.print(
+                            f"[yellow]Warning: Invalid field mapping '{mapping}' (expected format: 'position:name')[/yellow]"
+                        )
+                        continue
+
+                    pos_str, name = mapping.split(":", 1)
+                    position = int(pos_str.strip())
+                    field_name = name.strip()
+                    field_overrides[position] = field_name
+
+                if field_overrides:
+                    console.print(
+                        f"[dim]Applying {len(field_overrides)} manual field mapping(s)[/dim]"
+                    )
+            except ValueError as e:
+                console.print(f"[yellow]Warning: Error parsing field mappings: {e}[/yellow]")
 
         # Use async client for introspection
         import asyncio
@@ -545,6 +602,7 @@ def introspect_command(
                     introspector = SchemaIntrospector(client)
 
                     gather_metadata = not no_metadata
+                    perform_duckdb = not no_duckdb_analysis
 
                     if gather_metadata:
                         console.print(
@@ -553,8 +611,15 @@ def introspect_command(
                     else:
                         console.print("[dim]Analyzing table structure...[/dim]")
 
+                    if perform_duckdb:
+                        console.print(f"[dim]Performing DuckDB analysis (sample size: {sample_size})...[/dim]")
+
                     return await introspector.introspect_table(
-                        table_name=table_name, gather_metadata=gather_metadata
+                        table_name=resolved_table_name, 
+                        gather_metadata=gather_metadata,
+                        field_name_overrides=field_overrides if field_overrides else None,
+                        sample_size=sample_size,
+                        perform_duckdb_analysis=perform_duckdb,
                     )
 
             except Exception:
@@ -573,8 +638,8 @@ def introspect_command(
         info_table.add_column("Property", style="cyan")
         info_table.add_column("Value", style="white")
 
-        info_table.add_row("Table", table_name)
-        info_table.add_row("Total Fields", str(schema.total_fields))
+        info_table.add_row("Table", resolved_table_name)
+        info_table.add_row("Field Count", str(schema.total_fields))
 
         if schema.metadata:
             info_table.add_row("Row Count", f"{schema.metadata.row_count:,}")
@@ -641,12 +706,50 @@ def introspect_command(
                     console.print(f"    Max: {ranges['max']}")
                 console.print()
 
+        # DuckDB Analysis
+        if schema.metadata and hasattr(schema.metadata, "duckdb_analysis") and schema.metadata.duckdb_analysis:
+            analysis = schema.metadata.duckdb_analysis
+            
+            if "error" not in analysis:
+                console.print("[bold]DuckDB Statistical Analysis:[/bold]\n")
+
+                for field_name, stats in analysis.items():
+                    if isinstance(stats, dict) and "error" not in stats:
+                        console.print(f"  [cyan]{field_name}:[/cyan]")
+                        
+                        # Display basic stats
+                        if "dtype" in stats:
+                            console.print(f"    Type: {stats['dtype']}")
+                        if "null_percentage" in stats:
+                            console.print(f"    Null %: {stats['null_percentage']:.2f}%")
+                        if "unique_count" in stats:
+                            console.print(f"    Unique: {stats['unique_count']} ({stats.get('cardinality', 0):.2%} cardinality)")
+                        
+                        # Display type-specific stats
+                        if "min_value" in stats and "max_value" in stats:
+                            console.print(f"    Range: [{stats['min_value']} .. {stats['max_value']}]")
+                            if "avg_value" in stats and stats["avg_value"] is not None:
+                                console.print(f"    Average: {stats['avg_value']:.2f}")
+                        
+                        if "min_length" in stats and "max_length" in stats:
+                            console.print(f"    Length: [{stats['min_length']} .. {stats['max_length']}]")
+                            if "avg_length" in stats and stats["avg_length"] is not None:
+                                console.print(f"    Avg Length: {stats['avg_length']:.2f}")
+                        
+                        # Display top values for low cardinality
+                        if "top_values" in stats and stats["top_values"]:
+                            console.print("    Top Values:")
+                            for val, cnt in stats["top_values"][:3]:
+                                console.print(f"      • {val}: {cnt}")
+                        
+                        console.print()
+
         # Save if requested
         if save or output:
-            output_path = output or f"config/{table_name}-schema.{format}"
+            output_path = output or f"config/{resolved_table_name}-schema.{format}"
 
             # Convert schema to dict
-            schema_dict = {"schemas": {table_name: schema.to_dict()}}
+            schema_dict = {"schemas": {resolved_table_name: schema.to_dict()}}
 
             # Ensure output directory exists
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
