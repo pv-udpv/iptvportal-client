@@ -224,7 +224,7 @@ class TestSchemaIntrospector:
             [["2023-01-01T10:00:00", "2023-01-02T11:00:00"]],  # timestamp range for timestamp_3
         ]
 
-        schema = await introspector.introspect_table("users")
+        schema = await introspector.introspect_table("users", perform_duckdb_analysis=False)
 
         assert schema.table_name == "users"
         assert len(schema.fields) == 4  # 4 columns in sample data
@@ -266,7 +266,7 @@ class TestSchemaIntrospector:
 
         field_overrides = {1: "full_name", 2: "contact_email"}
 
-        schema = await introspector.introspect_table("users", field_name_overrides=field_overrides)
+        schema = await introspector.introspect_table("users", field_name_overrides=field_overrides, perform_duckdb_analysis=False)
 
         assert schema.fields[0].name == "id"  # Auto-detected
         assert schema.fields[1].name == "full_name"  # Overridden
@@ -288,7 +288,7 @@ class TestSchemaIntrospector:
             [{"max_id": 1, "min_id": 1}],
         ]
 
-        schema = await introspector.introspect_table("duplicate_test")
+        schema = await introspector.introspect_table("duplicate_test", perform_duckdb_analysis=False)
 
         # Should have unique names
         names = [field.name for field in schema.fields.values()]
@@ -304,7 +304,7 @@ class TestSchemaIntrospector:
         mock_client.execute = AsyncMock(return_value=[])
 
         with pytest.raises(ValueError, match="Table 'empty_table' is empty"):
-            await introspector.introspect_table("empty_table")
+            await introspector.introspect_table("empty_table", perform_duckdb_analysis=False)
 
     @pytest.mark.asyncio
     async def test_introspect_table_no_metadata(self, introspector, mock_client):
@@ -312,7 +312,7 @@ class TestSchemaIntrospector:
         sample_data = [[1, "John"]]
         mock_client.execute = AsyncMock(return_value=sample_data)
 
-        schema = await introspector.introspect_table("users", gather_metadata=False)
+        schema = await introspector.introspect_table("users", gather_metadata=False, perform_duckdb_analysis=False)
 
         assert schema.metadata is None
         assert schema.sync_config.where is None  # No smart defaults without metadata
@@ -330,7 +330,7 @@ class TestSchemaIntrospector:
             [{"max_id": 2, "min_id": 2}],  # table2 ID stats
         ]
 
-        schemas = await introspector.introspect_all_tables(["table1", "table2"])
+        schemas = await introspector.introspect_all_tables(["table1", "table2"], perform_duckdb_analysis=False)
 
         assert len(schemas) == 2
         assert "table1" in schemas
@@ -350,7 +350,7 @@ class TestSchemaIntrospector:
             Exception("Connection failed"),  # table2 fails
         ]
 
-        schemas = await introspector.introspect_all_tables(["table1", "table2"])
+        schemas = await introspector.introspect_all_tables(["table1", "table2"], perform_duckdb_analysis=False)
 
         assert len(schemas) == 1  # Only successful table
         assert "table1" in schemas

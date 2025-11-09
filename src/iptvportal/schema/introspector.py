@@ -423,7 +423,7 @@ class SchemaIntrospector:
         return f"Field_{position}"
 
     async def introspect_all_tables(
-        self, table_names: list[str], gather_metadata: bool = True
+        self, table_names: list[str], gather_metadata: bool = True, perform_duckdb_analysis: bool = True
     ) -> dict[str, TableSchema]:
         """
         Интроспекция нескольких таблиц параллельно.
@@ -431,11 +431,15 @@ class SchemaIntrospector:
         Args:
             table_names: Список имён таблиц
             gather_metadata: Собирать ли метаданные
+            perform_duckdb_analysis: Выполнять ли DuckDB анализ
 
         Returns:
             Словарь {table_name: TableSchema}
         """
-        tasks = [self.introspect_table(table_name, gather_metadata) for table_name in table_names]
+        tasks = [
+            self.introspect_table(table_name, gather_metadata, perform_duckdb_analysis=perform_duckdb_analysis) 
+            for table_name in table_names
+        ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 

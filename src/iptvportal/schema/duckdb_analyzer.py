@@ -64,21 +64,14 @@ class DuckDBAnalyzer:
             ]
 
         try:
+            import pandas as pd
+            
             # Create a DuckDB connection
             conn = self.duckdb.connect(":memory:")
 
-            # Convert sample data to DuckDB table
-            # We need to create a relation from the data
-            conn.execute("CREATE TABLE sample_data AS SELECT * FROM ?", [sample_data])
-
-            # Rename columns to match field names
-            import contextlib
-            
-            for i, field_name in enumerate(field_names):
-                safe_name = field_name.replace(" ", "_").replace("-", "_")
-                # Try to rename column, ignore if it fails
-                with contextlib.suppress(Exception):
-                    conn.execute(f'ALTER TABLE sample_data RENAME COLUMN "col{i}" TO "{safe_name}"')
+            # Convert sample data to DataFrame first, then to DuckDB table
+            df = pd.DataFrame(sample_data, columns=field_names)
+            conn.execute("CREATE TABLE sample_data AS SELECT * FROM df")
 
             # Perform analysis
             analysis_results = {}
@@ -162,8 +155,12 @@ class DuckDBAnalyzer:
             return []
 
         try:
+            import pandas as pd
+            
             conn = self.duckdb.connect(":memory:")
-            conn.execute("CREATE TABLE sample AS SELECT * FROM ?", [sample_data])
+            # Create DataFrame with default column names
+            df = pd.DataFrame(sample_data)
+            conn.execute("CREATE TABLE sample AS SELECT * FROM df")
             describe = conn.execute("DESCRIBE sample").fetchall()
             conn.close()
 
