@@ -349,7 +349,7 @@ class Subscriber(SQLModel, table=True):
 The schema system automatically expands `SELECT *` in queries when using the transpiler:
 
 ```python
-from iptvportal.transpiler import SQLTranspiler
+from iptvportal.jsonsql import SQLTranspiler
 
 # Initialize transpiler with schema registry
 transpiler = SQLTranspiler(schema_registry=client.schema_registry)

@@ -373,7 +373,7 @@ import typer
 from rich.console import Console
 
 from iptvportal.config import load_cli_config, CLISettings
-from iptvportal.transpiler import SQLTranspiler
+from iptvportal.jsonsql import SQLTranspiler
 from iptvportal.cli.utils import execute_query
 
 console = Console()
