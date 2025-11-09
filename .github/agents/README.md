@@ -99,6 +99,20 @@ The agent architecture enables efficient, consistent, and high-quality developme
 - Integrates with query builder and transport layer
 - Follows existing patterns from SubscriberResource
 
+---
+
+### 8. [Pydantic Agent](./pydantic-agent.md)
+**Pydantic Model Generation Specialist**
+
+- Generates Pydantic models from table schemas with full type hints
+- Automates type inference and validation rules
+- Ensures mypy strict compliance and Google-style docstrings
+- Integrates models with transport layer and resource managers
+
+**When to use**: When creating new data models, generating request/response models, or ensuring strict type safety.
+
+**Key tools**: `pydantic-schema`, `schema-validator`, `integration-checker`
+
 **When to use**: When creating new resource managers or extending entity management capabilities.
 
 **Key tools**: `template-engine`, `crud-validator`

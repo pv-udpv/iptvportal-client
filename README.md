@@ -10,6 +10,7 @@ Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync sup
  - 📊 **Sync Management CLI** - Complete command-line interface for cache initialization, status monitoring, and maintenance operations
  - ⚙️ **Modular Configuration** - Dynaconf-based hierarchical configuration with schema-specific overrides and environment variable support
  - 🐛 **Debug Mode** - Step-by-step logging with `--debug` flag for troubleshooting, showing SQL transpilation, JSONSQL, JSON-RPC requests, and full error tracebacks
+ - 🤖 **Pydantic Model Generator** - Automated generation of type-safe Pydantic models from table schemas with validators, Google-style docstrings, and mypy strict compliance
 
 ## Installation
 
@@ -595,6 +596,117 @@ query = qb.select(
     )
 )
 ```
+
+---
+
+## Pydantic Model Generator
+
+The IPTVPortal client includes an advanced Pydantic model generator that automatically creates type-safe models from table schemas with full validation, documentation, and integration support.
+
+### Features
+
+- **Automated Type Inference** - Converts FieldType enums to Python types (INTEGER → int, STRING → str, etc.)
+- **Modern Type Syntax** - Uses Python 3.10+ union syntax (`str | None` instead of `Optional[str]`)
+- **Field Validation** - Generates validators for string trimming, numeric constraints, etc.
+- **Google-Style Docstrings** - Complete documentation with examples
+- **mypy Strict Compliance** - All generated code passes `mypy --strict`
+- **Integration Checking** - Validates compatibility with transport layer and resource managers
+
+### MCP Tools
+
+Three Model Context Protocol (MCP) tools are provided for model generation workflow:
+
+1. **pydantic_schema** - Generate Pydantic models from schemas
+2. **schema_validator** - Validate generated models (AST, docstrings, mypy)
+3. **integration_checker** - Check transport/resource manager compatibility
+
+### Usage Example
+
+```python
+from iptvportal.schema import (
+    PydanticModelGenerator,
+    SchemaBuilder,
+    SchemaRegistry,
+    FieldType,
+)
+
+# Create a schema
+registry = SchemaRegistry()
+subscriber_schema = (
+    SchemaBuilder("subscriber")
+    .field(0, "id", field_type=FieldType.INTEGER, description="Subscriber ID")
+    .field(1, "username", field_type=FieldType.STRING, description="Username")
+    .field(2, "email", field_type=FieldType.STRING, description="Email")
+    .set_total_fields(3)
+    .build()
+)
+
+# Add constraints
+subscriber_schema.fields[0].constraints = {"nullable": False, "ge": 1}
+subscriber_schema.fields[1].constraints = {"nullable": False, "min_length": 3}
+subscriber_schema.fields[2].constraints = {"nullable": True}
+
+registry.register(subscriber_schema)
+
+# Generate model
+generator = PydanticModelGenerator(registry)
+model_code = generator.generate_model("subscriber", include_validators=True)
+print(model_code)
+
+# Validate the generated model
+validation_report = generator.validate_model(model_code)
+print(f"Valid: {validation_report['valid']}")
+
+# Check integration
+integration_report = generator.check_integration(model_code, "subscriber")
+print(f"Transport compatible: {integration_report['transport_compatible']}")
+```
+
+### Generated Model Example
+
+The generator produces complete, production-ready Pydantic models:
+
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+
+
+class Subscriber(BaseModel):
+    """Subscriber model.
+    
+    Represents a subscriber record from the IPTVPortal database.
+    
+    Attributes:
+        id: Subscriber ID
+        username: Username  
+        email: Email
+    """
+    
+    id: int = Field(..., ge=1, description="Subscriber ID")
+    username: str = Field(..., min_length=3, description="Username")
+    email: str | None = Field(None, description="Email")
+    
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("username cannot be empty")
+        return v.strip()
+    
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True,
+        validate_assignment=True,
+    )
+```
+
+For more details, see:
+- Full example: `examples/pydantic_generator_example.py`
+- Agent specification: `.github/agents/pydantic-agent.md`
+- API documentation: `src/iptvportal/schema/pydantic_generator.py`
+
+---
 
 ## Enhanced Error Handling
 

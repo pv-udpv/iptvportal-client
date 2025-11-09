@@ -2,6 +2,12 @@
 
 from iptvportal.schema.codegen import ORMGenerator
 from iptvportal.schema.introspector import SchemaIntrospector
+from iptvportal.schema.pydantic_generator import (
+    PydanticModelGenerator,
+    integration_checker,
+    pydantic_schema,
+    schema_validator,
+)
 from iptvportal.schema.table import (
     FieldDefinition,
     FieldType,
@@ -29,4 +35,9 @@ __all__ = [
     # Utilities
     "SchemaIntrospector",
     "ORMGenerator",
+    # Pydantic generator and MCP tools
+    "PydanticModelGenerator",
+    "pydantic_schema",
+    "schema_validator",
+    "integration_checker",
 ]
