@@ -3,8 +3,8 @@
 import typer
 from rich.console import Console
 
-from iptvportal.client import IPTVPortalClient
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.config.settings import IPTVPortalSettings
+from iptvportal.core.client import IPTVPortalClient
 from iptvportal.exceptions import IPTVPortalError
 
 console = Console()

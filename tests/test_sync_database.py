@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.config.settings import IPTVPortalSettings
 from iptvportal.schema import FieldDefinition, FieldType, SyncConfig, TableMetadata, TableSchema
 from iptvportal.sync.database import SyncDatabase
 

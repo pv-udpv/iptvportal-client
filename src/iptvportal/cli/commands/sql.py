@@ -11,7 +11,7 @@ from iptvportal.cli.formatters import (
 )
 from iptvportal.cli.utils import execute_query
 from iptvportal.exceptions import IPTVPortalError
-from iptvportal.transpiler import SQLTranspiler
+from iptvportal.jsonsql import SQLTranspiler
 
 console = Console()
 

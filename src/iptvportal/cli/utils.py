@@ -8,8 +8,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 
-from iptvportal.client import IPTVPortalClient
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.config.settings import IPTVPortalSettings
+from iptvportal.core.client import IPTVPortalClient
 
 console = Console()
 

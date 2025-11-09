@@ -11,7 +11,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.tree import Tree
 
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.config.settings import IPTVPortalSettings
 
 console = Console()
 config_app = typer.Typer(name="config", help="Manage configuration")

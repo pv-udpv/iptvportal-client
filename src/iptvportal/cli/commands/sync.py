@@ -118,8 +118,8 @@ def register(
         errors = []
 
         # Get client for metadata queries
-        from iptvportal.async_client import AsyncIPTVPortalClient
         from iptvportal.cli.utils import load_config
+        from iptvportal.core.async_client import AsyncIPTVPortalClient
 
         settings = load_config(config_file)
 
@@ -142,7 +142,7 @@ def register(
 
                                 # Get sample row to determine total fields
                                 sample_sql = f"SELECT * FROM {table_name} LIMIT 1"
-                                from iptvportal.transpiler.transpiler import SQLTranspiler
+                                from iptvportal.jsonsql.transpiler import SQLTranspiler
 
                                 transpiler = SQLTranspiler()
                                 sample_jsonsql = transpiler.transpile(sample_sql)
@@ -285,8 +285,8 @@ def run(
         iptvportal sync run tv_channel --strategy incremental
     """
     try:
-        from iptvportal.async_client import AsyncIPTVPortalClient
         from iptvportal.cli.utils import load_config
+        from iptvportal.core.async_client import AsyncIPTVPortalClient
         from iptvportal.sync.manager import SyncManager
 
         settings = load_config(config_file)

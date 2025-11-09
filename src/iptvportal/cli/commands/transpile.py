@@ -4,8 +4,8 @@ import typer
 from rich.console import Console
 
 from iptvportal.cli.formatters import format_json, format_yaml
-from iptvportal.transpiler import SQLTranspiler
-from iptvportal.transpiler.exceptions import TranspilerError
+from iptvportal.jsonsql import SQLTranspiler
+from iptvportal.jsonsql.exceptions import TranspilerError
 
 console = Console()
 
