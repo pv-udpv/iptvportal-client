@@ -109,14 +109,20 @@ def get_conf() -> Dynaconf:
     Example:
         >>> from iptvportal.project_conf import get_conf
         >>> conf = get_conf()
-        >>> print(conf.core.timeout)
-        30.0
-        >>> print(conf.sync.subscriber.strategy)
-        incremental
+        >>> conf.core.timeout  # -> 30.0
+        >>> conf.sync.subscriber.strategy  # -> incremental
     """
     global _settings
     if _settings is None:
         _settings = _init_dynaconf()
+        # Initialize logging after config is loaded; keep best-effort to avoid import cycles
+        try:
+            from iptvportal.logging_setup import setup_logging
+
+            setup_logging(_settings)
+        except Exception:
+            # Do not fail configuration loading if logging setup fails
+            pass
     return _settings
 
 
@@ -134,6 +140,14 @@ def reload_conf() -> Dynaconf:
     """
     global _settings
     _settings = _init_dynaconf()
+    # Reconfigure logging to pick up any changed logging settings
+    try:
+        from iptvportal.logging_setup import setup_logging
+
+        setup_logging(_settings)
+    except Exception:
+        # Best-effort: don't raise on logging failures
+        pass
     return _settings
 
 
@@ -229,7 +243,7 @@ def get_config_files() -> list[str]:
         >>> from iptvportal.project_conf import get_config_files
         >>> files = get_config_files()
         >>> for f in files:
-        ...     print(f)
+        ...     f  # iterate over configuration file paths
     """
     config_base = _find_config_base()
 
