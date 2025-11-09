@@ -645,17 +645,21 @@ iptvportal-client/
 │   │   └── cache.py           # Query result cache
 │   ├── config/            # Configuration management
 │   │   ├── settings.py        # Pydantic Settings
-│   │   └── project.py         # Dynaconf configuration
+│   │   ├── project.py         # Dynaconf configuration
+│   │   └── logging.py         # Logging configuration
+│   ├── cache/             # Cache service (query result caching)
+│   │   └── __cli__.py         # Cache CLI commands
 │   ├── schema/            # Schema system
-│   │   ├── table.py           # TableSchema, FieldDefinition
-│   │   ├── registry.py        # SchemaRegistry, SchemaLoader
+│   │   ├── table.py           # TableSchema, FieldDefinition, SchemaRegistry, SchemaLoader
 │   │   ├── introspector.py    # Schema introspection
+│   │   ├── duckdb_analyzer.py # DuckDB-based statistical analysis
 │   │   └── codegen.py         # ORM model generation
 │   ├── jsonsql/           # JSONSQL transpiler & query builder
 │   │   ├── transpiler.py      # SQL → JSONSQL transpiler
 │   │   ├── builder.py         # Query builder DSL
 │   │   ├── operators.py       # Operator mappings
-│   │   └── functions.py       # Function handlers
+│   │   ├── functions.py       # Function handlers
+│   │   └── exceptions.py      # Transpiler exceptions
 │   ├── models/            # Data Transfer Objects (DTOs)
 │   │   ├── requests.py        # Input validation models
 │   │   └── responses.py       # Output models with metadata
@@ -669,7 +673,9 @@ iptvportal-client/
 │   │   ├── __main__.py        # CLI application entry
 │   │   └── commands/          # CLI command modules
 │   ├── exceptions.py      # Exception hierarchy
-│   └── validation.py      # Pandas-based validation
+│   ├── validation.py      # Pandas-based validation
+│   ├── logging_setup.py   # Logging configuration and setup
+│   └── project_conf.py    # Legacy project configuration (backward compatibility)
 └── docs/
     ├── cli.md             # Comprehensive CLI guide
     └── jsonsql.md         # JSONSQL specification
@@ -728,14 +734,14 @@ with IPTVPortalClient() as client:
 ```mermaid
 flowchart LR
   subgraph CLI["iptvportal CLI (Typer)"]
-    CMD["Commands:\n- auth\n- sql\n- jsonsql\n- transpile\n- config\n- sync"]
+    CMD["Services:\n- config\n- cache\n- schema\n- jsonsql (auth, sql, select/insert/update/delete, utils)\n- sync"]
   end
 
   subgraph Core["Core Library"]
     AUTH["auth.py\n(session mgmt)"]
     CLIENT["client.py / async_client.py\n(httpx JSON-RPC)"]
     TRANS["jsonsql/\n(SQL → JSONSQL)"]
-    SCHEMA["schema.py\n(mapping, validation)"]
+    SCHEMA["schema/\n(table schemas, introspection)"]
     SYNC["sync/\n(SQLite cache: database.py)"]
   end
 
@@ -762,11 +768,11 @@ sequenceDiagram
   participant U as User
   participant CLI as iptvportal (Typer)
   participant TRANS as SQLTranspiler
-  participant SCHEMA as schema.py
+  participant SCHEMA as schema/ (table.py)
   participant CLIENT as client.py (httpx)
   participant RPC as IPTVPortal JSON-RPC
 
-  U->>CLI: iptvportal sql -q "SELECT id, username FROM subscriber LIMIT 5"
+  U->>CLI: iptvportal jsonsql sql -q "SELECT id, username FROM subscriber LIMIT 5"
   CLI->>TRANS: transpile(SQL, auto_order_by_id=True)
   TRANS->>SCHEMA: resolve fields, mapping, types
   SCHEMA-->>TRANS: field positions, types, order_by="id"
