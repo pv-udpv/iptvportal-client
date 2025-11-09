@@ -71,28 +71,28 @@ def sql_main(
 
     Examples:
         # Execute SQL query directly
-        iptvportal sql --query "SELECT * FROM subscriber LIMIT 10"
-        iptvportal sql -q "SELECT id, username FROM subscriber WHERE disabled = false"
+        iptvportal jsonsql sql --query "SELECT * FROM subscriber LIMIT 10"
+        iptvportal jsonsql sql -q "SELECT id, username FROM subscriber WHERE disabled = false"
 
         # Open editor to write query
-        iptvportal sql --edit
-        iptvportal sql -e
+        iptvportal jsonsql sql --edit
+        iptvportal jsonsql sql -e
 
         # Dry-run mode (show transpiled JSONSQL without executing)
-        iptvportal sql -q "SELECT * FROM subscriber" --dry-run
+        iptvportal jsonsql sql -q "SELECT * FROM subscriber" --dry-run
 
         # Different output formats
-        iptvportal sql -q "SELECT * FROM subscriber" --format json
-        iptvportal sql -q "SELECT * FROM subscriber" -f yaml
+        iptvportal jsonsql sql -q "SELECT * FROM subscriber" --format json
+        iptvportal jsonsql sql -q "SELECT * FROM subscriber" -f yaml
 
         # Disable schema mapping (if you need raw column inference)
-        iptvportal sql -q "SELECT * FROM media LIMIT 10" --no-map-schema
-        iptvportal sql -q "SELECT * FROM media" -M
+        iptvportal jsonsql sql -q "SELECT * FROM media LIMIT 10" --no-map-schema
+        iptvportal jsonsql sql -q "SELECT * FROM media" -M
 
         # Debug mode (detailed step-by-step logging)
-        iptvportal sql -q "SELECT * FROM subscriber" --debug
-        iptvportal sql -q "SELECT * FROM media" --debug --debug-format json
-        iptvportal sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
+        iptvportal jsonsql sql -q "SELECT * FROM subscriber" --debug
+        iptvportal jsonsql sql -q "SELECT * FROM media" --debug --debug-format json
+        iptvportal jsonsql sql -q "SELECT * FROM terminal" --debug --debug-file debug.log
     """
     # Import debug logger
     from iptvportal.cli.debug import DebugLogger

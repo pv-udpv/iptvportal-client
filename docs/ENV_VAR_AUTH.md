@@ -95,12 +95,12 @@ export IPTVPORTAL_USERNAME=admin
 export IPTVPORTAL_PASSWORD=secret123
 
 # Run queries directly - automatically authenticated
-iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
-iptvportal sql -q "SELECT id, name, disabled FROM subscriber WHERE login LIKE 'admin%'"
-iptvportal sql -q "SELECT COUNT(*) FROM media"
+iptvportal jsonsql sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal jsonsql sql -q "SELECT id, name, disabled FROM subscriber WHERE login LIKE 'admin%'"
+iptvportal jsonsql sql -q "SELECT COUNT(*) FROM media"
 
 # Check authentication status
-iptvportal auth
+iptvportal jsonsql auth
 
 # Use different query formats
 iptvportal jsonsql select --from tv_channel --limit 10
@@ -177,22 +177,22 @@ All CLI commands automatically use environment variables:
 
 ```bash
 # Run SQL queries - most common use case
-iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
-iptvportal sql -q "SELECT id, username, balance FROM subscriber WHERE disabled=false LIMIT 20"
-iptvportal sql -q "SELECT COUNT(*) FROM media"
+iptvportal jsonsql sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal jsonsql sql -q "SELECT id, username, balance FROM subscriber WHERE disabled=false LIMIT 20"
+iptvportal jsonsql sql -q "SELECT COUNT(*) FROM media"
 
 # Run JSONSQL queries
 iptvportal jsonsql select --from tv_channel --limit 10
 iptvportal jsonsql select --from subscriber --data id,username --limit 20
 
 # Transpile SQL to JSONSQL (dry-run - see what will be executed)
-iptvportal sql -q "SELECT * FROM media WHERE active=true" --dry-run
+iptvportal jsonsql sql -q "SELECT * FROM media WHERE active=true" --dry-run
 
 # Check authentication status (optional - queries auto-authenticate)
-iptvportal auth
+iptvportal jsonsql auth
 
 # Force re-authentication if needed
-iptvportal auth --renew
+iptvportal jsonsql auth --renew
 
 # Show current configuration
 iptvportal config show
@@ -244,11 +244,11 @@ These can be used immediately for running queries:
 
 ```bash
 # Run queries directly - authentication happens automatically
-iptvportal sql -q "SELECT * FROM tv_channel LIMIT 10"
-iptvportal sql -q "SELECT COUNT(*) FROM subscriber"
+iptvportal jsonsql sql -q "SELECT * FROM tv_channel LIMIT 10"
+iptvportal jsonsql sql -q "SELECT COUNT(*) FROM subscriber"
 
 # Check auth status if needed
-iptvportal auth
+iptvportal jsonsql auth
 # ✓ Authentication successful
 # Session ID: abc123...
 ```

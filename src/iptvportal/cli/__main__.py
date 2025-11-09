@@ -5,6 +5,10 @@ import contextlib
 import typer
 from rich.console import Console
 
+from iptvportal.cli.commands.cache import cache_app
+from iptvportal.cli.commands.config import config_app
+from iptvportal.cli.commands.jsonsql import jsonsql_app
+from iptvportal.cli.commands.sync import app as sync_app
 from iptvportal.cli.discovery import discover_cli_modules
 
 console = Console()
@@ -15,6 +19,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+# Register infrastructure commands (top-level)
+app.add_typer(config_app, name="config")
+app.add_typer(cache_app, name="cache")
 # Auto-discover and register all service CLI modules
 discovered = discover_cli_modules("iptvportal", verbose=False)
 for service_name, service_app in discovered.items():
@@ -24,6 +31,45 @@ for service_name, service_app in discovered.items():
 from iptvportal.cli.commands.sync import app as sync_app
 
 app.add_typer(sync_app, name="sync")
+
+# Register API operations under jsonsql hierarchy
+# (jsonsql_app includes: select, insert, update, delete, auth, sql, transpile, schema)
+app.add_typer(jsonsql_app, name="jsonsql")
+
+
+# Deprecated command redirects (hidden from help)
+@app.command(name="auth", hidden=True)
+def auth_deprecated() -> None:
+    """Deprecated: use 'iptvportal jsonsql auth' instead."""
+    console.print("[yellow]Command moved:[/yellow] iptvportal auth → iptvportal jsonsql auth")
+    console.print("[dim]Run: iptvportal jsonsql auth[/dim]")
+    raise typer.Exit(1)
+
+
+@app.command(name="transpile", hidden=True)
+def transpile_deprecated() -> None:
+    """Deprecated: use 'iptvportal jsonsql transpile' instead."""
+    console.print(
+        "[yellow]Command moved:[/yellow] iptvportal transpile → iptvportal jsonsql transpile"
+    )
+    console.print("[dim]Run: iptvportal jsonsql transpile <sql>[/dim]")
+    raise typer.Exit(1)
+
+
+@app.command(name="sql", hidden=True)
+def sql_deprecated() -> None:
+    """Deprecated: use 'iptvportal jsonsql sql' instead."""
+    console.print("[yellow]Command moved:[/yellow] iptvportal sql → iptvportal jsonsql sql")
+    console.print("[dim]Run: iptvportal jsonsql sql --query 'SELECT ...'[/dim]")
+    raise typer.Exit(1)
+
+
+@app.command(name="schema", hidden=True)
+def schema_deprecated() -> None:
+    """Deprecated: use 'iptvportal jsonsql schema' instead."""
+    console.print("[yellow]Command moved:[/yellow] iptvportal schema → iptvportal jsonsql schema")
+    console.print("[dim]Run: iptvportal jsonsql schema show[/dim]")
+    raise typer.Exit(1)
 
 # Define typer Option defaults at module level to avoid calling functions in parameter defaults
 LOG_LEVEL_OPTION = typer.Option(

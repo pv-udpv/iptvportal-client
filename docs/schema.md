@@ -378,10 +378,10 @@ The CLI automatically detects table names from JSONSQL queries and applies schem
 
 ```bash
 # Use schema mapping with automatic table detection
-iptvportal sql select --from media --map-schema
+iptvportal jsonsql sql select --from media --map-schema
 
 # Works with any JSONSQL query
-iptvportal sql select --from subscriber --where '{"status": "active"}' --map-schema
+iptvportal jsonsql sql select --from subscriber --where '{"status": "active"}' --map-schema
 ```
 
 ### Automatic Schema Generation
@@ -390,7 +390,7 @@ When using `--map-schema` with a table that doesn't have a predefined schema, th
 
 ```bash
 # First query to a new table - auto-generates schema
-iptvportal sql select --from new_table --map-schema
+iptvportal jsonsql sql select --from new_table --map-schema
 ```
 
 The CLI will:
@@ -409,7 +409,7 @@ The CLI will:
 With auto-generation enabled:
 
 ```bash
-$ iptvportal sql select --from unknown_table --limit 5 --map-schema
+$ iptvportal jsonsql sql select --from unknown_table --limit 5 --map-schema
 
 Auto-generating schema for table: unknown_table
 ✓ Generated schema with 8 fields

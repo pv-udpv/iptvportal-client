@@ -2,6 +2,23 @@
 
 Comprehensive guide to using the IPTVPortal command-line interface.
 
+## Command Hierarchy
+
+The IPTVPortal CLI organizes commands into two main categories:
+
+**API Operations (under `jsonsql`):**
+- `iptvportal jsonsql auth` - Authentication
+- `iptvportal jsonsql sql` - SQL queries (auto-transpiled)
+- `iptvportal jsonsql transpile` - SQL → JSONSQL conversion
+- `iptvportal jsonsql schema` - Schema management
+- `iptvportal jsonsql select/insert/update/delete` - Native JSONSQL queries
+
+**Infrastructure Operations (top-level):**
+- `iptvportal config` - Configuration management
+- `iptvportal sync` - Cache management
+- `iptvportal cache` - Cache utilities
+
+All commands that interact with the IPTVPortal API are grouped under the `jsonsql` namespace for logical organization.
 > **Note**: The CLI now uses a service-oriented architecture with auto-discovery.  
 > See [CLI Architecture](cli-architecture.md) for details on the service design.
 
@@ -453,6 +470,13 @@ Convert SQL queries to JSONSQL format without executing them.
 
 ```bash
 # Simple query
+iptvportal jsonsql transpile "SELECT * FROM subscriber"
+
+# With WHERE clause
+iptvportal jsonsql transpile "SELECT id, username FROM subscriber WHERE disabled = false"
+
+# Complex query with JOIN
+iptvportal jsonsql transpile "
 iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
 
 # With WHERE clause
@@ -471,6 +495,10 @@ iptvportal jsonsql utils transpile "
 
 ```bash
 # JSON format (default)
+iptvportal jsonsql transpile "SELECT * FROM subscriber"
+
+# YAML format
+iptvportal jsonsql transpile "SELECT * FROM subscriber" --format yaml
 iptvportal jsonsql utils transpile "SELECT * FROM subscriber"
 
 # YAML format
@@ -481,6 +509,10 @@ iptvportal jsonsql utils transpile "SELECT * FROM subscriber" --format yaml
 
 ```bash
 # Read SQL from file
+iptvportal jsonsql transpile --file query.sql
+
+# With specific format
+iptvportal jsonsql transpile --file query.sql --format yaml
 iptvportal jsonsql utils transpile --file query.sql
 
 # With specific format
@@ -725,41 +757,41 @@ Automatically analyze a table's structure with comprehensive metadata:
 
 ```bash
 # Simple table introspection (using positional argument)
-iptvportal schema introspect tv_channel
+iptvportal jsonsql schema introspect tv_channel
 
 # Using --table option (equivalent)
-iptvportal schema introspect --table tv_channel
+iptvportal jsonsql schema introspect --table tv_channel
 
 # SQL-based introspection
-iptvportal schema introspect --from-sql="SELECT * FROM tv_channel"
+iptvportal jsonsql schema introspect --from-sql="SELECT * FROM tv_channel"
 
 # With manual field mappings
-iptvportal schema introspect --table media --fields="0:id,1:name,2:url,3:duration"
+iptvportal jsonsql schema introspect --table media --fields="0:id,1:name,2:url,3:duration"
 
 # Save schema to file
-iptvportal schema introspect tv_channel --save
-iptvportal schema introspect media --save --output schemas/media-schema.yaml
+iptvportal jsonsql schema introspect tv_channel --save
+iptvportal jsonsql schema introspect media --save --output schemas/media-schema.yaml
 
 # Skip metadata gathering (faster)
-iptvportal schema introspect tv_channel --no-metadata
+iptvportal jsonsql schema introspect tv_channel --no-metadata
 
 # Skip DuckDB analysis
-iptvportal schema introspect tv_channel --no-duckdb-analysis
+iptvportal jsonsql schema introspect tv_channel --no-duckdb-analysis
 
 # Custom sample size for analysis
-iptvportal schema introspect media --sample-size 5000
+iptvportal jsonsql schema introspect media --sample-size 5000
 
 # NEW: Introspect and sync to local cache
-iptvportal schema introspect tv_channel --sync
+iptvportal jsonsql schema introspect tv_channel --sync
 
 # NEW: Introspect, sync with custom chunk size and analyze from cache
-iptvportal schema introspect tv_program --fields='0:channel_id,1:start,2:stop' --sync --sync-chunk=5000
+iptvportal jsonsql schema introspect tv_program --fields='0:channel_id,1:start,2:stop' --sync --sync-chunk=5000
 
 # NEW: Sync with ordering and analyze synced data
-iptvportal schema introspect media --sync --order-by-fields='id:asc' --analyze-from-cache
+iptvportal jsonsql schema introspect media --sync --order-by-fields='id:asc' --analyze-from-cache
 
 # NEW: Sync with timeout (0 = no timeout)
-iptvportal schema introspect tv_channel --sync --sync-run-timeout=300
+iptvportal jsonsql schema introspect tv_channel --sync --sync-run-timeout=300
 ```
 
 ### What Gets Analyzed
@@ -804,7 +836,7 @@ iptvportal schema introspect tv_channel --sync --sync-run-timeout=300
 ### Example Output
 
 ```bash
-$ iptvportal schema introspect tv_channel
+$ iptvportal jsonsql schema introspect tv_channel
 
 Introspecting table: tv_channel
 Gathering metadata (row count, ID ranges, timestamps)...
@@ -867,7 +899,7 @@ Cache TTL:        1800s
 ### Example Output with Sync
 
 ```bash
-$ iptvportal schema introspect tv_channel --sync --analyze-from-cache
+$ iptvportal jsonsql schema introspect tv_channel --sync --analyze-from-cache
 
 Introspecting table: tv_channel
 Gathering metadata (row count, ID ranges, timestamps)...
@@ -919,28 +951,28 @@ DuckDB Analysis (from cache):
 
 ```bash
 # List all loaded schemas
-iptvportal schema list
+iptvportal jsonsql schema list
 
 # Show detailed schema info
-iptvportal schema show tv_channel
+iptvportal jsonsql schema show tv_channel
 
 # Generate schema from SQL query
-iptvportal schema from-sql -q "SELECT * FROM media LIMIT 10"
+iptvportal jsonsql schema from-sql -q "SELECT * FROM media LIMIT 10"
 
 # Validate field mappings
-iptvportal schema validate-mapping subscriber -m "0:id,1:username,2:email"
+iptvportal jsonsql schema validate-mapping subscriber -m "0:id,1:username,2:email"
 
 # Export schema to file
-iptvportal schema export tv_channel -o schemas/tv-channel.yaml
+iptvportal jsonsql schema export tv_channel -o schemas/tv-channel.yaml
 
 # Import schemas from file
-iptvportal schema import schemas.yaml
+iptvportal jsonsql schema import schemas.yaml
 
 # Validate schema file
-iptvportal schema validate schemas.yaml
+iptvportal jsonsql schema validate schemas.yaml
 
 # Generate ORM models
-iptvportal schema generate-models schemas.yaml --format sqlmodel
+iptvportal jsonsql schema generate-models schemas.yaml --format sqlmodel
 ```
 
 ## Common Use Cases
@@ -1016,6 +1048,7 @@ iptvportal jsonsql sql --edit
 
 # Or break into steps with dry-run
 iptvportal jsonsql sql -q "YOUR_COMPLEX_QUERY" --dry-run
+iptvportal jsonsql transpile "YOUR_COMPLEX_QUERY"  # Check JSONSQL
 iptvportal jsonsql utils transpile "YOUR_COMPLEX_QUERY"  # Check JSONSQL
 iptvportal jsonsql sql -q "YOUR_COMPLEX_QUERY"      # Execute
 ```
@@ -1059,6 +1092,7 @@ cat .env
 iptvportal jsonsql sql -q "YOUR_QUERY" --dry-run
 
 # Or transpile separately
+iptvportal jsonsql transpile "YOUR_QUERY"
 iptvportal jsonsql utils transpile "YOUR_QUERY"
 ```
 
@@ -1112,6 +1146,7 @@ iptvportal config get <key>         # Get value
 
 # Authentication
 iptvportal jsonsql auth                     # Check status
+iptvportal jsonsql auth --renew            # Force re-auth
 iptvportal auth --renew            # Force re-auth
 
 # SQL Queries
@@ -1129,17 +1164,20 @@ iptvportal jsonsql update --table t --set '{...}'     # Update
 iptvportal jsonsql delete --from table --where ...    # Delete
 
 # Transpiler
+iptvportal jsonsql transpile "SELECT ..."              # SQL to JSONSQL
+iptvportal jsonsql transpile --file query.sql         # From file
+iptvportal jsonsql transpile "SELECT ..." -f yaml     # YAML output
 iptvportal jsonsql utils transpile "SELECT ..."              # SQL to JSONSQL
 iptvportal jsonsql utils transpile --file query.sql         # From file
 iptvportal jsonsql utils transpile "SELECT ..." -f yaml     # YAML output
 
 # Schema Management
-iptvportal schema introspect tv_channel                    # Analyze table
-iptvportal schema introspect --table media                 # Alt syntax
-iptvportal schema introspect --from-sql="SELECT * FROM t"  # SQL-based
-iptvportal schema list                                     # List schemas
-iptvportal schema show table_name                          # Show details
-iptvportal schema from-sql -q "SELECT ..." --save          # Generate & save
+iptvportal jsonsql schema introspect tv_channel                    # Analyze table
+iptvportal jsonsql schema introspect --table media                 # Alt syntax
+iptvportal jsonsql schema introspect --from-sql="SELECT * FROM t"  # SQL-based
+iptvportal jsonsql schema list                                     # List schemas
+iptvportal jsonsql schema show table_name                          # Show details
+iptvportal jsonsql schema from-sql -q "SELECT ..." --save          # Generate & save
 ```
 
 ## Integration with Scripts

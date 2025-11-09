@@ -18,8 +18,8 @@ def auth_command(
     Check authentication status or renew session.
 
     Examples:
-        iptvportal auth              # Check current session
-        iptvportal auth --renew      # Force re-authentication
+        iptvportal jsonsql auth              # Check current session
+        iptvportal jsonsql auth --renew      # Force re-authentication
     """
     try:
         # Load configuration

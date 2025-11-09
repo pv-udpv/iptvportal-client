@@ -1,4 +1,4 @@
-"""JSONSQL commands (select, insert, update, delete)."""
+"""JSONSQL commands (select, insert, update, delete) and API subcommands."""
 
 import json
 from typing import Any
@@ -16,7 +16,11 @@ from iptvportal.cli.utils import execute_query, parse_json_param
 from iptvportal.exceptions import IPTVPortalError
 
 console = Console()
-jsonsql_app = typer.Typer(name="jsonsql", help="Execute native JSONSQL queries")
+jsonsql_app = typer.Typer(
+    name="jsonsql",
+    help="JSONSQL queries and API operations",
+    no_args_is_help=True,
+)
 
 
 def build_select_params(
@@ -604,3 +608,25 @@ def delete_command(
             console.print(f"[bold red]Unexpected error:[/bold red] {e}")
             console.print("[yellow]Tip: Use --debug flag for detailed error information[/yellow]")
         raise typer.Exit(1) from e
+
+
+# Register subcommands under jsonsql
+# These imports are at the end to avoid circular dependencies
+def _register_subcommands() -> None:
+    """Register API subcommands under jsonsql."""
+    from iptvportal.cli.commands.auth import auth_command
+    from iptvportal.cli.commands.schema import schema_app
+    from iptvportal.cli.commands.sql import sql_app
+    from iptvportal.cli.commands.transpile import transpile_command
+
+    # Register as subcommands
+    jsonsql_app.command(name="auth", help="Check authentication or renew session")(auth_command)
+    jsonsql_app.command(name="transpile", help="Transpile SQL to JSONSQL format")(
+        transpile_command
+    )
+    jsonsql_app.add_typer(sql_app, name="sql")
+    jsonsql_app.add_typer(schema_app, name="schema")
+
+
+# Register subcommands when module is imported
+_register_subcommands()

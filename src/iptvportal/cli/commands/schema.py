@@ -15,16 +15,20 @@ console = Console()
 schema_app = typer.Typer(name="schema", help="Manage table schemas")
 
 
-@schema_app.command(name="list")
-def list_command(
+@schema_app.command(name="show")
+def show_command(
+    table: str | None = typer.Argument(None, help="Table name (omit to list all tables)"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table, json, yaml"),
     config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
 ) -> None:
     """
-    List all loaded schemas.
+    Show schema(s) - list all or show specific table schema.
 
     Examples:
-        iptvportal schema list
-        iptvportal schema list --config config.yaml
+        iptvportal jsonsql schema show              # list all schemas
+        iptvportal jsonsql schema show subscriber   # show specific schema
+        iptvportal jsonsql schema show --format json
+        iptvportal jsonsql schema show media -f yaml
     """
     try:
         settings = load_config(config_file)
@@ -35,68 +39,51 @@ def list_command(
             if not tables:
                 console.print("[yellow]No schemas loaded[/yellow]")
                 console.print("\n[dim]Load schemas from a file or generate them with:[/dim]")
-                console.print('[dim]  iptvportal schema from-sql -q "SELECT * FROM table"[/dim]\n')
+                console.print('[dim]  iptvportal jsonsql schema from-sql -q "SELECT * FROM table"[/dim]\n')
                 return
 
-            console.print(f"\n[bold cyan]Loaded Schemas ({len(tables)} tables)[/bold cyan]\n")
+            # If no table specified, list all schemas
+            if not table:
+                console.print(f"\n[bold cyan]Loaded Schemas ({len(tables)} tables)[/bold cyan]\n")
 
-            table = Table(show_header=True, header_style="bold cyan")
-            table.add_column("Table Name", style="white")
-            table.add_column("Total Fields", style="green")
-            table.add_column("Defined Fields", style="blue")
-            table.add_column("Type", style="yellow")
+                table_display = Table(show_header=True, header_style="bold cyan")
+                table_display.add_column("Table Name", style="white")
+                table_display.add_column("Total Fields", style="green")
+                table_display.add_column("Defined Fields", style="blue")
+                table_display.add_column("Type", style="yellow")
 
-            for table_name in sorted(tables):
-                schema = client.schema_registry.get(table_name)
-                schema_type = (
-                    "Auto-generated"
-                    if not schema.fields
-                    or all(f.description == "Auto-generated field" for f in schema.fields.values())
-                    else "Predefined"
-                )
+                for table_name in sorted(tables):
+                    schema = client.schema_registry.get(table_name)
+                    schema_type = (
+                        "Auto-generated"
+                        if not schema.fields
+                        or all(f.description == "Auto-generated field" for f in schema.fields.values())
+                        else "Predefined"
+                    )
 
-                table.add_row(
-                    table_name,
-                    str(schema.total_fields or len(schema.fields)),
-                    str(len(schema.fields)),
-                    schema_type,
-                )
+                    table_display.add_row(
+                        table_name,
+                        str(schema.total_fields or len(schema.fields)),
+                        str(len(schema.fields)),
+                        schema_type,
+                    )
 
-            console.print(table)
-            console.print()
+                console.print(table_display)
+                console.print()
+                return
 
-    except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        raise typer.Exit(1)
-
-
-@schema_app.command(name="show")
-def show_command(
-    table_name: str = typer.Argument(..., help="Table name to show schema for"),
-    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
-) -> None:
-    """
-    Show detailed schema information for a table.
-
-    Examples:
-        iptvportal schema show media
-        iptvportal schema show subscriber --config config.yaml
-    """
-    try:
-        settings = load_config(config_file)
-
-        with IPTVPortalClient(settings) as client:
-            if not client.schema_registry.has(table_name):
-                console.print(f"[yellow]Schema for table '{table_name}' not found[/yellow]")
+            # Show specific table schema
+            if not client.schema_registry.has(table):
+                console.print(f"[yellow]Schema for table '{table}' not found[/yellow]")
                 console.print("\n[dim]Generate it with:[/dim]")
                 console.print(
-                    f'[dim]  iptvportal schema from-sql -q "SELECT * FROM {table_name}"[/dim]\n'
+                    f'[dim]  iptvportal jsonsql schema from-sql -q "SELECT * FROM {table}"[/dim]\n'
                 )
                 raise typer.Exit(1)
 
-            schema = client.schema_registry.get(table_name)
+            schema = client.schema_registry.get(table)
 
-            console.print(f"\n[bold cyan]Schema for table: {table_name}[/bold cyan]\n")
+            console.print(f"\n[bold cyan]Schema for table: {table}[/bold cyan]\n")
 
             # Schema metadata
             info_table = Table(show_header=False, box=None)
@@ -145,6 +132,17 @@ def show_command(
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+
+
+# Keep old 'list' command as alias for backwards compatibility (hidden)
+@schema_app.command(name="list", hidden=True)
+def list_command_deprecated(
+    config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
+) -> None:
+    """Deprecated: use 'iptvportal jsonsql schema show' instead."""
+    console.print("[yellow]Command renamed:[/yellow] schema list → schema show")
+    console.print("[dim]Running: iptvportal jsonsql schema show[/dim]\n")
+    show_command(table=None, format="table", config_file=config_file)
 
 
 @schema_app.command(name="from-sql")
