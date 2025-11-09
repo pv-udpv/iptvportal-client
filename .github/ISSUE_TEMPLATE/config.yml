@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Support
+    url: https://github.com/pv-udpv/iptvportal-client/discussions
+    about: Ask questions and get support from the community
+  - name: Security Issue
+    url: https://github.com/pv-udpv/iptvportal-client/security/advisories/new
+    about: Report a security vulnerability (private disclosure)
