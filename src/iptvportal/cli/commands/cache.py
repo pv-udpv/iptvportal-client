@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.table import Table
 
 from iptvportal.cli.utils import load_config
-from iptvportal.client import IPTVPortalClient
+from iptvportal.core.client import IPTVPortalClient
 
 console = Console()
 

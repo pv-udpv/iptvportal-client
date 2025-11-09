@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from iptvportal.codegen import ORMGenerator
+from iptvportal.schema.codegen import ORMGenerator
 from iptvportal.schema import (
     FieldDefinition,
     FieldType,

@@ -160,18 +160,17 @@ class RemoteFieldValidator:
 
         if "int" in dtype_lower:
             return "integer"
-        elif "float" in dtype_lower or "double" in dtype_lower:
+        if "float" in dtype_lower or "double" in dtype_lower:
             return "float"
-        elif "bool" in dtype_lower:
+        if "bool" in dtype_lower:
             return "boolean"
-        elif "datetime" in dtype_lower or "timestamp" in dtype_lower:
+        if "datetime" in dtype_lower or "timestamp" in dtype_lower:
             return "datetime"
-        elif "date" in dtype_lower and "datetime" not in dtype_lower:
+        if "date" in dtype_lower and "datetime" not in dtype_lower:
             return "date"
-        elif "object" in dtype_lower or "string" in dtype_lower:
+        if "object" in dtype_lower or "string" in dtype_lower:
             return "string"
-        else:
-            return "unknown"
+        return "unknown"
 
     async def validate_table_schema(
         self,

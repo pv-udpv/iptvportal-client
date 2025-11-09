@@ -6,13 +6,11 @@ based on discovered settings.
 """
 
 import ast
-import inspect
 from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
 class FieldInfo(BaseModel):
@@ -84,7 +82,7 @@ def discover_settings_classes(
                         if class_info:
                             settings_classes.append(class_info)
         
-        except Exception as e:
+        except Exception:
             # Skip files that can't be parsed
             continue
     
@@ -186,24 +184,22 @@ def _get_type_string(annotation: ast.expr) -> str:
     """Convert AST type annotation to string."""
     if isinstance(annotation, ast.Name):
         return annotation.id
-    elif isinstance(annotation, ast.Subscript):
+    if isinstance(annotation, ast.Subscript):
         base = _get_type_string(annotation.value)
         if isinstance(annotation.slice, ast.Name):
             return f"{base}[{annotation.slice.id}]"
-        elif isinstance(annotation.slice, ast.Tuple):
+        if isinstance(annotation.slice, ast.Tuple):
             items = [_get_type_string(e) for e in annotation.slice.elts]
             return f"{base}[{', '.join(items)}]"
-        else:
-            return base
-    elif isinstance(annotation, ast.Attribute):
+        return base
+    if isinstance(annotation, ast.Attribute):
         return annotation.attr
-    elif isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+    if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
         # Handle Union types (A | B)
         left = _get_type_string(annotation.left)
         right = _get_type_string(annotation.right)
         return f"{left} | {right}"
-    else:
-        return "Any"
+    return "Any"
 
 
 def _get_value_repr(value: ast.expr) -> Any:
@@ -213,29 +209,27 @@ def _get_value_repr(value: ast.expr) -> Any:
         if value.value is ...:
             return "..."  # Return string representation
         return value.value
-    elif isinstance(value, ast.Name):
+    if isinstance(value, ast.Name):
         if value.id == "True":
             return True
-        elif value.id == "False":
+        if value.id == "False":
             return False
-        elif value.id == "None":
+        if value.id == "None":
             return None
-        elif value.id == "Ellipsis":
+        if value.id == "Ellipsis":
             return "..."  # Return string representation
-        else:
-            return value.id
-    elif isinstance(value, ast.List):
+        return value.id
+    if isinstance(value, ast.List):
         return [_get_value_repr(e) for e in value.elts]
-    elif isinstance(value, ast.Dict):
+    if isinstance(value, ast.Dict):
         return {_get_value_repr(k): _get_value_repr(v) for k, v in zip(value.keys, value.values)}
-    elif isinstance(value, ast.Str):
+    if isinstance(value, ast.Str):
         return value.s
-    elif isinstance(value, ast.Num):
+    if isinstance(value, ast.Num):
         return value.n
-    elif isinstance(value, ast.Ellipsis):
+    if isinstance(value, ast.Ellipsis):
         return "..."  # Return string representation
-    else:
-        return "..."
+    return "..."
 
 
 def generate_settings_yaml(
@@ -286,7 +280,7 @@ def generate_settings_yaml(
         # Write to file
         output_file = output_dir / "settings.yaml"
         with output_file.open("w") as f:
-            f.write(f"# Generated settings from code inspection\n")
+            f.write("# Generated settings from code inspection\n")
             f.write(f"# Context: {settings_context or 'root'}\n\n")
             yaml.dump(settings_dict, f, default_flow_style=False, sort_keys=False)
         

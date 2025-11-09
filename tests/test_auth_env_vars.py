@@ -7,9 +7,9 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from iptvportal.auth import AuthManager
-from iptvportal.client import IPTVPortalClient
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.core.auth import AuthManager
+from iptvportal.core.client import IPTVPortalClient
+from iptvportal.config.settings import IPTVPortalSettings
 from iptvportal.exceptions import AuthenticationError
 
 
@@ -118,7 +118,7 @@ class TestAuthWithEnvVars:
 
         with patch.dict(os.environ, test_env, clear=False):
             # Mock httpx.Client
-            with patch("iptvportal.client.httpx.Client") as mock_client_class:
+            with patch("iptvportal.core.client.httpx.Client") as mock_client_class:
                 mock_client = MagicMock()
                 mock_client_class.return_value = mock_client
 

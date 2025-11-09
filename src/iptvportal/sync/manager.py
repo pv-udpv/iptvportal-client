@@ -8,8 +8,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from iptvportal.async_client import AsyncIPTVPortalClient
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.config.settings import IPTVPortalSettings
+from iptvportal.core.async_client import AsyncIPTVPortalClient
+from iptvportal.jsonsql.transpiler import SQLTranspiler
 from iptvportal.schema import SchemaRegistry, TableSchema
 from iptvportal.sync.database import SyncDatabase
 from iptvportal.sync.exceptions import (
@@ -19,8 +20,6 @@ from iptvportal.sync.exceptions import (
     SyncStrategyError,
     TableNotFoundError,
 )
-
-from ..transpiler.transpiler import SQLTranspiler
 
 
 @dataclass

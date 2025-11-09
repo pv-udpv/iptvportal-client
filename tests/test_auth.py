@@ -8,8 +8,8 @@ import orjson
 import pytest
 from pydantic import SecretStr
 
-from iptvportal.auth import AsyncAuthManager, AuthManager
-from iptvportal.config import IPTVPortalSettings
+from iptvportal.core.auth import AsyncAuthManager, AuthManager
+from iptvportal.config.settings import IPTVPortalSettings
 from iptvportal.exceptions import AuthenticationError
 
 

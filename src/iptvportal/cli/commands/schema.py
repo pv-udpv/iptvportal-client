@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from iptvportal.cli.utils import load_config
-from iptvportal.client import IPTVPortalClient
+from iptvportal.core.client import IPTVPortalClient
 from iptvportal.schema import SchemaLoader, TableSchema
 
 console = Console()
@@ -200,7 +200,7 @@ def from_sql_command(
 
         with IPTVPortalClient(settings) as client:
             # Transpile SQL to JSONSQL
-            from iptvportal.transpiler import SQLTranspiler
+            from iptvportal.jsonsql import SQLTranspiler
 
             transpiler = SQLTranspiler()
             jsonsql = transpiler.transpile(query)
@@ -536,8 +536,8 @@ def introspect_command(
         # Use async client for introspection
         import asyncio
 
-        from iptvportal.async_client import AsyncIPTVPortalClient
-        from iptvportal.introspector import SchemaIntrospector
+        from iptvportal.core.async_client import AsyncIPTVPortalClient
+        from iptvportal.schema.introspector import SchemaIntrospector
 
         async def do_introspect():
             try:
@@ -731,7 +731,7 @@ def validate_mapping_command(
         # Run validation
         import asyncio
 
-        from iptvportal.async_client import AsyncIPTVPortalClient
+        from iptvportal.core.async_client import AsyncIPTVPortalClient
         from iptvportal.validation import RemoteFieldValidator
 
         async def do_validation():

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from iptvportal.async_client import AsyncIPTVPortalClient
+from iptvportal.core.async_client import AsyncIPTVPortalClient
 from iptvportal.validation import RemoteFieldValidator
 
 

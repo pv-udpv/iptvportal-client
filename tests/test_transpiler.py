@@ -2,8 +2,8 @@
 
 import pytest
 
-from iptvportal.transpiler import SQLTranspiler
-from iptvportal.transpiler.exceptions import ParseError, TranspilerError
+from iptvportal.jsonsql import SQLTranspiler
+from iptvportal.jsonsql.exceptions import ParseError, TranspilerError
 
 
 @pytest.fixture
