@@ -624,17 +624,21 @@ iptvportal-client/
 │   │   └── cache.py           # Query result cache
 │   ├── config/            # Configuration management
 │   │   ├── settings.py        # Pydantic Settings
-│   │   └── project.py         # Dynaconf configuration
+│   │   ├── project.py         # Dynaconf configuration
+│   │   └── logging.py         # Logging configuration
+│   ├── cache/             # Cache service (query result caching)
+│   │   └── __cli__.py         # Cache CLI commands
 │   ├── schema/            # Schema system
-│   │   ├── table.py           # TableSchema, FieldDefinition
-│   │   ├── registry.py        # SchemaRegistry, SchemaLoader
+│   │   ├── table.py           # TableSchema, FieldDefinition, SchemaRegistry, SchemaLoader
 │   │   ├── introspector.py    # Schema introspection
+│   │   ├── duckdb_analyzer.py # DuckDB-based statistical analysis
 │   │   └── codegen.py         # ORM model generation
 │   ├── jsonsql/           # JSONSQL transpiler & query builder
 │   │   ├── transpiler.py      # SQL → JSONSQL transpiler
 │   │   ├── builder.py         # Query builder DSL
 │   │   ├── operators.py       # Operator mappings
-│   │   └── functions.py       # Function handlers
+│   │   ├── functions.py       # Function handlers
+│   │   └── exceptions.py      # Transpiler exceptions
 │   ├── models/            # Data Transfer Objects (DTOs)
 │   │   ├── requests.py        # Input validation models
 │   │   └── responses.py       # Output models with metadata
@@ -648,7 +652,9 @@ iptvportal-client/
 │   │   ├── __main__.py        # CLI application entry
 │   │   └── commands/          # CLI command modules
 │   ├── exceptions.py      # Exception hierarchy
-│   └── validation.py      # Pandas-based validation
+│   ├── validation.py      # Pandas-based validation
+│   ├── logging_setup.py   # Logging configuration and setup
+│   └── project_conf.py    # Legacy project configuration (backward compatibility)
 └── docs/
     ├── cli.md             # Comprehensive CLI guide
     └── jsonsql.md         # JSONSQL specification
