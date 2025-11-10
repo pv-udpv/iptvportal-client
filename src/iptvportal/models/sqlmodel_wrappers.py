@@ -48,13 +48,13 @@ class JSONSQLQueryInput(SQLModel):
     """
 
     method: str = Field(..., pattern="^(select|insert|update|delete)$")
-    params: dict
+    params: dict[str, Any]
     use_cache: bool = True
     timeout: int | None = Field(None, ge=1, le=300)
 
     @field_validator("params")
     @classmethod
-    def validate_params(cls, v: dict) -> dict:
+    def validate_params(cls, v: dict[str, Any]) -> dict[str, Any]:
         """Validate params is a non-empty dictionary."""
         if not isinstance(v, dict):
             raise ValueError("params must be a dictionary")
@@ -78,7 +78,7 @@ class QueryResult(SQLModel):
 
     data: list[dict[str, Any]] | dict[str, Any]
     sql: str | None = None
-    jsonsql: dict | None = None
+    jsonsql: dict[str, Any] | None = None
     method: str
     table: str | None = None
     execution_time_ms: float | None = None
