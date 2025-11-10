@@ -1,42 +1,86 @@
 # Python
 *.py[cod]
+*.py[co]
 __pycache__/
 **/__pycache__/
 *.so
+*.egg
 *.egg-info/
+.eggs/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
 # IDE
 .vscode/
 .idea/
 *.swp
+*.swo
 *.bak
+*~
+.project
+.pydevproject
+.settings/
 
 # Environment
 .venv/
+venv/
+ENV/
+env/
 .env
 .env.local
 .env.*
+!.env.example
 
 # Build
 build/
 dist/
-.eggs/
 *.log
 *.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 
 # Test
 .coverage
+.coverage.*
 htmlcov/
-pytest_cache/
+.pytest_cache/
+.tox/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
 test_*_standalone.py
 test_*_manual.py
+coverage.xml
+*.cover
 
 # Package
 *.pkl
+*.pickle
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+
+# IPTVPortal specific
+.iptvportal/
+session-cache/
+cache/
 
 # Generated documentation (root only)
 /PROJECT_STRUCTURE.md
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+tmp/

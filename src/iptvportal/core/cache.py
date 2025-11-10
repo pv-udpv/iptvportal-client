@@ -88,7 +88,9 @@ class QueryCache:
             self._hits += 1
             return entry["result"]
 
-    def set(self, query_hash: str, result: Any, ttl: int | None = None) -> None:
+    def set(
+        self, query_hash: str, result: Any, ttl: int | None = None, table_name: str | None = None
+    ) -> None:
         """
         Cache a query result.
 
@@ -96,6 +98,7 @@ class QueryCache:
             query_hash: Query hash string
             result: Result to cache
             ttl: Time-to-live in seconds (None = use default, 0 = no expiration)
+            table_name: Optional table name associated with this query
         """
         with self._lock:
             # Determine TTL
@@ -118,6 +121,7 @@ class QueryCache:
                 "result": result,
                 "cached_at": time.time(),
                 "expires_at": expires_at,
+                "table_name": table_name,
             }
 
             # Move to end (mark as recently used)
@@ -128,8 +132,7 @@ class QueryCache:
         Clear cache entries.
 
         Args:
-            table_name: Optional table name to clear entries for
-                       (requires parsing cached queries - not implemented)
+            table_name: Optional table name to clear entries for specific table
 
         Returns:
             Number of entries removed
@@ -140,11 +143,18 @@ class QueryCache:
                 count = len(self._cache)
                 self._cache.clear()
                 return count
-            # TODO: Implement selective clearing by table name
-            # This would require storing table metadata with each entry
-            count = len(self._cache)
-            self._cache.clear()
-            return count
+
+            # Clear entries for specific table
+            keys_to_remove = [
+                key
+                for key, entry in self._cache.items()
+                if entry.get("table_name") == table_name
+            ]
+
+            for key in keys_to_remove:
+                del self._cache[key]
+
+            return len(keys_to_remove)
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -188,3 +198,31 @@ class QueryCache:
 
         # Cache only SELECT queries
         return method in ("select", "query", "get")
+
+    def extract_table_name(self, query: dict[str, Any]) -> str | None:
+        """
+        Extract table name from a query dictionary.
+
+        Args:
+            query: Query dictionary (JSON-RPC request)
+
+        Returns:
+            Table name if found, None otherwise
+        """
+        params = query.get("params", {})
+
+        # Try to extract from different possible locations
+        if isinstance(params, dict):
+            # Direct 'from' field
+            if "from" in params:
+                return params["from"]
+
+            # Inside a 'query' object (JSONSQL format)
+            if "query" in params and isinstance(params["query"], dict):
+                return params["query"].get("from")
+
+            # Inside a 'table' field
+            if "table" in params:
+                return params["table"]
+
+        return None
