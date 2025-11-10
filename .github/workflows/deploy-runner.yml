@@ -93,78 +93,23 @@ jobs:
         if: ${{ steps.generate-token.outputs.token != '' }}
         uses: appleboy/ssh-action@v1.0.3
         env:
-          REGISTRATION_TOKEN: ${{ steps.generate-token.outputs.token }}
-          REPO_URL: https://github.com/${{ github.repository }}
+          GITHUB_PAT: ${{ secrets.ACTION_RUNNER_TOKEN }}
+          REPO: ${{ github.repository }}
           RUNNER_NAME: docker-runner-${{ secrets.SERVER_HOSTNAME || 'cargo' }}
-          FORCE_REBUILD: ${{ github.event.inputs.force_rebuild || 'false' }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: REGISTRATION_TOKEN,REPO_URL,RUNNER_NAME,FORCE_REBUILD
+          envs: GITHUB_PAT,REPO,RUNNER_NAME
           script: |
             set -e
-
-            echo "[$(date -Is)] Starting runner deployment..."
-
-            mkdir -p ~/gost-runner
-            cat > ~/gost-runner/gost-runner.env << EOF
-            REGISTRATION_TOKEN=$REGISTRATION_TOKEN
-            REMOVAL_TOKEN=
+            mkdir -p ~/runnerctl && cd ~/runnerctl
+            cat > self-runner-ctl.sh << 'EOF'
+            #!/usr/bin/env bash
+            $(sed 's/\//\\\//g' scripts/self-runner-ctl.sh)
             EOF
-
-            echo "[$(date -Is)] Updated gost-runner.env"
-
-            cd ~/go-gost-proxy
-            git fetch origin
-            git pull origin main
-
-            echo "[$(date -Is)] Updated repository"
-
-            cp Dockerfile.runner ~/gost-runner/
-            cp entrypoint.sh ~/gost-runner/
-            cp docker-compose.yml ~/gost-runner/ 2>/dev/null || true
-
-            docker stop gost-runner 2>/dev/null || true
-            docker rm gost-runner 2>/dev/null || true
-
-            echo "[$(date -Is)] Stopped old runner"
-
-            cd ~/gost-runner
-            if [ "$FORCE_REBUILD" = "true" ] || ! docker images | grep -q "gost-runner"; then
-              echo "[$(date -Is)] Building Docker image..."
-              docker build \
-                --build-arg RUNNER_VERSION=2.329.0 \
-                -f Dockerfile.runner \
-                -t gost-runner:latest \
-                .
-            else
-              echo "[$(date -Is)] Using existing Docker image"
-            fi
-
-            echo "[$(date -Is)] Starting runner container..."
-            docker run -d \
-              --name gost-runner \
-              --restart unless-stopped \
-              -e REPO_URL="$REPO_URL" \
-              -e RUNNER_NAME="$RUNNER_NAME" \
-              -e LABELS="self-hosted,linux,x64,docker,gost-proxy" \
-              --env-file ~/gost-runner/gost-runner.env \
-              -v runner-work:/home/runner/actions-runner/_work \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              gost-runner:latest
-
-            echo "[$(date -Is)] Waiting for runner to start..."
-            sleep 5
-
-            if docker ps | grep -q gost-runner; then
-              echo "[$(date -Is)] ✓ Runner container is running"
-              docker logs gost-runner --tail 30
-            else
-              echo "[$(date -Is)] ✗ Runner container failed to start"
-              docker logs gost-runner --tail 50
-              exit 1
-            fi
+            chmod +x self-runner-ctl.sh
+            REPO="$REPO" RUNNER_NAME="$RUNNER_NAME" GITHUB_PAT="$GITHUB_PAT" ./self-runner-ctl.sh
 
       - name: Verify runner registration (PAT mode only)
         if: ${{ steps.generate-token.outputs.token != '' }}
