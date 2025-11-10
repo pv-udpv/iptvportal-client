@@ -1,0 +1,216 @@
+name: Deploy Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: "Force rebuild Docker image"
+        required: false
+        type: boolean
+        default: false
+
+  push:
+    branches:
+      - main
+    paths:
+      - "Dockerfile.runner"
+      - "entrypoint.sh"
+      - "scripts/install-runner-docker.sh"
+      - ".github/workflows/deploy-runner.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate runner registration token (PAT mode)
+        if: ${{ secrets.ACTION_RUNNER_TOKEN != '' && (secrets.RUNNER_APP_ID == '' || secrets.RUNNER_APP_PRIVATE_KEY_B64 == '') }}
+        id: generate-token
+        run: |
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.ACTION_RUNNER_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "::error::Failed to generate registration token (HTTP $HTTP_CODE)"
+            echo "::error::Response: $BODY"
+            echo "::error::Check ACTION_RUNNER_TOKEN permissions:"
+            echo "::error::  - For fine-grained PAT: 'Administration' permission with 'Read and write' access"
+            echo "::error::  - For classic PAT: 'repo' scope"
+            echo "::error::  - Token must not be expired"
+            exit 1
+          fi
+
+          REGISTRATION_TOKEN=$(echo "$BODY" | jq -r '.token')
+
+          if [ -z "$REGISTRATION_TOKEN" ] || [ "$REGISTRATION_TOKEN" = "null" ]; then
+            echo "::error::Failed to extract token from response: $BODY"
+            exit 1
+          fi
+
+          echo "::add-mask::$REGISTRATION_TOKEN"
+          echo "token=$REGISTRATION_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Deploy runner to server (App mode, server-side registration)
+        if: ${{ secrets.RUNNER_APP_ID != '' && secrets.RUNNER_APP_PRIVATE_KEY_B64 != '' }}
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          RUNNER_APP_ID: ${{ secrets.RUNNER_APP_ID }}
+          RUNNER_APP_PRIVATE_KEY_B64: ${{ secrets.RUNNER_APP_PRIVATE_KEY_B64 }}
+          REPO: ${{ github.repository }}
+          RUNNER_NAME: docker-runner-${{ secrets.SERVER_HOSTNAME || 'cargo' }}
+          EPHEMERAL: ${{ inputs.ephemeral || 'false' }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: RUNNER_APP_ID,RUNNER_APP_PRIVATE_KEY_B64,REPO,RUNNER_NAME,EPHEMERAL
+          script: |
+            set -e
+            mkdir -p ~/runnerctl && cd ~/runnerctl
+            printf '%s' "$RUNNER_APP_PRIVATE_KEY_B64" | base64 -d > app_private_key.pem
+            cat > self-runner-ctl.sh << 'EOF'
+            #!/usr/bin/env bash
+            $(sed 's/\//\\\//g' scripts/self-runner-ctl.sh)
+            EOF
+            chmod +x self-runner-ctl.sh
+            GITHUB_APP_ID="$RUNNER_APP_ID" \
+            GITHUB_APP_PRIVATE_KEY_FILE="$HOME/runnerctl/app_private_key.pem" \
+            REPO="$REPO" \
+            RUNNER_NAME="$RUNNER_NAME" \
+            EPHEMERAL="$EPHEMERAL" \
+            ./self-runner-ctl.sh
+
+      - name: Deploy runner to server (PAT mode)
+        if: ${{ steps.generate-token.outputs.token != '' }}
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          REGISTRATION_TOKEN: ${{ steps.generate-token.outputs.token }}
+          REPO_URL: https://github.com/${{ github.repository }}
+          RUNNER_NAME: docker-runner-${{ secrets.SERVER_HOSTNAME || 'cargo' }}
+          FORCE_REBUILD: ${{ github.event.inputs.force_rebuild || 'false' }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: REGISTRATION_TOKEN,REPO_URL,RUNNER_NAME,FORCE_REBUILD
+          script: |
+            set -e
+
+            echo "[$(date -Is)] Starting runner deployment..."
+
+            mkdir -p ~/gost-runner
+            cat > ~/gost-runner/gost-runner.env << EOF
+            REGISTRATION_TOKEN=$REGISTRATION_TOKEN
+            REMOVAL_TOKEN=
+            EOF
+
+            echo "[$(date -Is)] Updated gost-runner.env"
+
+            cd ~/go-gost-proxy
+            git fetch origin
+            git pull origin main
+
+            echo "[$(date -Is)] Updated repository"
+
+            cp Dockerfile.runner ~/gost-runner/
+            cp entrypoint.sh ~/gost-runner/
+            cp docker-compose.yml ~/gost-runner/ 2>/dev/null || true
+
+            docker stop gost-runner 2>/dev/null || true
+            docker rm gost-runner 2>/dev/null || true
+
+            echo "[$(date -Is)] Stopped old runner"
+
+            cd ~/gost-runner
+            if [ "$FORCE_REBUILD" = "true" ] || ! docker images | grep -q "gost-runner"; then
+              echo "[$(date -Is)] Building Docker image..."
+              docker build \
+                --build-arg RUNNER_VERSION=2.329.0 \
+                -f Dockerfile.runner \
+                -t gost-runner:latest \
+                .
+            else
+              echo "[$(date -Is)] Using existing Docker image"
+            fi
+
+            echo "[$(date -Is)] Starting runner container..."
+            docker run -d \
+              --name gost-runner \
+              --restart unless-stopped \
+              -e REPO_URL="$REPO_URL" \
+              -e RUNNER_NAME="$RUNNER_NAME" \
+              -e LABELS="self-hosted,linux,x64,docker,gost-proxy" \
+              --env-file ~/gost-runner/gost-runner.env \
+              -v runner-work:/home/runner/actions-runner/_work \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              gost-runner:latest
+
+            echo "[$(date -Is)] Waiting for runner to start..."
+            sleep 5
+
+            if docker ps | grep -q gost-runner; then
+              echo "[$(date -Is)] ✓ Runner container is running"
+              docker logs gost-runner --tail 30
+            else
+              echo "[$(date -Is)] ✗ Runner container failed to start"
+              docker logs gost-runner --tail 50
+              exit 1
+            fi
+
+      - name: Verify runner registration (PAT mode only)
+        if: ${{ steps.generate-token.outputs.token != '' }}
+        run: |
+          echo "Waiting for runner to connect to GitHub..."
+          sleep 15
+
+          RUNNERS=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.ACTION_RUNNER_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+
+          RUNNER_NAME="docker-runner-${{ secrets.SERVER_HOSTNAME || 'cargo' }}"
+          RUNNER_STATUS=$(echo "$RUNNERS" | jq -r ".runners[] | select(.name == \"$RUNNER_NAME\") | .status")
+          RUNNER_BUSY=$(echo "$RUNNERS" | jq -r ".runners[] | select(.name == \"$RUNNER_NAME\") | .busy")
+
+          echo "Runner: $RUNNER_NAME"
+          echo "Status: $RUNNER_STATUS"
+          echo "Busy: $RUNNER_BUSY"
+
+          if [ "$RUNNER_STATUS" = "online" ]; then
+            echo "✓ Runner is online and ready"
+          else
+            echo "::warning::Runner status is '$RUNNER_STATUS'. It may take a few more seconds to come online."
+          fi
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## Runner Deployment Summary
+
+          - **Repository**: ${{ github.repository }}
+          - **Runner Name**: docker-runner-${{ secrets.SERVER_HOSTNAME || 'cargo' }}
+          - **Server**: ${{ secrets.SERVER_HOST }}
+          - **Triggered by**: ${{ github.event_name }}
+
+          ### Next Steps
+
+          Check runner status at:
+          https://github.com/${{ github.repository }}/settings/actions/runners
+
+          View runner logs:
+          ```bash
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
+          docker logs -f gost-runner
+          ```
+          EOF
