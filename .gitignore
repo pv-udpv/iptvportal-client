@@ -57,6 +57,9 @@ test_*_manual.py
 coverage.xml
 *.cover
 
+# Root-level test scripts (for manual testing)
+/test_*.py
+
 # Package
 *.pkl
 *.pickle

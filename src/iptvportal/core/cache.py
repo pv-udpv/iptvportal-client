@@ -89,7 +89,7 @@ class QueryCache:
             return entry["result"]
 
     def set(
-        self, query_hash: str, result: Any, ttl: int | None = None, table_name: str | None = None
+        self, query_hash: str, result: Any, ttl: int | None = None, query: dict[str, Any] | None = None
     ) -> None:
         """
         Cache a query result.
@@ -98,7 +98,7 @@ class QueryCache:
             query_hash: Query hash string
             result: Result to cache
             ttl: Time-to-live in seconds (None = use default, 0 = no expiration)
-            table_name: Optional table name associated with this query
+            query: Optional query dictionary for metadata extraction
         """
         with self._lock:
             # Determine TTL
@@ -109,6 +109,11 @@ class QueryCache:
             expires_at = None
             if ttl is not None and ttl > 0:
                 expires_at = time.time() + ttl
+
+            # Extract table name from query if provided
+            table_name = None
+            if query:
+                table_name = self._extract_table_name(query)
 
             # If at capacity, evict least recently used
             if query_hash not in self._cache and len(self._cache) >= self.max_size:
@@ -183,6 +188,26 @@ class QueryCache:
             self._hits = 0
             self._misses = 0
             self._evictions = 0
+
+    def _extract_table_name(self, query: dict[str, Any]) -> str | None:
+        """
+        Extract table name from query dictionary.
+
+        Args:
+            query: Query dictionary
+
+        Returns:
+            Table name if found, None otherwise
+        """
+        params = query.get("params", {})
+        if isinstance(params, dict):
+            # Direct table name in params
+            if "from" in params:
+                return params["from"]
+            # Table name in nested structure
+            if "table" in params:
+                return params["table"]
+        return None
 
     def is_read_query(self, query: dict[str, Any]) -> bool:
         """

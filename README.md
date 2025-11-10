@@ -1105,6 +1105,138 @@ make ci
 - 💬 [Discussions](https://github.com/pv-udpv/iptvportal-client/discussions)
 - 🐛 [Report Bug](https://github.com/pv-udpv/iptvportal-client/issues/new)
 - ✨ [Request Feature](https://github.com/pv-udpv/iptvportal-client/issues/new)
+## Troubleshooting
+
+### Common Issues
+
+#### Authentication Errors
+
+**Problem**: `AuthenticationError: Invalid credentials`
+
+**Solution**:
+```bash
+# Verify environment variables are set
+echo $IPTVPORTAL_DOMAIN
+echo $IPTVPORTAL_USERNAME
+
+# Force re-authentication
+iptvportal jsonsql auth --renew
+
+# Check configuration
+iptvportal config show
+```
+
+#### Connection Timeouts
+
+**Problem**: `TimeoutError: Request timeout`
+
+**Solution**:
+```bash
+# Increase timeout in configuration
+export IPTVPORTAL_TIMEOUT=60
+
+# Or in cli-config.yaml:
+# core:
+#   timeout: 60
+```
+
+#### Schema Mapping Issues
+
+**Problem**: Column names showing as `field_0`, `field_1` instead of actual names
+
+**Solution**:
+```bash
+# Generate or update schema
+iptvportal schema introspect table_name
+
+# Verify schema exists
+iptvportal schema show table_name
+
+# Check schema directory configuration
+iptvportal config show cli.schema_directory
+```
+
+#### Cache Issues
+
+**Problem**: Stale data or inconsistent results
+
+**Solution**:
+```bash
+# Clear all cache
+iptvportal cache clear
+
+# Clear specific table cache (if using table-aware caching)
+iptvportal cache clear --table subscriber
+
+# Check cache status
+iptvportal cache status
+```
+
+#### Installation Problems
+
+**Problem**: Package installation fails
+
+**Solution**:
+```bash
+# Use pip with longer timeout
+pip install --default-timeout=300 iptvportal-client
+
+# Or install from source
+git clone https://github.com/pv-udpv/iptvportal-client.git
+cd iptvportal-client
+pip install -e .
+```
+
+#### Import Errors
+
+**Problem**: `ModuleNotFoundError: No module named 'iptvportal'`
+
+**Solution**:
+```bash
+# Ensure package is installed
+pip list | grep iptvportal
+
+# Reinstall in development mode
+pip install -e .
+
+# Check Python path
+python -c "import sys; print('\n'.join(sys.path))"
+```
+
+### Debug Mode
+
+Enable debug mode for detailed logging:
+
+```bash
+# With SQL queries
+iptvportal jsonsql sql -q "SELECT * FROM subscriber LIMIT 5" --debug
+
+# With JSON format for automation
+iptvportal jsonsql sql -q "SELECT * FROM terminal" --debug --debug-format json
+
+# Save debug logs to file
+iptvportal jsonsql sql -q "SELECT * FROM media" --debug --debug-file debug.log
+```
+
+### Getting Help
+
+- **Documentation**: Check the [docs/](docs/) directory
+- **Issues**: Search existing [GitHub Issues](https://github.com/pv-udpv/iptvportal-client/issues)
+- **Discussions**: Start a [GitHub Discussion](https://github.com/pv-udpv/iptvportal-client/discussions)
+- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### Reporting Bugs
+
+When reporting bugs, please include:
+
+1. IPTVPortal Client version: `pip show iptvportal-client`
+2. Python version: `python --version`
+3. Operating system
+4. Full error message and stack trace
+5. Steps to reproduce
+6. Configuration (redact sensitive information)
+
+See our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md) for details.
 
 ## License
 
