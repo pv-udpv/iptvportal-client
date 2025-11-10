@@ -285,6 +285,14 @@ docs-serve: ## Serve documentation locally (if docs server exists)
 	@echo "$(YELLOW)Documentation serving not yet implemented$(NC)"
 	@echo "View docs in docs/ directory"
 
+docs-validate: ## Validate documentation consistency
+	@echo "$(BLUE)Validating documentation...$(NC)"
+	@python scripts/validate_docs.py
+
+docs-validate-diagrams: ## Validate only diagram consistency
+	@echo "$(BLUE)Validating diagrams...$(NC)"
+	@python scripts/validate_docs.py --diagrams-only
+
 docs-tree: ## Generate annotated tree structure of the project
 	@echo "$(BLUE)Generating project tree structure...$(NC)"
 	@python scripts/generate_tree_docs.py src/iptvportal --max-depth 3

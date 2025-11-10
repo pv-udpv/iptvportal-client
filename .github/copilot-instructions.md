@@ -51,6 +51,23 @@ Short, project-specific rules to make AI agents productive and consistent here.
    - `README.md` (Quick Start, CLI usage, Supported Features, Error Handling examples)
    - `docs/cli.md` (command syntax, modes, examples; note schema mapping and deprecations)
    - `docs/jsonsql.md` (spec nuances you changed, e.g., function args or join shapes)
+   - `docs/architecture.md` (if architectural changes are made)
+
+## Documentation consistency requirements
+- **Architecture alignment**: README.md must stay consistent with docs/architecture.md
+   - Diagrams in README should match their counterparts in architecture.md
+   - Key architecture concepts (proxy-centric, schema-driven, multi-level caching) must be mentioned
+   - README should reference architecture.md for comprehensive details
+- **Validation**: Run `make docs-validate` before committing documentation changes
+   - Checks diagram consistency between README and architecture.md
+   - Verifies key concepts are present
+   - Ensures version numbers are consistent across files
+- **Automated checks**: Documentation validation runs on all PRs that modify docs or README
+- **When to update both**:
+   - Architecture diagrams changed → update both README (summary) and architecture.md (detailed)
+   - CLI commands changed → update README examples and docs/cli.md
+   - New architectural patterns → add to architecture.md, summarize in README
+   - Transpiler behavior → update docs/jsonsql.md and README if user-facing
 
 ## Examples (project-specific)
 - SQL auto-transpile: `iptvportal sql -q "SELECT COUNT(DISTINCT mac_addr) FROM terminal" --dry-run` → prints nested `distinct` per rules above.
