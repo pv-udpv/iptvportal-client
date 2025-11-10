@@ -1,4 +1,4 @@
-.PHONY: help install install-dev sync sync-dev clean test test-cov test-watch lint lint-grouped lint-summary format type-check check build run cli docs venv-init venv-activate install-user install-system cli-config-init
+.PHONY: help install install-dev sync sync-dev clean test test-cov test-watch lint lint-grouped lint-summary format type-check check build run cli docs venv-init venv-activate install-user install-system cli-config-init ci-enable ci-disable ci-status
 
 # Default target
 .DEFAULT_GOAL := help
@@ -227,6 +227,54 @@ pre-commit: check-fix test ## Run all pre-commit checks (format, lint, type, tes
 # CI-style check (no fixes, fail on issues)
 ci: format-check lint type-check test-cov ## Run all CI checks (no auto-fix)
 	@echo "$(GREEN)✓ CI checks passed!$(NC)"
+
+# CI workflow management
+ci-enable: ## Enable CI workflows (rename .disabled files back to .yml)
+	@echo "$(BLUE)Enabling CI workflows...$(NC)"
+	@if [ -f .github/workflows/ci.yml.disabled ]; then \
+		mv .github/workflows/ci.yml.disabled .github/workflows/ci.yml && \
+		echo "$(GREEN)✓ CI workflow enabled$(NC)"; \
+	else \
+		echo "$(YELLOW)CI workflow already enabled or not found$(NC)"; \
+	fi
+	@if [ -f .github/workflows/security.yml.disabled ]; then \
+		mv .github/workflows/security.yml.disabled .github/workflows/security.yml && \
+		echo "$(GREEN)✓ Security workflow enabled$(NC)"; \
+	else \
+		echo "$(YELLOW)Security workflow already enabled or not found$(NC)"; \
+	fi
+
+ci-disable: ## Disable CI workflows (rename .yml files to .disabled)
+	@echo "$(BLUE)Disabling CI workflows...$(NC)"
+	@if [ -f .github/workflows/ci.yml ]; then \
+		mv .github/workflows/ci.yml .github/workflows/ci.yml.disabled && \
+		echo "$(GREEN)✓ CI workflow disabled$(NC)"; \
+	else \
+		echo "$(YELLOW)CI workflow already disabled or not found$(NC)"; \
+	fi
+	@if [ -f .github/workflows/security.yml ]; then \
+		mv .github/workflows/security.yml .github/workflows/security.yml.disabled && \
+		echo "$(GREEN)✓ Security workflow disabled$(NC)"; \
+	else \
+		echo "$(YELLOW)Security workflow already disabled or not found$(NC)"; \
+	fi
+
+ci-status: ## Show CI workflow status (enabled/disabled)
+	@echo "$(BLUE)CI Workflow Status:$(NC)"
+	@if [ -f .github/workflows/ci.yml ]; then \
+		echo "  CI:       $(GREEN)ENABLED$(NC)"; \
+	elif [ -f .github/workflows/ci.yml.disabled ]; then \
+		echo "  CI:       $(RED)DISABLED$(NC)"; \
+	else \
+		echo "  CI:       $(YELLOW)NOT FOUND$(NC)"; \
+	fi
+	@if [ -f .github/workflows/security.yml ]; then \
+		echo "  Security: $(GREEN)ENABLED$(NC)"; \
+	elif [ -f .github/workflows/security.yml.disabled ]; then \
+		echo "  Security: $(RED)DISABLED$(NC)"; \
+	else \
+		echo "  Security: $(YELLOW)NOT FOUND$(NC)"; \
+	fi
 
 # Quick feedback loop for development
 quick: lint-fix test ## Quick check: fix lint and run tests
