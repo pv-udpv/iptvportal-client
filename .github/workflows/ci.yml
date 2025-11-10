@@ -28,7 +28,7 @@ jobs:
 
     - name: Lint with ruff
       run: |
-        ruff check .
+        ruff check --unsafe-fixes .
 
     - name: Check formatting with ruff
       run: |
