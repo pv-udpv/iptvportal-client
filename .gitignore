@@ -31,6 +31,9 @@ pytest_cache/
 test_*_standalone.py
 test_*_manual.py
 
+# Root-level test scripts (for manual testing)
+/test_*.py
+
 # Package
 *.pkl
 
