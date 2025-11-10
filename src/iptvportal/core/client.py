@@ -162,7 +162,7 @@ class IPTVPortalClient:
                 # Cache result for read queries
                 if self._cache and self._cache.is_read_query(query):
                     query_hash = self._cache.compute_query_hash(query)
-                    self._cache.set(query_hash, result)
+                    self._cache.set(query_hash, result, query=query)
                     if self.settings.log_requests:
                         print(f"Cached result for query hash: {query_hash[:16]}...")
 

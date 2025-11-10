@@ -88,7 +88,9 @@ class QueryCache:
             self._hits += 1
             return entry["result"]
 
-    def set(self, query_hash: str, result: Any, ttl: int | None = None) -> None:
+    def set(
+        self, query_hash: str, result: Any, ttl: int | None = None, query: dict[str, Any] | None = None
+    ) -> None:
         """
         Cache a query result.
 
@@ -96,6 +98,7 @@ class QueryCache:
             query_hash: Query hash string
             result: Result to cache
             ttl: Time-to-live in seconds (None = use default, 0 = no expiration)
+            query: Optional query dictionary for metadata extraction
         """
         with self._lock:
             # Determine TTL
@@ -106,6 +109,11 @@ class QueryCache:
             expires_at = None
             if ttl is not None and ttl > 0:
                 expires_at = time.time() + ttl
+
+            # Extract table name from query if provided
+            table_name = None
+            if query:
+                table_name = self._extract_table_name(query)
 
             # If at capacity, evict least recently used
             if query_hash not in self._cache and len(self._cache) >= self.max_size:
@@ -118,6 +126,7 @@ class QueryCache:
                 "result": result,
                 "cached_at": time.time(),
                 "expires_at": expires_at,
+                "table_name": table_name,
             }
 
             # Move to end (mark as recently used)
@@ -128,8 +137,7 @@ class QueryCache:
         Clear cache entries.
 
         Args:
-            table_name: Optional table name to clear entries for
-                       (requires parsing cached queries - not implemented)
+            table_name: Optional table name to clear entries for specific table
 
         Returns:
             Number of entries removed
@@ -140,11 +148,18 @@ class QueryCache:
                 count = len(self._cache)
                 self._cache.clear()
                 return count
-            # TODO: Implement selective clearing by table name
-            # This would require storing table metadata with each entry
-            count = len(self._cache)
-            self._cache.clear()
-            return count
+
+            # Clear entries for specific table
+            keys_to_remove = [
+                key
+                for key, entry in self._cache.items()
+                if entry.get("table_name") == table_name
+            ]
+
+            for key in keys_to_remove:
+                del self._cache[key]
+
+            return len(keys_to_remove)
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -173,6 +188,26 @@ class QueryCache:
             self._hits = 0
             self._misses = 0
             self._evictions = 0
+
+    def _extract_table_name(self, query: dict[str, Any]) -> str | None:
+        """
+        Extract table name from query dictionary.
+
+        Args:
+            query: Query dictionary
+
+        Returns:
+            Table name if found, None otherwise
+        """
+        params = query.get("params", {})
+        if isinstance(params, dict):
+            # Direct table name in params
+            if "from" in params:
+                return params["from"]
+            # Table name in nested structure
+            if "table" in params:
+                return params["table"]
+        return None
 
     def is_read_query(self, query: dict[str, Any]) -> bool:
         """
