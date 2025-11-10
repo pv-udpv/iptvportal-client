@@ -1,0 +1,51 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'scripts/validate_docs.py'
+      - '.github/workflows/docs-validation.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'scripts/validate_docs.py'
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    name: Validate Documentation Consistency
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Run documentation validation
+        run: |
+          python scripts/validate_docs.py --verbose
+        
+      - name: Comment on PR (if failed)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## ⚠️ Documentation Validation Failed\n\n' +
+                    'The documentation consistency check failed. This usually means:\n\n' +
+                    '- Diagrams in README.md don\'t match docs/architecture.md\n' +
+                    '- Key architecture concepts are missing from README.md\n' +
+                    '- Version numbers are inconsistent\n\n' +
+                    'Please run `make docs-validate` locally to see detailed errors and fix them.\n\n' +
+                    'For more information, see the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).'
+            })

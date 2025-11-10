@@ -2,6 +2,98 @@
 
 This directory contains utility scripts for the IPTVPortal client project.
 
+## validate_docs.py
+
+Validates documentation consistency across the repository, ensuring that README.md stays aligned with docs/architecture.md.
+
+### Usage
+
+```bash
+# Run all validation checks
+python scripts/validate_docs.py
+
+# Check only diagrams
+python scripts/validate_docs.py --diagrams-only
+
+# Show verbose output
+python scripts/validate_docs.py --verbose
+
+# Attempt auto-fix (not yet implemented)
+python scripts/validate_docs.py --fix
+```
+
+### Via Makefile
+
+```bash
+# Run full documentation validation
+make docs-validate
+
+# Validate only diagrams
+make docs-validate-diagrams
+```
+
+### What It Checks
+
+1. **Diagram Consistency**: Ensures diagrams in README.md match their counterparts in docs/architecture.md
+   - High-level architecture diagram
+   - CLI SELECT call flow
+   - Sync/cache dataflow
+   - Auth/session lifecycle
+
+2. **Architecture Concepts**: Verifies key concepts are mentioned in README
+   - Proxy-centric architecture
+   - Schema-driven development
+   - Multi-level caching
+
+3. **Cross-References**: Checks that README references architecture.md for detailed documentation
+
+4. **Version Consistency**: Ensures Python version requirements match between README and pyproject.toml
+
+### CI Integration
+
+The validation script runs automatically on pull requests that modify:
+- `README.md`
+- Files in `docs/` directory
+- The validation script itself
+
+See `.github/workflows/docs-validation.yml` for details.
+
+### Exit Codes
+
+- `0`: All checks passed
+- `1`: Validation failed (fixable issues found)
+- `2`: Error during validation (script error)
+
+### Example Output
+
+```
+================================================================================
+📚 Documentation Consistency Validator
+================================================================================
+
+🔍 Checking diagram consistency...
+🔍 Checking architecture concepts...
+🔍 Checking architecture.md reference...
+🔍 Checking version consistency...
+
+================================================================================
+📊 Results
+================================================================================
+
+✅ Diagram 'High-level architecture' matches architecture.md
+✅ Diagram 'CLI SELECT call flow' matches architecture.md
+✅ Architecture concept 'proxy-centric' mentioned in README
+✅ README references architecture.md for detailed documentation
+
+================================================================================
+✅ Passed: 9
+❌ Failed: 0
+📝 Total:  9
+================================================================================
+
+✅ All documentation checks passed!
+```
+
 ## generate_tree_docs.py
 
 Generate an annotated tree structure of the project with file descriptions extracted from docstrings.

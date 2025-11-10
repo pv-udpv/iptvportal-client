@@ -735,7 +735,7 @@ with IPTVPortalClient() as client:
 
 ## Architecture
 
-The package follows a **layered architecture** with clear separation of concerns:
+The iptvportal-client is built on a **proxy-centric, schema-driven, multi-level caching architecture** with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -750,6 +750,12 @@ The package follows a **layered architecture** with clear separation of concerns
 │   Core (Infrastructure)                 │  ← Client, HTTP, Cache, Schema
 └─────────────────────────────────────────┘
 ```
+
+**Key Architectural Principles:**
+- **Proxy-Centric**: Smart intermediary layer handling protocol translation, caching, and resilience
+- **Schema-Driven**: Single source of truth for field definitions driving code generation and validation
+- **Multi-Level Caching**: Three-tier strategy (in-memory → SQLite → remote) for optimal performance
+- **Configuration-Driven**: Hierarchical configuration system with environment variable support
 
 ### Package Structure
 
@@ -854,14 +860,14 @@ with IPTVPortalClient() as client:
 ```mermaid
 flowchart LR
   subgraph CLI["iptvportal CLI (Typer)"]
-    CMD["Services:\n- config\n- cache\n- schema\n- jsonsql (auth, sql, select/insert/update/delete, utils)\n- sync"]
+    CMD["Commands:\n- auth\n- sql\n- jsonsql\n- transpile\n- config\n- sync"]
   end
 
   subgraph Core["Core Library"]
     AUTH["auth.py\n(session mgmt)"]
     CLIENT["client.py / async_client.py\n(httpx JSON-RPC)"]
-    TRANS["jsonsql/\n(SQL → JSONSQL)"]
-    SCHEMA["schema/\n(table schemas, introspection)"]
+    TRANS["transpiler/\n(SQL → JSONSQL)"]
+    SCHEMA["schema.py\n(mapping, validation)"]
     SYNC["sync/\n(SQLite cache: database.py)"]
   end
 
@@ -888,11 +894,11 @@ sequenceDiagram
   participant U as User
   participant CLI as iptvportal (Typer)
   participant TRANS as SQLTranspiler
-  participant SCHEMA as schema/ (table.py)
+  participant SCHEMA as schema.py
   participant CLIENT as client.py (httpx)
   participant RPC as IPTVPortal JSON-RPC
 
-  U->>CLI: iptvportal jsonsql sql -q "SELECT id, username FROM subscriber LIMIT 5"
+  U->>CLI: iptvportal sql -q "SELECT id, username FROM subscriber LIMIT 5"
   CLI->>TRANS: transpile(SQL, auto_order_by_id=True)
   TRANS->>SCHEMA: resolve fields, mapping, types
   SCHEMA-->>TRANS: field positions, types, order_by="id"

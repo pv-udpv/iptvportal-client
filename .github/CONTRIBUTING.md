@@ -242,6 +242,7 @@ test(sync): add tests for incremental sync
 - [ ] Code is properly formatted (`make format`)
 - [ ] Type checking passes (`make type-check`)
 - [ ] Documentation updated if needed
+- [ ] Documentation validation passes (`make docs-validate`) if docs changed
 - [ ] Commit messages follow conventional format
 - [ ] No debug statements left in code
 - [ ] All related files updated in same commit (code + tests + docs)
@@ -310,7 +311,33 @@ When making changes, update ALL affected documentation:
 - `README.md` - User-facing features and examples
 - `docs/cli.md` - CLI commands and usage
 - `docs/jsonsql.md` - Query syntax and transpiler behavior
+- `docs/architecture.md` - Architectural changes
 - Inline docstrings - API documentation
+
+### Documentation Consistency
+
+The project enforces documentation consistency through automated validation:
+
+```bash
+# Validate documentation before committing
+make docs-validate
+
+# Check only diagrams
+make docs-validate-diagrams
+```
+
+**What's checked:**
+- Diagrams in README match docs/architecture.md
+- Key architecture concepts are present
+- Version numbers are consistent
+- Architecture.md is referenced appropriately
+
+**Automatic validation** runs on all PRs that modify documentation files. The validation will fail if:
+- Diagrams are out of sync between README and architecture.md
+- Architecture concepts are missing from README
+- Cross-references are broken
+
+See `scripts/validate_docs.py` for implementation details.
 
 ## Need Help?
 
