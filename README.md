@@ -1,5 +1,11 @@
 # IPTVPortal Client
 
+[![CI](https://github.com/pv-udpv/iptvportal-client/workflows/CI/badge.svg)](https://github.com/pv-udpv/iptvportal-client/actions/workflows/ci.yml)
+[![Security](https://github.com/pv-udpv/iptvportal-client/workflows/Security/badge.svg)](https://github.com/pv-udpv/iptvportal-client/actions/workflows/security.yml)
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
 Modern Python client for IPTVPortal JSONSQL API with full typing, async/sync support, and intuitive query building.
 
 ## Features
@@ -1055,6 +1061,50 @@ This repository includes GitHub Copilot instructions in `.github/copilot-instruc
 
 When contributing, Copilot will help maintain sync between code and documentation automatically.
 
+## Contributing
+
+We welcome contributions! Please see:
+
+- [CONTRIBUTING.md](.github/CONTRIBUTING.md) - Contribution guidelines
+- [CONTRIBUTORS.md](CONTRIBUTORS.md) - List of contributors
+- [CHANGELOG.md](CHANGELOG.md) - Version history
+
+### Quick Start for Contributors
+
+```bash
+# Clone the repository
+git clone https://github.com/pv-udpv/iptvportal-client.git
+cd iptvportal-client
+
+# Set up development environment
+make dev
+
+# Run tests
+make test
+
+# Run linters
+make lint
+
+# Run type checker
+make type-check
+
+# Run all checks
+make ci
+```
+
+## Links
+
+- **Documentation**: [docs/](docs/)
+- **Issue Tracker**: [GitHub Issues](https://github.com/pv-udpv/iptvportal-client/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/pv-udpv/iptvportal-client/discussions)
+- **Security**: [SECURITY.md](.github/SECURITY.md)
+
+## Support
+
+- 📖 [Documentation](docs/)
+- 💬 [Discussions](https://github.com/pv-udpv/iptvportal-client/discussions)
+- 🐛 [Report Bug](https://github.com/pv-udpv/iptvportal-client/issues/new)
+- ✨ [Request Feature](https://github.com/pv-udpv/iptvportal-client/issues/new)
 ## Troubleshooting
 
 ### Common Issues
@@ -1190,4 +1240,4 @@ See our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md) for details.
 
 ## License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.

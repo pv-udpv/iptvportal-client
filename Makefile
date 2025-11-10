@@ -158,7 +158,7 @@ lint-summary: ## Run ruff linter with summary statistics
 
 lint-fix: ## Run ruff linter with auto-fix
 	@echo "$(BLUE)Running linter with auto-fix...$(NC)"
-	uv run ruff check --fix .
+	uv run ruff check --fix --unsafe-fixes .
 
 format: ## Format code with ruff
 	@echo "$(BLUE)Formatting code...$(NC)"

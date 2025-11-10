@@ -96,6 +96,13 @@ ignore = [
     "E501",                  # Line length (handled by ruff)
 ]
 
+[tool.bandit]
+exclude_dirs = ["tests", "examples", ".venv", "build", "dist"]
+skips = ["B101"]  # Skip assert_used check in tests
+
+[tool.bandit.assert_used]
+skips = ["*_test.py", "test_*.py"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -109,9 +116,37 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
+    "--cov-report=term-missing",
+    "--cov-report=html",
 ]
 asyncio_mode = "auto"
 markers = [
     "asyncio: marks tests as async (using pytest-asyncio)",
     "timeout: per-test timeout in seconds (pytest-timeout)",
+    "unit: marks tests as unit tests (fast, isolated)",
+    "integration: marks tests as integration tests (may require external services)",
+    "slow: marks tests as slow running",
 ]
+
+[tool.coverage.run]
+source = ["src/iptvportal"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+precision = 2
+show_missing = true
+skip_covered = false

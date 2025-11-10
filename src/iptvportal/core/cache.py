@@ -223,3 +223,31 @@ class QueryCache:
 
         # Cache only SELECT queries
         return method in ("select", "query", "get")
+
+    def extract_table_name(self, query: dict[str, Any]) -> str | None:
+        """
+        Extract table name from a query dictionary.
+
+        Args:
+            query: Query dictionary (JSON-RPC request)
+
+        Returns:
+            Table name if found, None otherwise
+        """
+        params = query.get("params", {})
+
+        # Try to extract from different possible locations
+        if isinstance(params, dict):
+            # Direct 'from' field
+            if "from" in params:
+                return params["from"]
+
+            # Inside a 'query' object (JSONSQL format)
+            if "query" in params and isinstance(params["query"], dict):
+                return params["query"].get("from")
+
+            # Inside a 'table' field
+            if "table" in params:
+                return params["table"]
+
+        return None
