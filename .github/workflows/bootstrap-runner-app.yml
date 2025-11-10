@@ -1,0 +1,83 @@
+name: Bootstrap Runner GitHub App
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_code:
+        description: "One-time code from GitHub App manifest install flow (optional)"
+        required: false
+        type: string
+        default: ""
+      store_secrets:
+        description: "Store App ID and Private Key into repo secrets (requires SECRETS_ADMIN_TOKEN)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Exchange manifest code for App credentials
+        id: exchange
+        if: ${{ inputs.manifest_code != '' }}
+        run: |
+          set -euo pipefail
+          CODE="${{ inputs.manifest_code }}"
+          echo "Exchanging manifest code..."
+          RESP=$(curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app-manifests/${CODE}/conversions")
+          APP_ID=$(echo "$RESP" | jq -r '.id')
+          APP_SLUG=$(echo "$RESP" | jq -r '.slug')
+          APP_PEM=$(echo "$RESP" | jq -r '.pem')
+          if [ -z "$APP_ID" ] || [ "$APP_ID" = "null" ]; then
+            echo "::error::Failed to exchange manifest code"
+            echo "$RESP" | sed 's/\(pem\":\s*\)\".*\"/\1"<redacted>"/'
+            exit 1
+          fi
+          APP_PEM_B64=$(printf '%s' "$APP_PEM" | base64 -w0)
+          echo "app_id=$APP_ID" >> $GITHUB_OUTPUT
+          echo "app_slug=$APP_SLUG" >> $GITHUB_OUTPUT
+          echo "app_pem_b64=$APP_PEM_B64" >> $GITHUB_OUTPUT
+
+      - name: Save credentials to repo secrets via gh (optional)
+        if: ${{ inputs.store_secrets && steps.exchange.outputs.app_id != '' && steps.exchange.outputs.app_pem_b64 != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::SECRETS_ADMIN_TOKEN is required to write repo secrets."
+            exit 1
+          fi
+          echo -n "${{ steps.exchange.outputs.app_id }}" | gh secret set RUNNER_APP_ID --repo "$GITHUB_REPOSITORY" --app actions
+          echo -n "${{ steps.exchange.outputs.app_pem_b64 }}" | gh secret set RUNNER_APP_PRIVATE_KEY_B64 --repo "$GITHUB_REPOSITORY" --app actions
+          echo "Stored RUNNER_APP_ID and RUNNER_APP_PRIVATE_KEY_B64 in repo secrets."
+
+      - name: Summary
+        run: |
+          {
+            echo "## Bootstrap Summary";
+            if [ -n "${{ steps.exchange.outputs.app_id }}" ]; then
+              echo "- App ID: ${{ steps.exchange.outputs.app_id }}";
+              echo "- App Slug: ${{ steps.exchange.outputs.app_slug }}";
+              echo "- Private key captured (base64) and kept in outputs/secrets.";
+            else
+              echo "- No manifest code provided. Use the manifest flow or provide credentials manually.";
+            fi;
+            echo;
+            echo "### Next";
+            echo "- Ensure repo secrets RUNNER_APP_ID and RUNNER_APP_PRIVATE_KEY_B64 are set.";
+            echo "- Run 'Deploy Self-Hosted Runner' workflow in App mode (no PAT required).";
+            echo;
+            echo "If host is not SSH-reachable, run runner controller locally and expose via a tunnel (Cloudflare, Tailscale).";
+          } >> "$GITHUB_STEP_SUMMARY"
+
