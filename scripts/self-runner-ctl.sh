@@ -51,6 +51,8 @@ RUNNER_WORKDIR="${RUNNER_WORKDIR:-_work}"
 RUNNER_VERSION="${RUNNER_VERSION:-latest}"
 EPHEMERAL="${EPHEMERAL:-false}"
 DISABLE_UPDATE="${DISABLE_UPDATE:-true}"
+# If true, do not exec run.sh; start in background and write PID
+DAEMONIZE="${DAEMONIZE:-false}"
 
 AUTH_MODE=""
 
@@ -174,10 +176,27 @@ configure_and_run() {
 
   ./config.sh "${args[@]}"
   log "Runner configured. Starting..."
-  exec ./run.sh
+  if [[ "$DAEMONIZE" == "true" ]]; then
+    nohup ./run.sh > runner.log 2>&1 & echo $! > runner.pid
+    log "Runner started in background (pid $(cat runner.pid))."
+  else
+    exec ./run.sh
+  fi
 }
 
-main() {
+# Removal token endpoint helper
+get_runner_removal_token() {
+  local token_source="$1"
+  if [[ "$RUNNER_SCOPE" == "repo" ]]; then
+    local owner repo
+    owner="${REPO%%/*}"; repo="${REPO##*/}"
+    github_api POST "/repos/$owner/$repo/actions/runners/remove-token" "$token_source" | jq -r '.token'
+  else
+    github_api POST "/orgs/$ORG/actions/runners/remove-token" "$token_source" | jq -r '.token'
+  fi
+}
+
+cmd_register() {
   local token app_jwt install_token version
   if [[ "$AUTH_MODE" == "app" ]]; then
     log "Using GitHub App authentication"
@@ -200,5 +219,50 @@ main() {
   configure_and_run "$token" "$version"
 }
 
-main "$@"
+cmd_remove() {
+  cd actions-runner || { err "actions-runner directory not found"; exit 1; }
+  local token app_jwt install_token removal_token
+  if [[ "$AUTH_MODE" == "app" ]]; then
+    app_jwt=$(make_app_jwt)
+    install_token=$(get_installation_token "$app_jwt")
+    removal_token=$(get_runner_removal_token "$install_token")
+  else
+    # PAT mode uses PAT to get removal token
+    removal_token=$(get_runner_removal_token "$GITHUB_PAT")
+  fi
+  [[ -n "$removal_token" && "$removal_token" != null ]] || { err "Failed to obtain runner removal token"; exit 1; }
+  if [[ -f runner.pid ]]; then
+    if kill -0 "$(cat runner.pid)" 2>/dev/null; then
+      log "Stopping background runner pid $(cat runner.pid)"
+      kill "$(cat runner.pid)" || true
+      sleep 2 || true
+    fi
+  fi
+  ./config.sh remove --token "$removal_token"
+  log "Runner removed."
+}
 
+cmd_status() {
+  if [[ -d actions-runner ]]; then
+    cd actions-runner
+    if [[ -f runner.pid ]] && kill -0 "$(cat runner.pid)" 2>/dev/null; then
+      echo "running (pid $(cat runner.pid))"
+    else
+      echo "installed (not running)"
+    fi
+  else
+    echo "not installed"
+  fi
+}
+
+main() {
+  local cmd="${1:-register}"
+  case "$cmd" in
+    register) shift || true; cmd_register "$@" ;;
+    remove) shift || true; cmd_remove "$@" ;;
+    status) shift || true; cmd_status "$@" ;;
+    *) err "Unknown command: $cmd (expected: register|remove|status)"; exit 1 ;;
+  esac
+}
+
+main "$@"
