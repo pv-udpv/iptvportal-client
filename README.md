@@ -847,6 +847,8 @@ with IPTVPortalClient() as client:
 
 ## Architecture diagrams and flows
 
+> **📚 For comprehensive system architecture documentation including detailed diagrams, data flows, caching strategies, and design narrative, see [docs/architecture.md](docs/architecture.md)**
+
 ### High-level architecture
 
 ```mermaid
@@ -972,6 +974,7 @@ erDiagram
 
 ## Documentation
 
+- **[Architecture Overview](docs/architecture.md)** - Comprehensive system architecture with diagrams, data flows, and design narrative
 - **[Authentication Guide](docs/authentication.md)** - Complete guide to authentication setup and usage
 - **[CLI Documentation](docs/cli.md)** - Complete guide to CLI usage with examples
 - **[Configuration Guide](docs/configuration.md)** - Detailed configuration options and settings
