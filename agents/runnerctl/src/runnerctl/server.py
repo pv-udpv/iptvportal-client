@@ -46,6 +46,9 @@ class RunnerRemovalRequest(BaseModel):
 
     repo: str = Field(..., description="Repository in format owner/repo")
 
+# Create settings once at module level
+SETTINGS = ServerSettings()
+
 @app.get("/health")
 async def health() -> dict:
     """Health check endpoint."""
@@ -57,16 +60,14 @@ async def create_runner(
     authorization: Optional[str] = Header(None),
 ) -> dict:
     """Create and register a new runner."""
-    settings = ServerSettings()
-    
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
-    if token != settings.api_token:
+    if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-    
+
     # Prepare environment for runner script
     env = {
         **os.environ,
@@ -78,7 +79,7 @@ async def create_runner(
         "DAEMONIZE": "true" if req.daemonize else "false",
         "RUNNER_HOME": f"/opt/runnerctl/runners/{req.name}",
     }
-    
+
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
@@ -94,16 +95,14 @@ async def remove_runner(
     authorization: Optional[str] = Header(None),
 ) -> dict:
     """Remove and deregister a runner."""
-    settings = ServerSettings()
-    
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
-    if token != settings.api_token:
+    if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-    
+
     # Prepare environment
     env = {
         **os.environ,
@@ -111,7 +110,7 @@ async def remove_runner(
         "REPO": req.repo,
         "RUNNER_HOME": f"/opt/runnerctl/runners/{runner_name}",
     }
-    
+
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
@@ -126,14 +125,12 @@ async def runner_status(
     authorization: Optional[str] = Header(None),
 ) -> dict:
     """Get runner status."""
-    settings = ServerSettings()
-    
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
-    if token != settings.api_token:
+    if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
     
     # Validate runner_name (only allow safe characters: alphanum, _, -, .)
@@ -152,7 +149,7 @@ async def runner_status(
 
     if not os.path.exists(runner_home_real_path):
         return {"status": "not_installed", "name": runner_name}
-    
+
     if os.path.exists(pid_file):
         try:
             pid = int(open(pid_file, "r", encoding="utf-8").read().strip())
@@ -166,11 +163,11 @@ async def runner_status(
 def main() -> None:
     """Run the API server."""
     settings = ServerSettings()
-    
+
     if not settings.api_token:
         print("ERROR: GITHUB_WFA_RUNNER_SERVER__API_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
-    
+
     host, port = settings.bind.rsplit(":", 1)
     uvicorn.run(app, host=host, port=int(port), log_level="info")
 
