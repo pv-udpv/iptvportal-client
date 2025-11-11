@@ -98,11 +98,14 @@ github_api() {
 
 make_app_jwt() {
   local key_file="${GITHUB_APP_PRIVATE_KEY_FILE:-}"
+  local temp_key_file=""
   if [[ -z "$key_file" ]]; then
     if [[ -n "${GITHUB_APP_PRIVATE_KEY_B64:-}" ]]; then
-      key_file="$(mktemp)"; printf '%s' "$GITHUB_APP_PRIVATE_KEY_B64" | base64 -d > "$key_file"
+      key_file="$(mktemp)"; temp_key_file="$key_file"
+      printf '%s' "$GITHUB_APP_PRIVATE_KEY_B64" | base64 -d > "$key_file"
     elif [[ -n "${GITHUB_APP_PRIVATE_KEY:-}" ]]; then
-      key_file="$(mktemp)"; printf '%s' "$GITHUB_APP_PRIVATE_KEY" > "$key_file"
+      key_file="$(mktemp)"; temp_key_file="$key_file"
+      printf '%s' "$GITHUB_APP_PRIVATE_KEY" > "$key_file"
     fi
   fi
   [[ -f "$key_file" ]] || { err "GitHub App private key not provided"; exit 1; }
@@ -116,6 +119,10 @@ make_app_jwt() {
   payload_b64=$(printf '%s' "$payload" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
   unsigned="$header_b64.$payload_b64"
   sig_b64=$(printf '%s' "$unsigned" | openssl dgst -binary -sha256 -sign "$key_file" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+  
+  # Clean up temporary key file if we created one
+  [[ -n "$temp_key_file" ]] && rm -f "$temp_key_file"
+  
   echo "$unsigned.$sig_b64"
 }
 
