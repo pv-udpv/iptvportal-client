@@ -1,0 +1,26 @@
+[Unit]
+Description=RunnerCTL Manager (ensure desired runner pool from config)
+After=network-online.target runnerctl.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=runnerctl
+Group=runnerctl
+WorkingDirectory=/opt/runnerctl
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/runnerctl/runnerctl.env
+ExecStart=/usr/bin/python3 /opt/runnerctl/runnerctl_manager.py --config /etc/runnerctl/runnerctl.yaml
+Restart=always
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target
+

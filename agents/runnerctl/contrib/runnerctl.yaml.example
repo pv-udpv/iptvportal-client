@@ -1,0 +1,32 @@
+defaults:
+  labels: self-hosted,linux,x64
+  version: latest
+  workdir: _work
+  ephemeral: true
+  daemonize: true
+  base_dir: /opt/runnerctl/runners
+
+runners:
+  # Single persistent runner for a repo
+  - name: repo-build-1
+    scope: repo
+    repo: owner/repo-one
+    labels: self-hosted,linux,x64,build
+    ephemeral: false
+
+  # Pool of 3 ephemeral runners for another repo
+  - name_prefix: repo-two-ephem
+    scope: repo
+    repo: owner/repo-two
+    count: 3
+    labels: self-hosted,linux,x64,ephemeral
+    ephemeral: true
+
+  # Org-scoped ephemeral pool (requires org-level App install/permissions)
+  - name_prefix: org-ephem
+    scope: org
+    org: my-org
+    count: 2
+    labels: self-hosted,linux,x64,org
+    ephemeral: true
+

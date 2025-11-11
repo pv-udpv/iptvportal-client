@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Lightweight RunnerCTL HTTP server.
+Lightweight RunnerCTL HTTP server (Typer/Pydantic Settings v2 ready).
 
 Endpoints:
   - POST /api/v1/runners
@@ -10,10 +10,14 @@ Endpoints:
   - GET /health
 
 Auth:
-  - Require header: Authorization: Bearer <RUNNERCTL_API_TOKEN>
+  - Require header: Authorization: Bearer <API token>
+    - Preferred env: GITHUB_WFA_RUNNER_SERVER__API_TOKEN (short: GHWFAX__SERVER__API_TOKEN)
+    - Back-compat: RUNNERCTL_API_TOKEN
 
-This server shells out to scripts/self-runner-ctl.sh, which performs the actual
-registration/removal with GitHub using GitHub App or PAT from environment.
+Settings (env, nested delimiter __):
+  - GITHUB_WFA_RUNNER_SERVER__BIND (default 127.0.0.1:8080)
+  - GITHUB_WFA_RUNNER_SERVER__SCRIPT (defaults to scripts/self-runner-ctl.sh)
+  - Back-compat: RUNNERCTL_BIND
 """
 
 from __future__ import annotations
@@ -27,19 +31,52 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict, Tuple
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
-API_TOKEN = os.environ.get("RUNNERCTL_API_TOKEN", "")
-BIND = os.environ.get("RUNNERCTL_BIND", "127.0.0.1:8080")
-SCRIPT = os.path.join(os.path.dirname(__file__), "self-runner-ctl.sh")
+
+def _merge_short_prefix_env() -> None:
+    # Map short prefix GHWFAX__* to full GITHUB_WFA_RUNNER_* for server settings
+    alt = "GHWFAX__"
+    full = "GITHUB_WFA_RUNNER_"
+    for k, v in list(os.environ.items()):
+        if k.startswith(alt):
+            mapped = full + k[len(alt) :]
+            os.environ.setdefault(mapped, v)
+
+
+class ServerSettings(BaseSettings):
+    api_token: str = Field(default="")
+    bind: str = Field(default="127.0.0.1:8080")
+    script: str = Field(default=os.path.join(os.path.dirname(__file__), "self-runner-ctl.sh"))
+
+    model_config = SettingsConfigDict(
+        env_prefix="GITHUB_WFA_RUNNER_SERVER_",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    def with_back_compat(self) -> "ServerSettings":
+        # Backwards compatibility fallbacks
+        if not self.api_token:
+            self.api_token = os.environ.get("RUNNERCTL_API_TOKEN", self.api_token)
+        if self.bind == "127.0.0.1:8080":
+            self.bind = os.environ.get("RUNNERCTL_BIND", self.bind)
+        return self
+
+
+_merge_short_prefix_env()
+SETTINGS = ServerSettings().with_back_compat()
 
 
 def _authz(headers) -> bool:
-    if not API_TOKEN:
+    if not SETTINGS.api_token:
         return False
     auth = headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return False
-    return auth.split(" ", 1)[1] == API_TOKEN
+    return auth.split(" ", 1)[1] == SETTINGS.api_token
 
 
 def _json_body(handler: BaseHTTPRequestHandler) -> Dict[str, Any]:
@@ -115,7 +152,7 @@ class Handler(BaseHTTPRequestHandler):
                 "DAEMONIZE": "true" if daemonize else "false",
             }
             # Secrets for GitHub App / PAT are inherited from server environment.
-            cmd = f"{shlex.quote(SCRIPT)} register"
+            cmd = f"{shlex.quote(SETTINGS.script)} register"
             pid, state = _spawn(cmd, env)
             _ok(self, {"name": name, "pid": pid, "state": state})
             return
@@ -143,19 +180,19 @@ class Handler(BaseHTTPRequestHandler):
             "REPO": scope_repo or "",
             "RUNNER_NAME": str(name),
         }
-        cmd = f"{shlex.quote(SCRIPT)} remove"
+        cmd = f"{shlex.quote(SETTINGS.script)} remove"
         pid, state = _spawn(cmd, env)
         _ok(self, {"name": name, "pid": pid, "state": state})
 
 
 def main() -> None:
-    if not API_TOKEN:
-        raise SystemExit("RUNNERCTL_API_TOKEN must be set")
-    host, _, port = BIND.partition(":")
+    if not SETTINGS.api_token:
+        raise SystemExit("API token not configured. Set GITHUB_WFA_RUNNER_SERVER__API_TOKEN or RUNNERCTL_API_TOKEN")
+    host, _, port = SETTINGS.bind.partition(":")
     if not port:
         port = "8080"
     server = HTTPServer((host, int(port)), Handler)
-    print(f"RunnerCTL server listening on http://{BIND}")
+    print(f"RunnerCTL server listening on http://{SETTINGS.bind}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -164,4 +201,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

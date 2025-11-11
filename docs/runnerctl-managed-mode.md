@@ -2,6 +2,10 @@
 
 RunnerCTL can maintain a pool of self-hosted runners declared in a YAML config. The manager keeps the desired set online by registering/starting runners and re-provisioning ephemeral ones after they finish.
 
+Use cases:
+- Private repos where users cannot add runners via the API.
+
+
 ## Config Schema
 
 Path: `/etc/runnerctl/runnerctl.yaml` (see `contrib/runnerctl.yaml.example`)
