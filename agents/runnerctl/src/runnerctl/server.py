@@ -20,6 +20,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
 class ServerSettings(BaseSettings):
     """Server configuration from environment."""
 
