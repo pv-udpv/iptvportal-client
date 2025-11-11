@@ -8,6 +8,7 @@ import subprocess
 import sys
 from typing import Optional
 
+import re
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,6 +19,7 @@ app = FastAPI(
     description="GitHub Actions self-hosted runner management API",
     version="0.1.0",
 )
+
 
 class ServerSettings(BaseSettings):
     """Server configuration from environment."""
@@ -46,6 +48,7 @@ class RunnerRemovalRequest(BaseModel):
     repo: str = Field(..., description="Repository in format owner/repo")
 
 # Instantiate settings once at module level
+# Create settings once at module level
 SETTINGS = ServerSettings()
 
 @app.get("/health")
@@ -62,11 +65,11 @@ async def create_runner(
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-    
+
     # Prepare environment for runner script
     env = {
         **os.environ,
@@ -78,7 +81,7 @@ async def create_runner(
         "DAEMONIZE": "true" if req.daemonize else "false",
         "RUNNER_HOME": f"/opt/runnerctl/runners/{req.name}",
     }
-    
+
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
@@ -97,11 +100,11 @@ async def remove_runner(
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-    
+
     # Prepare environment
     env = {
         **os.environ,
@@ -109,7 +112,7 @@ async def remove_runner(
         "REPO": req.repo,
         "RUNNER_HOME": f"/opt/runnerctl/runners/{runner_name}",
     }
-    
+
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
@@ -127,27 +130,28 @@ async def runner_status(
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
     
+    # Validate runner_name (only allow safe characters: alphanum, _, -, .)
+    if not runner_name or not re.match(r'^[A-Za-z0-9_.-]+$', runner_name):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+
     runners_root = "/opt/runnerctl/runners"
     runner_home = os.path.normpath(os.path.join(runners_root, runner_name))
     runner_home_real_path = os.path.realpath(runner_home)
     runners_root_real_path = os.path.realpath(runners_root)
     pid_file = os.path.join(runner_home_real_path, "runner.pid")
 
-    # Ensure runner_home stays inside root directory (prevent traversal), and runner_name is non-empty
-    if (
-        not runner_name
-        or os.path.commonpath([runner_home_real_path, runners_root_real_path]) != runners_root_real_path
-    ):
+    # Ensure runner_home stays inside root directory (prevent traversal)
+    if os.path.commonpath([runner_home_real_path, runners_root_real_path]) != runners_root_real_path:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
 
     if not os.path.exists(runner_home_real_path):
         return {"status": "not_installed", "name": runner_name}
-    
+
     if os.path.exists(pid_file):
         try:
             with open(pid_file, "r", encoding="utf-8") as f:
@@ -166,6 +170,13 @@ def main() -> None:
         sys.exit(1)
     
     host, port = SETTINGS.bind.rsplit(":", 1)
+    settings = ServerSettings()
+
+    if not settings.api_token:
+        print("ERROR: GITHUB_WFA_RUNNER_SERVER__API_TOKEN environment variable not set", file=sys.stderr)
+        sys.exit(1)
+
+    host, port = settings.bind.rsplit(":", 1)
     uvicorn.run(app, host=host, port=int(port), log_level="info")
 
 if __name__ == "__main__":

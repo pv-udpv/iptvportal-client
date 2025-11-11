@@ -33,6 +33,17 @@ set -euo pipefail
 
 API_ROOT="https://api.github.com"
 
+# Track temporary files for cleanup
+TEMP_FILES=()
+
+cleanup() {
+  for f in "${TEMP_FILES[@]}"; do
+    [[ -f "$f" ]] && rm -f "$f"
+  done
+}
+
+trap cleanup EXIT
+
 log() { echo "[$(date -Is)] $*"; }
 err() { echo "[$(date -Is)] ERROR: $*" >&2; }
 
