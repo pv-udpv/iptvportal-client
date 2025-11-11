@@ -47,6 +47,7 @@ class RunnerRemovalRequest(BaseModel):
 
     repo: str = Field(..., description="Repository in format owner/repo")
 
+# Instantiate settings once at module level
 # Create settings once at module level
 SETTINGS = ServerSettings()
 
@@ -84,7 +85,7 @@ async def create_runner(
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
-        subprocess.Popen(f"{script} register", shell=True, env=env)
+        subprocess.Popen([script, "register"], env=env)
         return {"status": "started", "name": req.name}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -153,7 +154,8 @@ async def runner_status(
 
     if os.path.exists(pid_file):
         try:
-            pid = int(open(pid_file, "r", encoding="utf-8").read().strip())
+            with open(pid_file, "r", encoding="utf-8") as f:
+                pid = int(f.read().strip())
             os.kill(pid, 0)
             return {"status": "running", "name": runner_name, "pid": pid}
         except Exception:
@@ -163,6 +165,11 @@ async def runner_status(
 
 def main() -> None:
     """Run the API server."""
+    if not SETTINGS.api_token:
+        print("ERROR: GITHUB_WFA_RUNNER_SERVER__API_TOKEN environment variable not set", file=sys.stderr)
+        sys.exit(1)
+    
+    host, port = SETTINGS.bind.rsplit(":", 1)
     settings = ServerSettings()
 
     if not settings.api_token:

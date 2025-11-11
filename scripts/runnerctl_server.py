@@ -25,7 +25,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shlex
 import subprocess
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -103,8 +102,8 @@ def _err(handler: BaseHTTPRequestHandler, msg: str, status: int = 400):
     _ok(handler, {"error": msg}, status)
 
 
-def _spawn(cmd: str, env: Dict[str, str]) -> Tuple[int, str]:
-    proc = subprocess.Popen(cmd, shell=True, env={**os.environ, **env})
+def _spawn(cmd: list, env: Dict[str, str]) -> Tuple[int, str]:
+    proc = subprocess.Popen(cmd, env={**os.environ, **env})
     return proc.pid, "started"
 
 
@@ -152,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
                 "DAEMONIZE": "true" if daemonize else "false",
             }
             # Secrets for GitHub App / PAT are inherited from server environment.
-            cmd = f"{shlex.quote(SETTINGS.script)} register"
+            cmd = [SETTINGS.script, "register"]
             pid, state = _spawn(cmd, env)
             _ok(self, {"name": name, "pid": pid, "state": state})
             return
@@ -180,7 +179,7 @@ class Handler(BaseHTTPRequestHandler):
             "REPO": scope_repo or "",
             "RUNNER_NAME": str(name),
         }
-        cmd = f"{shlex.quote(SETTINGS.script)} remove"
+        cmd = [SETTINGS.script, "remove"]
         pid, state = _spawn(cmd, env)
         _ok(self, {"name": name, "pid": pid, "state": state})
 
@@ -196,6 +195,7 @@ def main() -> None:
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        # Graceful shutdown on Ctrl+C
         pass
 
 
