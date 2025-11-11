@@ -51,6 +51,10 @@ RUNNER_WORKDIR="${RUNNER_WORKDIR:-_work}"
 RUNNER_VERSION="${RUNNER_VERSION:-latest}"
 EPHEMERAL="${EPHEMERAL:-false}"
 DISABLE_UPDATE="${DISABLE_UPDATE:-true}"
+# Runner installation directory (per instance). Defaults to 'actions-runner'.
+# For multi-runner hosts, set RUNNER_HOME to a unique path per runner
+# e.g., /opt/runnerctl/runners/$RUNNER_NAME
+RUNNER_HOME="${RUNNER_HOME:-actions-runner}"
 # If true, do not exec run.sh; start in background and write PID
 DAEMONIZE="${DAEMONIZE:-false}"
 
@@ -148,10 +152,10 @@ get_runner_version() {
 
 download_runner() {
   local version="$1"
-  if [[ ! -d actions-runner ]]; then
-    mkdir -p actions-runner
+  if [[ ! -d "$RUNNER_HOME" ]]; then
+    mkdir -p "$RUNNER_HOME"
   fi
-  cd actions-runner
+  cd "$RUNNER_HOME"
   if [[ ! -f ".runner.${version}" ]]; then
     rm -f actions-runner-linux-x64-*.tar.gz || true
     curl -fsS -L -o actions-runner-linux-x64-${version}.tar.gz \
@@ -174,13 +178,17 @@ configure_and_run() {
   [[ "$EPHEMERAL" == "true" ]] && args+=("--ephemeral")
   [[ "$DISABLE_UPDATE" == "true" ]] && args+=("--disableupdate")
 
-  ./config.sh "${args[@]}"
+  ( cd "$RUNNER_HOME" && ./config.sh "${args[@]}" )
   log "Runner configured. Starting..."
   if [[ "$DAEMONIZE" == "true" ]]; then
-    nohup ./run.sh > runner.log 2>&1 & echo $! > runner.pid
-    log "Runner started in background (pid $(cat runner.pid))."
+    ( cd "$RUNNER_HOME" && nohup ./run.sh > runner.log 2>&1 & echo $! > runner.pid && echo "pid=$!" )
+    if [[ -f "$RUNNER_HOME/runner.pid" ]]; then
+      log "Runner started in background (pid $(cat "$RUNNER_HOME/runner.pid"))."
+    else
+      log "Runner started in background."
+    fi
   else
-    exec ./run.sh
+    exec "$RUNNER_HOME"/run.sh
   fi
 }
 
@@ -220,7 +228,7 @@ cmd_register() {
 }
 
 cmd_remove() {
-  cd actions-runner || { err "actions-runner directory not found"; exit 1; }
+  cd "$RUNNER_HOME" || { err "Runner directory not found: $RUNNER_HOME"; exit 1; }
   local token app_jwt install_token removal_token
   if [[ "$AUTH_MODE" == "app" ]]; then
     app_jwt=$(make_app_jwt)
@@ -243,8 +251,8 @@ cmd_remove() {
 }
 
 cmd_status() {
-  if [[ -d actions-runner ]]; then
-    cd actions-runner
+  if [[ -d "$RUNNER_HOME" ]]; then
+    cd "$RUNNER_HOME"
     if [[ -f runner.pid ]] && kill -0 "$(cat runner.pid)" 2>/dev/null; then
       echo "running (pid $(cat runner.pid))"
     else
