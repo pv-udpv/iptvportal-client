@@ -114,7 +114,7 @@ async def remove_runner(
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
-        subprocess.Popen(f"{script} remove", shell=True, env=env)
+        subprocess.Popen([script, "remove"], env=env)
         return {"status": "removed", "name": runner_name}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
