@@ -141,8 +141,11 @@ async def runner_status(
     runners_root_real_path = os.path.realpath(runners_root)
     pid_file = os.path.join(runner_home_real_path, "runner.pid")
 
-    # Ensure runner_home stays inside root directory (prevent traversal)
-    if not runner_home_real_path.startswith(runners_root_real_path + os.sep):
+    # Ensure runner_home stays inside root directory (prevent traversal), and runner_name is non-empty
+    if (
+        not runner_name
+        or os.path.commonpath([runner_home_real_path, runners_root_real_path]) != runners_root_real_path
+    ):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
 
     if not os.path.exists(runner_home_real_path):
