@@ -137,13 +137,15 @@ async def runner_status(
     
     runners_root = "/opt/runnerctl/runners"
     runner_home = os.path.normpath(os.path.join(runners_root, runner_name))
-    pid_file = os.path.join(runner_home, "runner.pid")
+    runner_home_real_path = os.path.realpath(runner_home)
+    runners_root_real_path = os.path.realpath(runners_root)
+    pid_file = os.path.join(runner_home_real_path, "runner.pid")
 
     # Ensure runner_home stays inside root directory (prevent traversal)
-    if not runner_home.startswith(os.path.abspath(runners_root) + os.sep):
+    if not runner_home_real_path.startswith(runners_root_real_path + os.sep):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
 
-    if not os.path.exists(runner_home):
+    if not os.path.exists(runner_home_real_path):
         return {"status": "not_installed", "name": runner_name}
     
     if os.path.exists(pid_file):
