@@ -135,9 +135,14 @@ async def runner_status(
     if token != settings.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
     
-    runner_home = f"/opt/runnerctl/runners/{runner_name}"
-    pid_file = f"{runner_home}/runner.pid"
-    
+    runners_root = "/opt/runnerctl/runners"
+    runner_home = os.path.normpath(os.path.join(runners_root, runner_name))
+    pid_file = os.path.join(runner_home, "runner.pid")
+
+    # Ensure runner_home stays inside root directory (prevent traversal)
+    if not runner_home.startswith(os.path.abspath(runners_root) + os.sep):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+
     if not os.path.exists(runner_home):
         return {"status": "not_installed", "name": runner_name}
     
@@ -148,7 +153,7 @@ async def runner_status(
             return {"status": "running", "name": runner_name, "pid": pid}
         except Exception:
             pass
-    
+
     return {"status": "installed_not_running", "name": runner_name}
 
 def main() -> None:
