@@ -170,13 +170,6 @@ def main() -> None:
         sys.exit(1)
     
     host, port = SETTINGS.bind.rsplit(":", 1)
-    settings = ServerSettings()
-
-    if not settings.api_token:
-        print("ERROR: GITHUB_WFA_RUNNER_SERVER__API_TOKEN environment variable not set", file=sys.stderr)
-        sys.exit(1)
-
-    host, port = settings.bind.rsplit(":", 1)
     uvicorn.run(app, host=host, port=int(port), log_level="info")
 
 if __name__ == "__main__":
