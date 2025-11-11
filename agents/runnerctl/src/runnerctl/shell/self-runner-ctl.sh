@@ -33,6 +33,17 @@ set -euo pipefail
 
 API_ROOT="https://api.github.com"
 
+# Track temporary files for cleanup
+TEMP_FILES=()
+
+cleanup() {
+  for f in "${TEMP_FILES[@]}"; do
+    [[ -f "$f" ]] && rm -f "$f"
+  done
+}
+
+trap cleanup EXIT
+
 log() { echo "[$(date -Is)] $*"; }
 err() { echo "[$(date -Is)] ERROR: $*" >&2; }
 
@@ -100,9 +111,13 @@ make_app_jwt() {
   local key_file="${GITHUB_APP_PRIVATE_KEY_FILE:-}"
   if [[ -z "$key_file" ]]; then
     if [[ -n "${GITHUB_APP_PRIVATE_KEY_B64:-}" ]]; then
-      key_file="$(mktemp)"; printf '%s' "$GITHUB_APP_PRIVATE_KEY_B64" | base64 -d > "$key_file"
+      key_file="$(mktemp)"
+      TEMP_FILES+=("$key_file")
+      printf '%s' "$GITHUB_APP_PRIVATE_KEY_B64" | base64 -d > "$key_file"
     elif [[ -n "${GITHUB_APP_PRIVATE_KEY:-}" ]]; then
-      key_file="$(mktemp)"; printf '%s' "$GITHUB_APP_PRIVATE_KEY" > "$key_file"
+      key_file="$(mktemp)"
+      TEMP_FILES+=("$key_file")
+      printf '%s' "$GITHUB_APP_PRIVATE_KEY" > "$key_file"
     fi
   fi
   [[ -f "$key_file" ]] || { err "GitHub App private key not provided"; exit 1; }
