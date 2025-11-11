@@ -10,14 +10,9 @@ import time
 from typing import List, Optional, Tuple
 
 import typer
+import yaml  # type: ignore
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-try:
-    import yaml  # type: ignore
-except Exception:  # pragma: no cover - runtime dependency check
-    print("Missing dependency: pyyaml. Install with: pip install pyyaml", file=sys.stderr)
-    sys.exit(1)
 
 APP = typer.Typer(
     add_completion=False,
