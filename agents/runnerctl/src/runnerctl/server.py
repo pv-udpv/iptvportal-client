@@ -24,8 +24,8 @@ app = FastAPI(
 class ServerSettings(BaseSettings):
     """Server configuration from environment."""
 
-    api_token: str = Field(default="", validation_alias="GITHUB_WFA_RUNNER_SERVER__API_TOKEN")
-    bind: str = Field(default="127.0.0.1:8080", validation_alias="GITHUB_WFA_RUNNER_SERVER__BIND")
+    api_token: str = Field(default="")
+    bind: str = Field(default="127.0.0.1:8080")
 
     model_config = SettingsConfigDict(
         env_prefix="GITHUB_WFA_RUNNER_SERVER__",
