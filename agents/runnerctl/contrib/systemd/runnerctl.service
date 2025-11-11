@@ -13,7 +13,7 @@ Environment=PYTHONUNBUFFERED=1
 Environment=RUNNERCTL_BIND=127.0.0.1:8080
 # Load secrets and defaults
 EnvironmentFile=-/etc/runnerctl/runnerctl.env
-ExecStart=/usr/bin/python3 /opt/runnerctl/runnerctl_server.py
+ExecStart=/usr/bin/python3 -m runnerctl.server
 Restart=on-failure
 RestartSec=5s
 NoNewPrivileges=true

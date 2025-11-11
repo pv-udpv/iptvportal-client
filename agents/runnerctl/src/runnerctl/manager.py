@@ -148,7 +148,8 @@ def ensure_runner(item: RunnerItem, defaults: DefaultsModel, index: int, base_di
     pid_file = os.path.join(runner_home, "runner.pid")
     if os.path.exists(pid_file):
         try:
-            pid = int(open(pid_file, "r", encoding="utf-8").read().strip())
+            with open(pid_file, "r", encoding="utf-8") as f:
+                pid = int(f.read().strip())
             os.kill(pid, 0)
             return  # still running
         except Exception:
@@ -168,8 +169,7 @@ def ensure_runner(item: RunnerItem, defaults: DefaultsModel, index: int, base_di
         "RUNNER_HOME": runner_home,
     }
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
-    cmd = f"{script} register"
-    subprocess.Popen(cmd, shell=True, env={**os.environ, **env})
+    subprocess.Popen([script, "register"], env={**os.environ, **env})
 
 
 def _run_loop(settings: ManagerSettings) -> None:
