@@ -69,6 +69,10 @@ async def create_runner(
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
     
+    # Validate runner name to prevent path traversal
+    if "/" in req.name or "\\" in req.name or req.name.startswith("."):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+    
     # Prepare environment for runner script
     env = {
         **os.environ,
@@ -106,6 +110,10 @@ async def remove_runner(
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
     
+    # Validate runner_name to prevent path traversal
+    if "/" in runner_name or "\\" in runner_name or runner_name.startswith("."):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+    
     # Prepare environment
     env = {
         **os.environ,
@@ -137,6 +145,10 @@ async def runner_status(
     token = authorization[7:]  # Remove "Bearer " prefix
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+    
+    # Validate runner_name to prevent path traversal
+    if "/" in runner_name or "\\" in runner_name or runner_name.startswith("."):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
     
     runner_home = f"/opt/runnerctl/runners/{runner_name}"
     pid_file = f"{runner_home}/runner.pid"
