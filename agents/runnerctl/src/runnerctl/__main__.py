@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """RunnerCTL CLI entry point."""
 
-import sys
-
 import typer
 
 from runnerctl.manager import APP as manager_app
