@@ -37,7 +37,9 @@ sudo editor /etc/runnerctl/runnerctl.env  # fill values
 ```
 
 Required variables:
-- `RUNNERCTL_API_TOKEN`: long random token used by the HTTP API (bearer auth)
+- HTTP API token (Pydantic Settings v2): `GITHUB_WFA_RUNNER_SERVER__API_TOKEN`
+  - Short prefix also supported: `GHWFAX__SERVER__API_TOKEN`
+  - Back-compat: `RUNNERCTL_API_TOKEN`
 - GitHub App (preferred): `GITHUB_APP_ID` and one of `GITHUB_APP_PRIVATE_KEY_B64`, `GITHUB_APP_PRIVATE_KEY_FILE`, or `GITHUB_APP_PRIVATE_KEY`
 - Optional PAT fallback: `GITHUB_PAT`
 
@@ -72,7 +74,7 @@ cloudflared tunnel --url http://127.0.0.1:8080
 Test API (from anywhere):
 
 ```bash
-curl -H "Authorization: Bearer $RUNNERCTL_API_TOKEN" \
+curl -H "Authorization: Bearer $API_TOKEN" \
      -H "Content-Type: application/json" \
      -X POST "https://<random>.trycloudflare.com/api/v1/runners" \
      -d '{"repo":"owner/repo","name":"ephem-1","labels":"self-hosted,linux,x64","ephemeral":true,"daemonize":true}'
@@ -124,14 +126,14 @@ sudo systemctl status cloudflared
 
 Set repo secrets:
 - `RUNNERCTL_BASE_URL`: e.g., `https://runnerctl.example.com`
-- `RUNNERCTL_API_TOKEN`: same value as on the host
+- `API_TOKEN`: same value as the server's `GITHUB_WFA_RUNNER_SERVER__API_TOKEN`
 
 Sample job step:
 
 ```yaml
 - name: Provision ephemeral runner
   run: |
-    curl -H "Authorization: Bearer ${{ secrets.RUNNERCTL_API_TOKEN }}" \
+    curl -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
          -H "Content-Type: application/json" \
          -X POST "${{ secrets.RUNNERCTL_BASE_URL }}/api/v1/runners" \
          -d '{"repo":"${{ github.repository }}","name":"ephem-${{ github.run_id }}","labels":"self-hosted,linux,x64","ephemeral":true,"daemonize":true}'
@@ -142,7 +144,7 @@ To remove:
 ```yaml
 - name: Remove runner
   run: |
-    curl -H "Authorization: Bearer ${{ secrets.RUNNERCTL_API_TOKEN }}" \
+    curl -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
          -H "Content-Type: application/json" \
          -X DELETE "${{ secrets.RUNNERCTL_BASE_URL }}/api/v1/runners/ephem-${{ github.run_id }}" \
          -d '{"repo":"${{ github.repository }}"}'
@@ -153,4 +155,3 @@ To remove:
 - Ensure outbound connectivity to GitHub from the host; otherwise the runner cannot register or go online.
 - Prefer GitHub App credentials over PAT for better security and rotation.
 - Logs are in journald: `journalctl -u runnerctl -f`.
-
