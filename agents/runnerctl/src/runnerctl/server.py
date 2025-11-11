@@ -19,6 +19,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
 class ServerSettings(BaseSettings):
     """Server configuration from environment."""
 
@@ -30,6 +31,11 @@ class ServerSettings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+
+# Instantiate settings once at module level
+settings = ServerSettings()
+
 
 class RunnerRequest(BaseModel):
     """Runner creation request."""
@@ -56,8 +62,6 @@ async def create_runner(
     authorization: Optional[str] = Header(None),
 ) -> dict:
     """Create and register a new runner."""
-    settings = ServerSettings()
-    
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
@@ -93,8 +97,6 @@ async def remove_runner(
     authorization: Optional[str] = Header(None),
 ) -> dict:
     """Remove and deregister a runner."""
-    settings = ServerSettings()
-    
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
@@ -125,8 +127,6 @@ async def runner_status(
     authorization: Optional[str] = Header(None),
 ) -> dict:
     """Get runner status."""
-    settings = ServerSettings()
-    
     # Verify API token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
@@ -163,8 +163,6 @@ async def runner_status(
 
 def main() -> None:
     """Run the API server."""
-    settings = ServerSettings()
-    
     if not settings.api_token:
         print("ERROR: GITHUB_WFA_RUNNER_SERVER__API_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
