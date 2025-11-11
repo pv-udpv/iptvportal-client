@@ -48,6 +48,21 @@ sudo systemctl enable --now runnerctl-manager
 
 Manager reads env from `/etc/runnerctl/runnerctl.env` (same as the API service), including GitHub App or PAT credentials. It loops every 10s and ensures each runner (or pool) is present and running.
 
+### Environment Overrides for Defaults
+
+You can override `defaults` via environment variables (Pydantic Settings v2):
+
+- Prefix: `GITHUB_WFA_RUNNER_DEFAULTS__` (short alias also supported: `GHWFAX__DEFAULTS__`)
+- Examples:
+  - `GITHUB_WFA_RUNNER_DEFAULTS__LABELS=self-hosted,linux,x64,build`
+  - `GITHUB_WFA_RUNNER_DEFAULTS__VERSION=latest`
+  - `GITHUB_WFA_RUNNER_DEFAULTS__WORKDIR=_work`
+  - `GITHUB_WFA_RUNNER_DEFAULTS__EPHEMERAL=false`
+  - `GITHUB_WFA_RUNNER_DEFAULTS__DAEMONIZE=true`
+  - `GITHUB_WFA_RUNNER_DEFAULTS__BASE_DIR=/opt/runnerctl/runners`
+
+These apply after the YAML is loaded, so env values take precedence over file defaults.
+
 ## How It Works
 
 - For each defined runner name, the manager sets `RUNNER_HOME` to a unique directory and shells out to `scripts/self-runner-ctl.sh register` with `DAEMONIZE=true`.
@@ -65,4 +80,3 @@ Manager reads env from `/etc/runnerctl/runnerctl.env` (same as the API service),
 - Status per runner directory: `cat /opt/runnerctl/runners/<name>/runner.pid` and `tail -f /opt/runnerctl/runners/<name>/runner.log`
 - Logs: `journalctl -u runnerctl-manager -f` and `journalctl -u runnerctl -f`
 - Re-register a broken runner: stop/remove its directory and let the manager recreate it.
-
