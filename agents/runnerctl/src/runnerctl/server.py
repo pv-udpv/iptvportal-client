@@ -73,6 +73,12 @@ async def create_runner(
     if "/" in req.name or "\\" in req.name or req.name.startswith("."):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
     
+    runner_home = f"/opt/runnerctl/runners/{req.name}"
+    # Ensure the resolved path is within the expected directory
+    expected_base = "/opt/runnerctl/runners"
+    if not os.path.realpath(runner_home).startswith(os.path.realpath(expected_base) + "/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+    
     # Prepare environment for runner script
     env = {
         **os.environ,
@@ -82,7 +88,7 @@ async def create_runner(
         "RUNNER_LABELS": req.labels.replace(" ", ""),
         "EPHEMERAL": "true" if req.ephemeral else "false",
         "DAEMONIZE": "true" if req.daemonize else "false",
-        "RUNNER_HOME": f"/opt/runnerctl/runners/{req.name}",
+        "RUNNER_HOME": runner_home,
     }
     
     # Call runner script
@@ -114,12 +120,18 @@ async def remove_runner(
     if "/" in runner_name or "\\" in runner_name or runner_name.startswith("."):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
     
+    runner_home = f"/opt/runnerctl/runners/{runner_name}"
+    # Ensure the resolved path is within the expected directory
+    expected_base = "/opt/runnerctl/runners"
+    if not os.path.realpath(runner_home).startswith(os.path.realpath(expected_base) + "/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+    
     # Prepare environment
     env = {
         **os.environ,
         "RUNNER_SCOPE": "repo",
         "REPO": req.repo,
-        "RUNNER_HOME": f"/opt/runnerctl/runners/{runner_name}",
+        "RUNNER_HOME": runner_home,
     }
     
     # Call runner script
@@ -151,6 +163,11 @@ async def runner_status(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
     
     runner_home = f"/opt/runnerctl/runners/{runner_name}"
+    # Ensure the resolved path is within the expected directory
+    expected_base = "/opt/runnerctl/runners"
+    if not os.path.realpath(runner_home).startswith(os.path.realpath(expected_base) + "/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
+    
     pid_file = f"{runner_home}/runner.pid"
     
     if not os.path.exists(runner_home):
