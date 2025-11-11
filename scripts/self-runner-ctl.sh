@@ -98,14 +98,22 @@ github_api() {
 
 make_app_jwt() {
   local key_file="${GITHUB_APP_PRIVATE_KEY_FILE:-}"
+  local temp_key_created=0
   if [[ -z "$key_file" ]]; then
     if [[ -n "${GITHUB_APP_PRIVATE_KEY_B64:-}" ]]; then
       key_file="$(mktemp)"; printf '%s' "$GITHUB_APP_PRIVATE_KEY_B64" | base64 -d > "$key_file"
+      temp_key_created=1
     elif [[ -n "${GITHUB_APP_PRIVATE_KEY:-}" ]]; then
       key_file="$(mktemp)"; printf '%s' "$GITHUB_APP_PRIVATE_KEY" > "$key_file"
+      temp_key_created=1
     fi
   fi
   [[ -f "$key_file" ]] || { err "GitHub App private key not provided"; exit 1; }
+
+  # Cleanup trap for temporary key file
+  if [[ $temp_key_created -eq 1 ]]; then
+    trap 'rm -f "$key_file" 2>/dev/null || true' EXIT
+  fi
 
   local now exp header payload header_b64 payload_b64 sig_b64 unsigned
   now=$(date +%s)
