@@ -8,6 +8,7 @@ import subprocess
 import sys
 from typing import Optional
 
+import re
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -113,7 +114,7 @@ async def remove_runner(
     # Call runner script
     script = os.path.join(os.path.dirname(__file__), "shell", "self-runner-ctl.sh")
     try:
-        subprocess.Popen(f"{script} remove", shell=True, env=env)
+        subprocess.Popen([script, "remove"], env=env)
         return {"status": "removed", "name": runner_name}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -131,6 +132,10 @@ async def runner_status(
     token = authorization[7:]  # Remove "Bearer " prefix
     if token != SETTINGS.api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+    
+    # Validate runner_name (only allow safe characters: alphanum, _, -, .)
+    if not runner_name or not re.match(r'^[A-Za-z0-9_.-]+$', runner_name):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
 
     runners_root = "/opt/runnerctl/runners"
     runner_home = os.path.normpath(os.path.join(runners_root, runner_name))
@@ -138,11 +143,8 @@ async def runner_status(
     runners_root_real_path = os.path.realpath(runners_root)
     pid_file = os.path.join(runner_home_real_path, "runner.pid")
 
-    # Ensure runner_home stays inside root directory (prevent traversal), and runner_name is non-empty
-    if (
-        not runner_name
-        or os.path.commonpath([runner_home_real_path, runners_root_real_path]) != runners_root_real_path
-    ):
+    # Ensure runner_home stays inside root directory (prevent traversal)
+    if os.path.commonpath([runner_home_real_path, runners_root_real_path]) != runners_root_real_path:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid runner name")
 
     if not os.path.exists(runner_home_real_path):
