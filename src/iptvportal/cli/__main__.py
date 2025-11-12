@@ -11,6 +11,11 @@ from iptvportal.cli.commands.jsonsql import jsonsql_app
 from iptvportal.cli.commands.sync import app as sync_app
 from iptvportal.cli.discovery import discover_cli_modules
 
+# Initialize logging once before CLI starts (idempotent: safe to call multiple times)
+from iptvportal.config import setup_logging
+
+setup_logging()
+
 console = Console()
 
 app = typer.Typer(

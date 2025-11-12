@@ -7,6 +7,11 @@ It provides:
 - reconfigure_logging() to reload from current dynaconf config
 - set_module_log_level(module, level) to change levels at runtime
 - get_logger(name=None) helper
+
+Key features:
+- Idempotent: safe to call setup_logging() multiple times
+- Thread-safe: uses global flag to prevent redundant initialization
+- Graceful fallback: uses basicConfig if advanced config fails
 """
 
 from __future__ import annotations
@@ -24,6 +29,10 @@ from iptvportal.config.project import (
     get_conf,
     set_value,
 )  # imported lazily by callers in some codepaths
+
+# Global flag to track logging initialization state
+_LOGGING_CONFIGURED = False
+_LOGGING_LOCK = False  # Simple flag for basic thread safety
 
 
 def _ensure_log_dir(path: str | Path) -> None:
@@ -232,13 +241,41 @@ def _build_dict_config(cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def setup_logging(dynaconf_conf: Dynaconf | dict | None = None) -> None:
+def is_logging_configured() -> bool:
+    """Check if logging has been configured.
+
+    Returns:
+        True if setup_logging() has been successfully called, False otherwise.
+    """
+    return _LOGGING_CONFIGURED
+
+
+def setup_logging(dynaconf_conf: Dynaconf | dict | None = None, force: bool = False) -> None:
     """
     Configure logging from a dynaconf configuration object or plain dict.
 
     Accepts either a Dynaconf instance or a dict with a "logging" key.
     If dynaconf_conf is None, tries to use project.get_conf() to obtain current config.
+
+    Args:
+        dynaconf_conf: Configuration object or dict. If None, uses get_conf().
+        force: If True, reconfigure even if already configured. Default: False.
+
+    Note:
+        This function is idempotent: calling it multiple times without force=True
+        will skip reconfiguration to avoid redundant initialization warnings.
     """
+    global _LOGGING_CONFIGURED, _LOGGING_LOCK
+
+    # Skip if already configured (unless force=True)
+    if _LOGGING_CONFIGURED and not force:
+        return
+
+    # Simple protection against concurrent initialization
+    if _LOGGING_LOCK:
+        return
+    _LOGGING_LOCK = True
+
     try:
         if dynaconf_conf is None:
             try:
@@ -260,26 +297,43 @@ def setup_logging(dynaconf_conf: Dynaconf | dict | None = None) -> None:
 
         dict_config = _build_dict_config(cfg)
         logging.config.dictConfig(dict_config)
+
+        _LOGGING_CONFIGURED = True
+
         logger = logging.getLogger("iptvportal")
         logger.info(
             "Logging configured",
             extra={"configured_handlers": list(dict_config["handlers"].keys())},
         )
     except Exception:
-        # Don't fail the application startup due to logging config errors.
-        logging.basicConfig(level=logging.INFO)
-        logging.getLogger("iptvportal").warning(
-            "Failed to apply advanced logging config; using basicConfig"
-        )
+        # Only apply basicConfig if not already configured
+        if not _LOGGING_CONFIGURED:
+            # Use force=True for Python 3.8+ to ensure basicConfig works
+            try:
+                logging.basicConfig(level=logging.INFO, force=True)
+            except TypeError:
+                # Python < 3.8 doesn't support force parameter
+                logging.basicConfig(level=logging.INFO)
+
+            _LOGGING_CONFIGURED = True
+            logging.getLogger("iptvportal").warning(
+                "Failed to apply advanced logging config; using basicConfig"
+            )
+    finally:
+        _LOGGING_LOCK = False
 
 
 def reconfigure_logging() -> None:
-    """Reload logging configuration from the active dynaconf configuration."""
+    """Reload logging configuration from the active dynaconf configuration.
+
+    This forces a reconfiguration even if logging was already set up.
+    Useful for applying runtime changes to logging settings.
+    """
     try:
         cfg = get_conf()
     except Exception:
         cfg = None
-    setup_logging(cfg)
+    setup_logging(cfg, force=True)
 
 
 def set_module_log_level(module: str, level: str) -> None:

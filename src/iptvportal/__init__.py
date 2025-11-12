@@ -18,12 +18,14 @@ from iptvportal.models import QueryResult, SQLQueryInput
 from iptvportal.schema import SchemaRegistry, TableSchema
 from iptvportal.service import QueryService
 
-# Auto-initialize logging from config on package import (best-effort)
-with suppress(Exception):
-    from iptvportal.config import setup_logging
-
-    with suppress(Exception):
-        setup_logging()
+# NOTE: Logging is NOT auto-initialized on import to avoid duplicate warnings.
+# For CLI usage, logging is configured via cli/__main__.py global callback.
+# For library usage, call setup_logging() explicitly:
+#
+#   from iptvportal.config import setup_logging
+#   setup_logging()
+#
+# This is safe to call multiple times (idempotent).
 
 __version__ = "0.1.0"
 
