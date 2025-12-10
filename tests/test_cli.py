@@ -128,7 +128,8 @@ def test_sync_command_help():
 
 def test_transpile_simple_query():
     """Test transpiling a simple SQL query."""
-    result = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber"])
+    first = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber"])
+    assert first.exit_code == 0
     result = runner.invoke(app, ["jsonsql", "utils", "transpile", "SELECT * FROM subscriber"])
     assert result.exit_code == 0
     assert "SQL Query" in result.stdout
@@ -152,7 +153,8 @@ def test_transpile_with_where():
 
 def test_transpile_yaml_format():
     """Test transpiling with YAML output format."""
-    result = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
+    first = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
+    assert first.exit_code == 0
     result = runner.invoke(app, ["jsonsql", "utils", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
     assert result.exit_code == 0
     assert "from: subscriber" in result.stdout

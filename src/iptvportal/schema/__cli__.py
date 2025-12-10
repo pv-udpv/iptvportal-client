@@ -570,14 +570,14 @@ def introspect_command(
     """
     if help:
         typer.echo(ctx.get_help())
-        for flag in (
-            "--sync",
-            "--sync-chunk",
-            "--order-by-fields",
-            "--sync-run-timeout",
-            "--analyze-from-cache",
+        for flag, desc in (
+            ("--sync", "Perform table sync after introspection"),
+            ("--sync-chunk", "Override auto-generated sync chunk size"),
+            ("--order-by-fields", "Specify sync order (e.g., 'id:asc')"),
+            ("--sync-run-timeout", "Sync run timeout in seconds (0 = no timeout)"),
+            ("--analyze-from-cache", "Analyze synced cache data instead of samples"),
         ):
-            typer.echo(flag)
+            typer.echo(f"{flag}: {desc}")
         raise typer.Exit()
 
     try:
