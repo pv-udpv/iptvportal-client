@@ -508,7 +508,7 @@ def utils_transpile(
 
     try:
         if file:
-            with open(file) as f:
+            with open(file, encoding="utf-8") as f:
                 sql_content = f.read()
             transpile_impl(sql=sql_content, format=format, file=None)
         else:

@@ -139,13 +139,10 @@ def test_transpile_simple_query():
 
 def test_transpile_with_where():
     """Test transpiling SQL with WHERE clause."""
-    first = runner.invoke(
-        app, ["jsonsql", "transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
-    )
+    sql = "SELECT id, username FROM subscriber WHERE disabled = false"
+    first = runner.invoke(app, ["jsonsql", "transpile", sql])
     assert first.exit_code == 0
-    result = runner.invoke(
-        app, ["jsonsql", "utils", "transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
-    )
+    result = runner.invoke(app, ["jsonsql", "utils", "transpile", sql])
     assert result.exit_code == 0
     assert '"from": "subscriber"' in result.stdout
     assert '"where"' in result.stdout
@@ -153,9 +150,10 @@ def test_transpile_with_where():
 
 def test_transpile_yaml_format():
     """Test transpiling with YAML output format."""
-    first = runner.invoke(app, ["jsonsql", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
+    sql = "SELECT * FROM subscriber"
+    first = runner.invoke(app, ["jsonsql", "transpile", sql, "--format", "yaml"])
     assert first.exit_code == 0
-    result = runner.invoke(app, ["jsonsql", "utils", "transpile", "SELECT * FROM subscriber", "--format", "yaml"])
+    result = runner.invoke(app, ["jsonsql", "utils", "transpile", sql, "--format", "yaml"])
     assert result.exit_code == 0
     assert "from: subscriber" in result.stdout
 
