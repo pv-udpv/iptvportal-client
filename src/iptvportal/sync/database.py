@@ -465,6 +465,25 @@ class SyncDatabase:
 
             conn.commit()
 
+    def register_table_schema(self, table_name: str, schema: TableSchema) -> None:
+        """
+        Backwards-compatible wrapper to register a table schema by name.
+
+        Args:
+            table_name: Name of the table being registered.
+            schema: TableSchema definition.
+        """
+        if schema.table_name != table_name:
+            schema = TableSchema(
+                table_name=table_name,
+                fields=schema.fields,
+                total_fields=schema.total_fields,
+                sync_config=schema.sync_config,
+                metadata=schema.metadata,
+            )
+
+        self.register_table(schema)
+
     def _calculate_schema_hash(self, schema: TableSchema) -> str:
         """Calculate hash of schema for change detection."""
         # Include field definitions and sync config in hash

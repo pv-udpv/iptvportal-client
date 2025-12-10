@@ -18,7 +18,7 @@ console = Console()
 sql_app = typer.Typer(
     name="sql",
     help="Execute SQL queries (auto-transpiled to JSONSQL)",
-    no_args_is_help=True,
+    no_args_is_help=False,
 )
 
 
@@ -110,6 +110,9 @@ def sql_main(
 
     try:
         sql_query: str | None = None
+        is_top_level = (
+            ctx.parent is not None and str(ctx.parent.info_name or "").lower() == "iptvportal"
+        )
 
         # Get SQL query from --query or --edit
         if edit:
@@ -119,7 +122,13 @@ def sql_main(
         elif query:
             sql_query = query
         else:
-            console.print("[red]Error: Either --query/-q or --edit/-e is required[/red]")
+            if is_top_level:
+                console.print(
+                    "[yellow]Command moved:[/yellow] iptvportal sql → iptvportal jsonsql sql"
+                )
+                console.print("[dim]Run: iptvportal jsonsql sql --query 'SELECT ...'[/dim]")
+            else:
+                console.print("[red]Error: Either --query/-q or --edit/-e is required[/red]")
             raise typer.Exit(1)
 
         # Log SQL input in debug mode

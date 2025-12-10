@@ -12,7 +12,38 @@ from iptvportal.core.client import IPTVPortalClient
 from iptvportal.schema import SchemaLoader, TableSchema
 
 console = Console()
-schema_app = typer.Typer(name="schema", help="Manage table schemas")
+schema_app = typer.Typer(name="schema", help="Schema management service")
+
+
+@schema_app.callback(invoke_without_command=True)
+def schema_root(ctx: typer.Context) -> None:
+    """
+    Handle base schema command.
+
+    Shows deprecation guidance when invoked without a subcommand.
+    """
+    if ctx.invoked_subcommand:
+        return
+
+    if ctx.resilient_parsing:
+        return
+
+    is_top_level = ctx.parent is not None and str(ctx.parent.info_name or "").lower() == "iptvportal"
+    if is_top_level:
+        console.print("[yellow]Command moved:[/yellow] iptvportal schema → iptvportal jsonsql schema")
+        console.print("[dim]Run: iptvportal jsonsql schema show[/dim]")
+        raise typer.Exit(1)
+
+    console.print(ctx.get_help())
+    raise typer.Exit()
+
+
+@schema_app.command(name="config")
+def config_command() -> None:
+    """Schema configuration helpers."""
+    console.print(
+        "[yellow]Schema configuration is managed via application settings and JSONSQL schema commands.[/yellow]"
+    )
 
 
 @schema_app.command(name="show")
