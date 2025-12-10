@@ -512,7 +512,8 @@ def utils_transpile(
                 sql_content = f.read()
             transpile_impl(sql=sql_content, format=format, file=None)
         else:
-            transpile_impl(sql=sql or "", format=format, file=None)
+            assert sql is not None
+            transpile_impl(sql=sql, format=format, file=None)
     except FileNotFoundError:
         console.print(f"[red]Error:[/red] File not found: {file}")
         raise typer.Exit(1)

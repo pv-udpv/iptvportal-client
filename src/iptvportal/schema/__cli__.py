@@ -23,6 +23,14 @@ schema_app = app
 def schema_entry(ctx: typer.Context) -> None:
     """Show deprecation hint when invoked without subcommands."""
     if ctx.resilient_parsing:
+        for flag, desc in (
+            ("--sync", "Perform table sync after introspection"),
+            ("--sync-chunk", "Override auto-generated sync chunk size"),
+            ("--order-by-fields", "Specify sync order (e.g., 'id:asc')"),
+            ("--sync-run-timeout", "Sync run timeout in seconds (0 = no timeout)"),
+            ("--analyze-from-cache", "Analyze synced cache data instead of samples"),
+        ):
+            console.print(f"{flag}: {desc}")
         return
 
     if ctx.invoked_subcommand:
