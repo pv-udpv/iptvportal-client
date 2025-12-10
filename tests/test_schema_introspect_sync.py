@@ -13,16 +13,6 @@ from iptvportal.schema import FieldDefinition, FieldType, TableMetadata, TableSc
 from iptvportal.sync.database import SyncDatabase
 
 
-def _duckdb_available() -> bool:
-    """Check if DuckDB is available."""
-    try:
-        import duckdb  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
-
-
 class TestSyncDatabase:
     """Test SyncDatabase fetch_rows functionality."""
 
@@ -313,3 +303,13 @@ class TestDuckDBAnalyzerWithSyncedData:
             value_stats = results["value"]
             assert value_stats["min_value"] == 0
             assert value_stats["max_value"] == 490
+
+
+def _duckdb_available() -> bool:
+    """Check if DuckDB is available."""
+    try:
+        import duckdb  # noqa: F401
+
+        return True
+    except ImportError:
+        return False

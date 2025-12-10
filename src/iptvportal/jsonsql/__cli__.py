@@ -40,7 +40,6 @@ from iptvportal.cli.commands.jsonsql import (
     select_command,
     update_command,
 )
-from iptvportal.cli.commands.schema import schema_app
 
 app.command(name="select")(select_command)
 app.command(name="insert")(insert_command)
@@ -128,7 +127,6 @@ def _detect_method(jsonsql: dict) -> str:
 
 
 app.add_typer(utils_app)
-app.add_typer(schema_app, name="schema")
 
 
 # JSONSQL-specific configuration

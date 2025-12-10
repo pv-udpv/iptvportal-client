@@ -140,8 +140,6 @@ def test_transpile_with_where():
     """Test transpiling SQL with WHERE clause."""
     result = runner.invoke(
         app, ["jsonsql", "transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
-    )
-    result = runner.invoke(
         app, ["jsonsql", "utils", "transpile", "SELECT id, username FROM subscriber WHERE disabled = false"]
     )
     assert result.exit_code == 0
