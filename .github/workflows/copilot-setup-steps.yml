@@ -12,23 +12,31 @@ on:
 jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     permissions:
       contents: read
+    env:
+      UV_PROJECT_ENVIRONMENT: .venv
+      # Enforce using the existing uv.lock when installing dependencies
+      UV_FROZEN: "1"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install uv
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Preinstall project dependencies
         run: |
-          uv sync --frozen --dev
+          set -euo pipefail
+          if [[ ! -f uv.lock ]]; then
+            echo 'Error: uv.lock file not found. Please run uv lock in the project root directory to generate the lock file before running this workflow.'
+            exit 1
+          fi
+          uv sync --all-extras --dev
