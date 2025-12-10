@@ -92,11 +92,13 @@ class SQLTranspiler:
     def _transpile_select(self, select: exp.Select) -> dict[str, Any]:
         """Transpile SELECT statement."""
         result: dict[str, Any] = {}
+        from_clause = select.args.get("from") or select.args.get("from_")
+        joins = select.args.get("joins")
 
         # Extract table name for schema lookup
         from_table = None
-        if select.args.get("from"):
-            from_expr = select.args["from"].this
+        if from_clause:
+            from_expr = from_clause.this
             if isinstance(from_expr, exp.Table):
                 from_table = from_expr.name
 
@@ -105,8 +107,8 @@ class SQLTranspiler:
             result["data"] = self._transpile_select_columns(select.expressions, from_table)
 
         # Handle FROM clause with JOINs
-        if select.args.get("from"):
-            result["from"] = self._transpile_from(select.args["from"], select.args.get("joins"))
+        if from_clause:
+            result["from"] = self._transpile_from(from_clause, joins)
 
         # Handle WHERE clause
         if select.args.get("where"):
@@ -135,7 +137,7 @@ class SQLTranspiler:
             has_group_by = select.args.get("group") is not None
             has_aggregate = self._has_aggregate_functions(select.expressions)
             has_id_field = self._has_id_field(select.expressions)
-            has_joins = bool(select.args.get("joins"))
+            has_joins = bool(joins)
 
             if not has_group_by and not has_aggregate and has_id_field and not has_joins:
                 result["order_by"] = "id"
