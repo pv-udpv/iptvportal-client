@@ -530,9 +530,8 @@ def validate_command(file_path: str = typer.Argument(..., help="Schema file to v
         raise typer.Exit(1)
 
 
-@schema_app.command(name="introspect", add_help_option=False)
+@schema_app.command(name="introspect")
 def introspect_command(
-    ctx: typer.Context,
     table_name: str | None = typer.Argument(None, help="Table name to introspect"),
     table: str | None = typer.Option(None, "--table", help="Table name (alternative to positional argument)"),
     from_sql: str | None = typer.Option(None, "--from-sql", help="SQL query to introspect (e.g., 'SELECT * FROM table')"),
@@ -549,7 +548,6 @@ def introspect_command(
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
     config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
-    help: bool = typer.Option(False, "--help", "-h", help="Show this message and exit"),
 ) -> None:
     """
     Introspect remote table structure with automatic metadata gathering and DuckDB analysis.
@@ -576,18 +574,6 @@ def introspect_command(
         iptvportal schema introspect tv_program --fields='0:channel_id,1:start,2:stop' --sync
         iptvportal schema introspect media --sync --sync-chunk=5000 --analyze-from-cache
     """
-    if help:
-        typer.echo(ctx.get_help())
-        for flag, desc in (
-            ("--sync", "Perform table sync after introspection"),
-            ("--sync-chunk", "Override auto-generated sync chunk size"),
-            ("--order-by-fields", "Specify sync order (e.g., 'id:asc')"),
-            ("--sync-run-timeout", "Sync run timeout in seconds (0 = no timeout)"),
-            ("--analyze-from-cache", "Analyze synced cache data instead of samples"),
-        ):
-            typer.echo(f"{flag}: {desc}")
-        raise typer.Exit()
-
     try:
         settings = load_config(config_file)
 
