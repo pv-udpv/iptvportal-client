@@ -14,6 +14,7 @@ from __future__ import annotations
 import inspect
 import logging
 import logging.config
+import os
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,9 @@ from iptvportal.config.project import (
     get_conf,
     set_value,
 )  # imported lazily by callers in some codepaths
+
+# Module-level flag to track if logging has been configured
+_LOGGING_CONFIGURED = False
 
 
 def _ensure_log_dir(path: str | Path) -> None:
@@ -232,13 +236,26 @@ def _build_dict_config(cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def setup_logging(dynaconf_conf: Dynaconf | dict | None = None) -> None:
+def setup_logging(dynaconf_conf: Dynaconf | dict | None = None, force: bool = False) -> None:
     """
     Configure logging from a dynaconf configuration object or plain dict.
 
     Accepts either a Dynaconf instance or a dict with a "logging" key.
     If dynaconf_conf is None, tries to use project.get_conf() to obtain current config.
+
+    Args:
+        dynaconf_conf: Configuration object or dict containing logging settings
+        force: If True, reconfigure even if already configured. Default False.
     """
+    global _LOGGING_CONFIGURED
+
+    # Skip if already configured and not forcing
+    if _LOGGING_CONFIGURED and not force:
+        return
+
+    # Check for silent mode env var
+    silent_mode = os.environ.get("IPTVPORTAL_LOGGING_SILENT", "0").lower() in ("1", "true", "yes")
+
     try:
         if dynaconf_conf is None:
             try:
@@ -258,28 +275,43 @@ def setup_logging(dynaconf_conf: Dynaconf | dict | None = None) -> None:
             except Exception:
                 cfg = {}
 
+        # Clear existing root logger handlers to avoid conflicts
+        root = logging.getLogger()
+        if root.hasHandlers():
+            root.handlers.clear()
+
         dict_config = _build_dict_config(cfg)
         logging.config.dictConfig(dict_config)
-        logger = logging.getLogger("iptvportal")
-        logger.info(
-            "Logging configured",
-            extra={"configured_handlers": list(dict_config["handlers"].keys())},
-        )
+        _LOGGING_CONFIGURED = True
+
+        if not silent_mode:
+            logger = logging.getLogger("iptvportal")
+            logger.info(
+                "Logging configured",
+                extra={"configured_handlers": list(dict_config["handlers"].keys())},
+            )
     except Exception:
         # Don't fail the application startup due to logging config errors.
-        logging.basicConfig(level=logging.INFO)
-        logging.getLogger("iptvportal").warning(
-            "Failed to apply advanced logging config; using basicConfig"
-        )
+        # Only show warning if not already configured
+        if not _LOGGING_CONFIGURED:
+            logging.basicConfig(level=logging.INFO, force=True)  # Python 3.8+
+            if not silent_mode:
+                logging.getLogger("iptvportal").warning(
+                    "Failed to apply advanced logging config; using basicConfig"
+                )
+            _LOGGING_CONFIGURED = True  # Mark as configured even with fallback
 
 
 def reconfigure_logging() -> None:
-    """Reload logging configuration from the active dynaconf configuration."""
+    """Reload logging configuration from the active dynaconf configuration.
+
+    This always forces reconfiguration regardless of previous state.
+    """
     try:
         cfg = get_conf()
     except Exception:
         cfg = None
-    setup_logging(cfg)
+    setup_logging(cfg, force=True)
 
 
 def set_module_log_level(module: str, level: str) -> None:

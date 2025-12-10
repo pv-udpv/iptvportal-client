@@ -1,13 +1,19 @@
 """Output formatters for CLI."""
 
 import json
+import os
 from typing import Any
 
 import yaml
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
+
+# Remove COLUMNS override if present to allow Rich to detect terminal width properly
+if "COLUMNS" in os.environ:
+    del os.environ["COLUMNS"]
 
 console = Console()
 
@@ -26,12 +32,39 @@ def format_table(data: list[dict[str, Any]], title: str | None = None) -> None:
 
     # Get columns from first row
     columns = list(data[0].keys())
+    num_cols = len(columns)
 
-    # Create table
-    table = Table(title=title, show_header=True, header_style="bold cyan")
+    # Check if terminal is too narrow for table display
+    if console.width < 100:
+        console.print(
+            f"[yellow]Terminal width ({console.width} cols) is narrow, "
+            "consider using --format json or --format yaml[/yellow]\n"
+        )
 
+    # Calculate adaptive max width per column based on terminal size
+    # Reserve space for borders (3 chars per column) and padding
+    available_width = console.width - (num_cols * 3) - 4
+    col_max_width = max(15, available_width // num_cols)  # Min 15 chars per column
+
+    # Create table with full-width expansion and better overflow handling
+    table = Table(
+        title=title,
+        show_header=True,
+        header_style="bold cyan",
+        expand=True,  # Stretch to full console width
+        box=box.SIMPLE,  # Cleaner borders
+        show_lines=False,  # No row separators
+    )
+
+    # Add columns with overflow handling
     for col in columns:
-        table.add_column(col, style="white")
+        table.add_column(
+            col,
+            style="white",
+            overflow="fold",  # Wrap text instead of ellipsis
+            no_wrap=False,  # Allow text wrapping
+            max_width=col_max_width,  # Adaptive width limit
+        )
 
     # Add rows
     for row in data:
