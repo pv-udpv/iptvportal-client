@@ -18,7 +18,7 @@ from iptvportal.exceptions import IPTVPortalError
 console = Console()
 jsonsql_app = typer.Typer(
     name="jsonsql",
-    help="JSONSQL API operations",
+    help="JSONSQL API operations and queries",
     no_args_is_help=True,
 )
 
@@ -506,12 +506,22 @@ def utils_transpile(
         console.print("[red]Error: Either SQL query or --file is required[/red]")
         raise typer.Exit(1)
 
-    if file:
-        with open(file) as f:
-            sql_content = f.read()
-        transpile_impl(sql=sql_content, format=format, file=None)
-    else:
-        transpile_impl(sql=sql or "", format=format, file=None)
+    try:
+        if file:
+            with open(file) as f:
+                sql_content = f.read()
+            transpile_impl(sql=sql_content, format=format, file=None)
+        else:
+            transpile_impl(sql=sql or "", format=format, file=None)
+    except FileNotFoundError:
+        console.print(f"[red]Error:[/red] File not found: {file}")
+        raise typer.Exit(1)
+    except PermissionError:
+        console.print(f"[red]Error:[/red] Permission denied reading file: {file}")
+        raise typer.Exit(1)
+    except OSError as exc:
+        console.print(f"[red]Error:[/red] Failed to read file: {exc}")
+        raise typer.Exit(1)
 
 
 # JSONSQL-specific configuration placeholder

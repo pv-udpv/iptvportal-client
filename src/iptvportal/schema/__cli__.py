@@ -14,7 +14,7 @@ from iptvportal.schema import SchemaLoader, TableSchema
 
 os.environ.setdefault("NO_COLOR", "1")
 console = Console(color_system=None)
-app = typer.Typer(name="schema", help="Schema management service", rich_markup_mode=None)
+app = typer.Typer(name="schema", help="Schema management service")
 # Keep schema_app as alias for backwards compatibility in this file
 schema_app = app
 
@@ -23,7 +23,6 @@ schema_app = app
 def schema_entry(ctx: typer.Context) -> None:
     """Show deprecation hint when invoked without subcommands."""
     if ctx.resilient_parsing:
-        console.print("--sync")
         return
 
     if ctx.invoked_subcommand:
