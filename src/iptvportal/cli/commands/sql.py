@@ -18,7 +18,6 @@ console = Console()
 sql_app = typer.Typer(
     name="sql",
     help="Execute SQL queries (auto-transpiled to JSONSQL)",
-    no_args_is_help=True,
 )
 
 
@@ -103,6 +102,10 @@ def sql_main(
         format_type=debug_format,
         output_file=debug_file,
     )
+
+    if ctx.parent and ctx.parent.info_name == "iptvportal":
+        console.print("[yellow]Command moved:[/yellow] iptvportal sql → iptvportal jsonsql sql")
+        console.print("[dim]Run: iptvportal jsonsql sql --query 'SELECT ...'[/dim]")
 
     # If no subcommand and ctx is being invoked
     if ctx.invoked_subcommand is not None:

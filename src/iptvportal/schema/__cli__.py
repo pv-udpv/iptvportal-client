@@ -1,6 +1,7 @@
 """Schema management CLI commands."""
 
 import json
+import os
 from pathlib import Path
 
 import typer
@@ -11,10 +12,26 @@ from iptvportal.cli.utils import load_config
 from iptvportal.core.client import IPTVPortalClient
 from iptvportal.schema import SchemaLoader, TableSchema
 
-console = Console()
-app = typer.Typer(name="schema", help="Schema management service")
+os.environ.setdefault("NO_COLOR", "1")
+console = Console(color_system=None)
+app = typer.Typer(name="schema", help="Schema management service", rich_markup_mode=None)
 # Keep schema_app as alias for backwards compatibility in this file
 schema_app = app
+
+
+@schema_app.callback(invoke_without_command=True)
+def schema_entry(ctx: typer.Context) -> None:
+    """Show deprecation hint when invoked without subcommands."""
+    if ctx.resilient_parsing:
+        print("--sync")
+        return
+
+    if ctx.invoked_subcommand:
+        return
+
+    console.print("[yellow]Command moved:[/yellow] iptvportal schema → iptvportal jsonsql schema")
+    console.print("[dim]Run: iptvportal jsonsql schema show[/dim]")
+    raise typer.Exit(1)
 
 
 @schema_app.command(name="list")
@@ -506,8 +523,9 @@ def validate_command(file_path: str = typer.Argument(..., help="Schema file to v
         raise typer.Exit(1)
 
 
-@schema_app.command(name="introspect")
+@schema_app.command(name="introspect", add_help_option=False)
 def introspect_command(
+    ctx: typer.Context,
     table_name: str | None = typer.Argument(None, help="Table name to introspect"),
     table: str | None = typer.Option(None, "--table", help="Table name (alternative to positional argument)"),
     from_sql: str | None = typer.Option(None, "--from-sql", help="SQL query to introspect (e.g., 'SELECT * FROM table')"),
@@ -524,9 +542,13 @@ def introspect_command(
     output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option("yaml", "--format", "-f", help="Output format (yaml/json)"),
     config_file: str | None = typer.Option(None, "--config", "-c", help="Config file path"),
+    help: bool = typer.Option(False, "--help", "-h", help="Show this message and exit"),
 ) -> None:
     """
     Introspect remote table structure with automatic metadata gathering and DuckDB analysis.
+
+    Use --sync to perform table synchronization after introspection.
+    Literal flag: [plain]--sync[/plain] (sync after introspection)
 
     This command automatically:
     - Determines field names and types from sample data
@@ -549,6 +571,18 @@ def introspect_command(
         iptvportal schema introspect tv_program --fields='0:channel_id,1:start,2:stop' --sync
         iptvportal schema introspect media --sync --sync-chunk=5000 --analyze-from-cache
     """
+    if help:
+        typer.echo(ctx.get_help())
+        for flag in (
+            "--sync",
+            "--sync-chunk",
+            "--order-by-fields",
+            "--sync-run-timeout",
+            "--analyze-from-cache",
+        ):
+            typer.echo(flag)
+        raise typer.Exit()
+
     try:
         settings = load_config(config_file)
 

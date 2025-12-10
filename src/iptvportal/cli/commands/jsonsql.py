@@ -18,7 +18,7 @@ from iptvportal.exceptions import IPTVPortalError
 console = Console()
 jsonsql_app = typer.Typer(
     name="jsonsql",
-    help="JSONSQL queries and API operations",
+    help="JSONSQL API operations",
     no_args_is_help=True,
 )
 
@@ -487,6 +487,32 @@ def update_command(
         raise typer.Exit(1) from e
 
 
+# Utilities subcommands (offline helpers)
+utils_app = typer.Typer(name="utils", help="JSONSQL utilities")
+
+
+@utils_app.command(name="transpile")
+def utils_transpile(
+    sql: str | None = typer.Argument(None, help="SQL query to transpile"),
+    format: str = typer.Option("json", "--format", help="Output format: json, yaml"),
+    file: str | None = typer.Option(None, "--file", help="Read SQL from file instead"),
+) -> None:
+    """
+    Transpile SQL to JSONSQL format without executing it.
+    """
+    from iptvportal.cli.commands.transpile import transpile_command as transpile_impl
+
+    if sql is None and file is None:
+        console.print("[red]Error: Either SQL query or --file is required[/red]")
+        raise typer.Exit(1)
+
+    transpile_impl(sql=sql or "", format=format, file=file)
+
+
+# JSONSQL-specific configuration placeholder
+config_app = typer.Typer(name="config", help="JSONSQL configuration")
+
+
 @jsonsql_app.command(name="delete")
 def delete_command(
     # Native JSONSQL parameters
@@ -624,6 +650,8 @@ def _register_subcommands() -> None:
     jsonsql_app.command(name="transpile", help="Transpile SQL to JSONSQL format")(
         transpile_command
     )
+    jsonsql_app.add_typer(utils_app, name="utils")
+    jsonsql_app.add_typer(config_app, name="config")
     jsonsql_app.add_typer(sql_app, name="sql")
     jsonsql_app.add_typer(schema_app, name="schema")
 

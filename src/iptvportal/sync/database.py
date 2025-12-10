@@ -465,6 +465,19 @@ class SyncDatabase:
 
             conn.commit()
 
+    def register_table_schema(self, table_name: str, schema: TableSchema) -> None:
+        """
+        Register schema metadata for an existing table.
+
+        Args:
+            table_name: Name of the table to register
+            schema: TableSchema definition
+        """
+        if schema.table_name != table_name:
+            schema.table_name = table_name
+
+        self.register_table(schema)
+
     def _calculate_schema_hash(self, schema: TableSchema) -> str:
         """Calculate hash of schema for change detection."""
         # Include field definitions and sync config in hash
