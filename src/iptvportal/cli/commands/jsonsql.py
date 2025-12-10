@@ -506,7 +506,12 @@ def utils_transpile(
         console.print("[red]Error: Either SQL query or --file is required[/red]")
         raise typer.Exit(1)
 
-    transpile_impl(sql=sql or "", format=format, file=file)
+    if file:
+        with open(file) as f:
+            sql_content = f.read()
+        transpile_impl(sql=sql_content, format=format, file=None)
+    else:
+        transpile_impl(sql=sql or "", format=format, file=None)
 
 
 # JSONSQL-specific configuration placeholder

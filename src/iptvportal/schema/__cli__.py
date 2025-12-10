@@ -23,7 +23,7 @@ schema_app = app
 def schema_entry(ctx: typer.Context) -> None:
     """Show deprecation hint when invoked without subcommands."""
     if ctx.resilient_parsing:
-        print("--sync")
+        console.print("--sync")
         return
 
     if ctx.invoked_subcommand:
@@ -548,8 +548,6 @@ def introspect_command(
     Introspect remote table structure with automatic metadata gathering and DuckDB analysis.
 
     Use --sync to perform table synchronization after introspection.
-    Literal flag: [plain]--sync[/plain] (sync after introspection)
-
     This command automatically:
     - Determines field names and types from sample data
     - Counts total rows (COUNT(*))
